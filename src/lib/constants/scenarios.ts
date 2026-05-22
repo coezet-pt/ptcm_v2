@@ -1,14 +1,19 @@
 /**
  * Full scenario configs for BAU, BWS-1, BWS-2, BEST.
- * Each contains parameters (15 cost trajectories) + policy (all levers).
  */
 import type { ScenarioConfig } from '@/lib/types';
-import { BAU_PARAMETERS, BAU_POLICY } from './extracted';
+import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES } from './extracted';
+
+const baseExtras = {
+  fixed: structuredClone(BAU_FIXED) as ScenarioConfig['fixed'],
+  segmentBasePrices: structuredClone(BAU_SEGMENT_BASE_PRICES) as ScenarioConfig['segmentBasePrices'],
+};
 
 export const SCENARIO_CONFIGS: Record<string, ScenarioConfig> = {
   BAU: {
     parameters: { ...BAU_PARAMETERS } as ScenarioConfig['parameters'],
     policy: { ...BAU_POLICY },
+    ...structuredClone(baseExtras),
   },
 
   'BWS-1': {
