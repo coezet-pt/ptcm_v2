@@ -99,6 +99,8 @@ export interface PolicyConfig {
 export interface ScenarioConfig {
   parameters: Record<ParameterKey, ParameterConfig>;
   policy: PolicyConfig;
+  fixed: FixedParameters;
+  segmentBasePrices: SegmentBasePrices;
 }
 
 // ── Simulation output ──
