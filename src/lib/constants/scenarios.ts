@@ -115,5 +115,6 @@ export const SCENARIO_CONFIGS: Record<string, ScenarioConfig> = {
       range_filling_concern_after_2035: false,
       gvw_payload_compensation_t: 0,
     },
+    ...structuredClone(baseExtras),
   },
 };
