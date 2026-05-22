@@ -1,35 +1,45 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { ScenarioConfig, PolicyConfig, ParameterKey } from '@/lib/types';
-import type { ScenarioName } from '@/lib/constants/extracted';
-import { BAU_PARAMETERS, BAU_POLICY } from '@/lib/constants/extracted';
+import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice } from '@/lib/types';
+import type { ScenarioName, VehicleSize } from '@/lib/constants/extracted';
+import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES } from '@/lib/constants/extracted';
 import { SCENARIO_CONFIGS } from '@/lib/constants/scenarios';
 
 // Build the default BAU config from constants
 const bauConfig: ScenarioConfig = {
   parameters: { ...BAU_PARAMETERS } as ScenarioConfig['parameters'],
   policy: { ...BAU_POLICY },
+  fixed: structuredClone(BAU_FIXED) as FixedParameters,
+  segmentBasePrices: structuredClone(BAU_SEGMENT_BASE_PRICES) as ScenarioConfig['segmentBasePrices'],
 };
 
 interface ScenarioContextValue {
   presets: Record<ScenarioName, { id: string; description: string; config: ScenarioConfig }>;
   loading: boolean;
   activeScenario: ScenarioName | 'Custom';
-  /** Applied config — what the simulation uses */
   config: ScenarioConfig;
-  /** Draft config — what the input forms bind to */
   draftConfig: ScenarioConfig;
-  /** True when draftConfig differs from applied config */
   isDirty: boolean;
   setActiveScenario: (name: ScenarioName | 'Custom') => void;
   updateParameter: (key: ParameterKey, field: string, value: number) => void;
   updatePolicy: <K extends keyof PolicyConfig>(key: K, value: PolicyConfig[K]) => void;
+  updateFixed: <K extends keyof FixedParameters>(key: K, value: FixedParameters[K]) => void;
+  updateSegmentPrice: (size: VehicleSize, field: keyof SegmentBasePrice, value: number) => void;
   resetToBAU: () => void;
   applyChanges: () => void;
   discardChanges: () => void;
 }
 
 const ScenarioContext = createContext<ScenarioContextValue | null>(null);
+
+function ensureFullConfig(cfg: Partial<ScenarioConfig> | undefined): ScenarioConfig {
+  return {
+    parameters: { ...bauConfig.parameters, ...(cfg?.parameters ?? {}) } as ScenarioConfig['parameters'],
+    policy: { ...bauConfig.policy, ...(cfg?.policy ?? {}) },
+    fixed: { ...bauConfig.fixed, ...(cfg?.fixed ?? {}) },
+    segmentBasePrices: { ...bauConfig.segmentBasePrices, ...(cfg?.segmentBasePrices ?? {}) },
+  };
+}
 
 export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   const [presets, setPresets] = useState<ScenarioContextValue['presets']>({} as any);
@@ -50,10 +60,11 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
             const name = row.name as ScenarioName;
             const hasConfig = row.config && Object.keys(row.config as object).length > 0;
             const fallback = SCENARIO_CONFIGS[name] ?? bauConfig;
+            const raw = hasConfig ? (row.config as unknown as Partial<ScenarioConfig>) : fallback;
             map[name] = {
               id: row.id,
               description: row.description || '',
-              config: hasConfig ? (row.config as unknown as ScenarioConfig) : structuredClone(fallback),
+              config: ensureFullConfig(raw),
             };
           }
           setPresets(map);
@@ -93,6 +104,27 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const updateFixed = useCallback(<K extends keyof FixedParameters>(key: K, value: FixedParameters[K]) => {
+    setActiveScenarioState('Custom');
+    setIsDirty(true);
+    setDraftConfig(prev => ({
+      ...prev,
+      fixed: { ...prev.fixed, [key]: value },
+    }));
+  }, []);
+
+  const updateSegmentPrice = useCallback((size: VehicleSize, field: keyof SegmentBasePrice, value: number) => {
+    setActiveScenarioState('Custom');
+    setIsDirty(true);
+    setDraftConfig(prev => ({
+      ...prev,
+      segmentBasePrices: {
+        ...prev.segmentBasePrices,
+        [size]: { ...prev.segmentBasePrices[size], [field]: value },
+      },
+    }));
+  }, []);
+
   const resetToBAU = useCallback(() => {
     setActiveScenarioState('BAU');
     const next = structuredClone(bauConfig);
@@ -114,8 +146,8 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
   return (
     <ScenarioContext.Provider value={{
       presets, loading, activeScenario, config, draftConfig, isDirty,
-      setActiveScenario, updateParameter, updatePolicy, resetToBAU,
-      applyChanges, discardChanges,
+      setActiveScenario, updateParameter, updatePolicy, updateFixed, updateSegmentPrice,
+      resetToBAU, applyChanges, discardChanges,
     }}>
       {children}
     </ScenarioContext.Provider>
