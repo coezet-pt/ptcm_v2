@@ -21,8 +21,6 @@ export const PARAMETER_META: Record<ParameterKey, ParameterMeta> = {
   adblue_per_l:                   { label: 'AdBlue (DEF) price',     unit: '₹/L',   tooltip: 'Diesel exhaust fluid price (consumed ~5% of diesel volume)' },
   diesel_vehicle_growth:          { label: 'Diesel vehicle price growth', unit: '%/yr', tooltip: 'Annual YoY price growth for diesel vehicle platform' },
   engine_trans_growth:            { label: 'Engine+trans growth',    unit: '%/yr',  tooltip: 'Annual YoY cost growth for engine + transmission (ZET glider)' },
-  diesel_vehicle_growth:          { label: 'Diesel vehicle price growth', unit: '%/yr', tooltip: 'Annual YoY price growth for diesel vehicle platform' },
-  engine_trans_growth:            { label: 'Engine+trans growth',    unit: '%/yr',  tooltip: 'Annual YoY cost growth for engine + transmission (ZET glider)' },
   e_powertrain_growth:            { label: 'E-powertrain growth',    unit: '%/yr',  tooltip: 'Annual YoY cost change for electric motor + electronics' },
   // v9 additions
   electricity_incl_caas_per_kwh:  { label: 'Electricity incl CAAS',  unit: '₹/kWh', tooltip: 'All-in electricity cost for BET charging incl. DISCOM + demand charges + charging infra (Excel R18)' },
