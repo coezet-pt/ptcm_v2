@@ -320,7 +320,8 @@ export const BAU_PARAMETERS = {
   diesel_price_per_l:          { baseValue: 88.93,  d2630: 0.0208, d3140: 0.0208, d4150: 0.0208, d5155: 0.0208 },
   cng_price_per_kg:            { baseValue: 87,     d2630: 0.025,  d3140: 0.025,  d4150: 0.025,  d5155: 0.025  },
   lng_price_per_kg:            { baseValue: 83,     d2630: 0.025,  d3140: 0.025,  d4150: 0.025,  d5155: 0.025  },
-  green_h2_production_per_kg:  { baseValue: 600,    d2630: -0.04,  d3140: -0.03,  d4150: -0.01,  d5155: 0      },
+  electricity_incl_caas_per_kwh:{ baseValue: 11.93, d2630: 0,      d3140: -0.02,  d4150: -0.02,  d5155: -0.01  },
+  green_h2_production_per_kg:  { baseValue: 546.50, d2630: -0.04,  d3140: -0.03,  d4150: -0.01,  d5155: 0      },
   grey_h2_production_per_kg:   { baseValue: 250,    d2630: 0.02,   d3140: 0.02,   d4150: 0.02,   d5155: 0.02   },
   h2_compression_storage_per_kg:{ baseValue: 175,   d2630: -0.03,  d3140: -0.02,  d4150: -0.02,  d5155: 0      },
   electricity_per_kwh:         { baseValue: 18,     d2630: 0,      d3140: -0.02,  d4150: -0.02,  d5155: -0.01  },
@@ -332,7 +333,36 @@ export const BAU_PARAMETERS = {
   diesel_vehicle_growth:       { baseValue: 0,      d2630: 0.03,   d3140: 0.03,   d4150: 0.03,   d5155: 0.03   },
   engine_trans_growth:         { baseValue: 0,      d2630: 0.02,   d3140: 0.02,   d4150: 0.02,   d5155: 0.02   },
   e_powertrain_growth:         { baseValue: 0,      d2630: -0.04,  d3140: -0.01,  d4150: 0.01,   d5155: 0.01   },
+  // New v9 parameters
+  discom_electricity_per_kwh:  { baseValue: 7.50,   d2630: 0,      d3140: -0.02,  d4150: -0.02,  d5155: -0.01  },
+  fixed_demand_charges_per_kwh:{ baseValue: 2.40,   d2630: 0,      d3140: 0,      d4150: 0,      d5155: 0      },
+  charging_infra_per_kwh:      { baseValue: 2.03,   d2630: 0,      d3140: -0.01,  d4150: -0.01,  d5155: 0      },
+  green_h2_electricity_per_kg: { baseValue: 291.50, d2630: -0.04,  d3140: -0.03,  d4150: -0.01,  d5155: 0      },
+  green_h2_capex_per_kg:       { baseValue: 115,    d2630: -0.03,  d3140: -0.02,  d4150: -0.02,  d5155: 0      },
+  green_h2_opex_margin_per_kg: { baseValue: 140,    d2630: -0.02,  d3140: -0.02,  d4150: -0.01,  d5155: 0      },
+  grey_h2_blend_fraction:      { baseValue: 0,      d2630: 0,      d3140: 0,      d4150: 0,      d5155: 0      },
+  lng_valves_piping_per_vehicle:{ baseValue: 100000, d2630: 0.01,  d3140: 0.01,   d4150: 0.01,   d5155: 0.01   },
 };
+
+// BAU fixed (non-trajectory) parameters
+export const BAU_FIXED = {
+  interest_rate_ice: 0.12,
+  insurance_rate_per_year: 0.02,
+  adblue_consumption_l_per_l_diesel: 0.05,
+  battery_life_cycles: 3000,
+  fuel_cell_life_hours: 25000,
+  battery_energy_density_kg_per_kwh: 8,
+  fuel_cell_power_density_kg_per_kw: 4,
+  tat_gradeability: {
+    'Diesel': 1.0, 'CNG': 0.95, 'LNG': 0.95, 'BET': 1.15, 'H2-ICE': 0.95, 'H2-FCET': 1.15,
+  },
+  range_filling_time: {
+    'Diesel': 1.0, 'CNG': 1.05, 'LNG': 1.10, 'BET': 1.20, 'H2-ICE': 1.0, 'H2-FCET': 1.0,
+  },
+};
+
+// BAU per-segment vehicle base prices (mirrors VEHICLE_BASE_PRICES_2025, editable)
+export const BAU_SEGMENT_BASE_PRICES = { ...VEHICLE_BASE_PRICES_2025 };
 
 // BAU policy levers
 export const BAU_POLICY = {
