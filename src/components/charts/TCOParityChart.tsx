@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { TCO_PARITY_YEARS, POWERTRAIN_COLORS, BUCKETS } from '@/lib/constants/extracted';
-import type { ScenarioName } from '@/lib/constants/extracted';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TCO_PARITY_YEARS, BUCKETS } from '@/lib/constants/extracted';
+import { PT_COLORS } from '@/lib/constants/colors';
 import ChartCard from '@/components/ChartCard';
 
 interface Props {
@@ -9,11 +9,6 @@ interface Props {
 }
 
 const ZET_PTS = ['BET', 'H2-ICE', 'H2-FCET'] as const;
-const PT_COLORS = {
-  BET: POWERTRAIN_COLORS.BET,
-  'H2-ICE': POWERTRAIN_COLORS['H2-ICE'],
-  'H2-FCET': POWERTRAIN_COLORS['H2-FCET'],
-};
 
 export default function TCOParityChart({ scenarioName }: Props) {
   const isBAU = scenarioName === 'BAU' || scenarioName === 'BWS-1' || scenarioName === 'BWS-2';

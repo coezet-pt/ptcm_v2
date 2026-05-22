@@ -134,12 +134,17 @@ function runSimulation(config: ScenarioConfig): SimulationResult {
   return result;
 }
 
-export function useSimulation(config: ScenarioConfig): SimulationResult | null {
+export function useSimulation(config: ScenarioConfig): {
+  result: SimulationResult | null;
+  isComputing: boolean;
+} {
   const configKey = useMemo(() => stableStringify(config), [config]);
   const [result, setResult] = useState<SimulationResult | null>(null);
+  const [isComputing, setIsComputing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
+    setIsComputing(true);
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       try {
@@ -147,11 +152,14 @@ export function useSimulation(config: ScenarioConfig): SimulationResult | null {
         setResult(r);
       } catch (e) {
         console.error('[useSimulation] Error:', e);
+      } finally {
+        setIsComputing(false);
       }
     }, 300);
     return () => clearTimeout(timerRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configKey]);
 
-  return result;
+  return { result, isComputing };
 }
+

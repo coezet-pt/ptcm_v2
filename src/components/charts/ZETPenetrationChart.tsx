@@ -6,9 +6,10 @@ import ChartCard from '@/components/ChartCard';
 interface Props {
   years: AnnualResult[];
   policy: PolicyConfig;
+  scenarioLabel?: string;
 }
 
-export default function ZETPenetrationChart({ years, policy }: Props) {
+export default function ZETPenetrationChart({ years, policy, scenarioLabel }: Props) {
   const data = useMemo(() =>
     years.map(y => ({ year: y.year, 'ZET Share': parseFloat((y.zetShare * 100).toFixed(2)) })),
     [years],
@@ -26,7 +27,12 @@ export default function ZETPenetrationChart({ years, policy }: Props) {
   ];
 
   return (
-    <ChartCard title="ZET Penetration" description="% of annual sales that are zero-emission" csvData={csvData} csvFilename="zet_penetration">
+    <ChartCard
+      title="ZET Penetration"
+      subtitle={`BET + H₂-ICE + H₂-FCET share of new sales${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      csvData={csvData}
+      csvFilename="zet_penetration"
+    >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
           <XAxis dataKey="year" tick={{ fontSize: 10 }} />

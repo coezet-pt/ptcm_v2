@@ -15,34 +15,55 @@ const SCENARIO_LABELS: Record<ScenarioName | 'Custom', string> = {
   Custom: 'Custom',
 };
 
+const SCENARIO_DIFFS: Record<ScenarioName | 'Custom', string[]> = {
+  BAU: [],
+  'BWS-1': ['BET ₹5k/kWh till 2035', 'FCET ₹15k/kWh till 2035', 'H₂ blending allowed'],
+  'BWS-2': ['BWS-1 + cheaper H₂', '₹2/kWh elec subsidy', '50% toll 10yr', 'GVW relief'],
+  BEST: ['₹10k→5k BET', '₹30k→15k FCET', '10% interest', '100% toll 5yr', 'Range concern gone'],
+  Custom: [],
+};
+
 export default function ScenarioPicker() {
   const { activeScenario, setActiveScenario, resetToBAU } = useScenario();
+  const diffs = SCENARIO_DIFFS[activeScenario] ?? [];
 
   return (
-    <div className="flex items-center gap-3">
-      <Select value={activeScenario} onValueChange={(v) => setActiveScenario(v as ScenarioName | 'Custom')}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue>{SCENARIO_LABELS[activeScenario]}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {SCENARIOS.map(s => (
-            <SelectItem key={s} value={s} disabled={s === 'Custom'}>
-              {SCENARIO_LABELS[s]}
-            </SelectItem>
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex items-center gap-3">
+        <Select value={activeScenario} onValueChange={(v) => setActiveScenario(v as ScenarioName | 'Custom')}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue>{SCENARIO_LABELS[activeScenario]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {SCENARIOS.map(s => (
+              <SelectItem key={s} value={s} disabled={s === 'Custom'}>
+                {SCENARIO_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {activeScenario === 'Custom' && (
+          <Badge variant="outline" className="text-warning border-warning">
+            Custom
+          </Badge>
+        )}
+
+        <Button variant="ghost" size="sm" onClick={resetToBAU} className="gap-1.5">
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset to Basic
+        </Button>
+      </div>
+
+      {diffs.length > 0 && (
+        <div className="flex flex-wrap justify-end gap-1 max-w-[420px]">
+          {diffs.map(d => (
+            <Badge key={d} variant="secondary" className="text-[10px] font-normal">
+              {d}
+            </Badge>
           ))}
-        </SelectContent>
-      </Select>
-
-      {activeScenario === 'Custom' && (
-        <Badge variant="outline" className="text-warning border-warning">
-          Custom
-        </Badge>
+        </div>
       )}
-
-      <Button variant="ghost" size="sm" onClick={resetToBAU} className="gap-1.5">
-        <RotateCcw className="h-3.5 w-3.5" />
-        Reset to Basic
-      </Button>
     </div>
   );
 }

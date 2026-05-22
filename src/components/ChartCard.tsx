@@ -7,12 +7,13 @@ import { exportPNG, exportCSV, exportXLSX } from '@/lib/exporters';
 interface Props {
   title: string;
   description?: string;
+  subtitle?: string;
   children: ReactNode;
   csvData?: Record<string, unknown>[];
   csvFilename?: string;
 }
 
-export default function ChartCard({ title, description, children, csvData, csvFilename }: Props) {
+export default function ChartCard({ title, description, subtitle, children, csvData, csvFilename }: Props) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [showTable, setShowTable] = useState(false);
   const fname = csvFilename || title;
@@ -22,6 +23,7 @@ export default function ChartCard({ title, description, children, csvData, csvFi
       <CardHeader className="pb-2 flex-row items-start justify-between space-y-0">
         <div className="space-y-0.5">
           <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           {description && <CardDescription className="text-xs">{description}</CardDescription>}
         </div>
         <div className="flex gap-1">
