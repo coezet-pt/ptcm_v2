@@ -142,6 +142,15 @@ export default function InputPanel() {
                   <FixedParamGroup />
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="E">
+                <AccordionTrigger className="text-sm font-medium">
+                  E. Policy Levers
+                </AccordionTrigger>
+                <AccordionContent>
+                  <PolicyLevers />
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </CardContent>
         </Card>
