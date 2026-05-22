@@ -156,9 +156,6 @@ export default function InputPanel() {
         </Card>
       )}
 
-      {/* Policy Levers */}
-      <PolicyLevers />
-
       {/* Sticky Apply / Discard bar */}
       <div className="sticky bottom-0 z-20 -mx-4 px-4 py-3 bg-card/90 backdrop-blur-md border-t border-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
