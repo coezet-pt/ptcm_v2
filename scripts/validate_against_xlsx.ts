@@ -140,29 +140,30 @@ const fmt = (n: number) => (n >= 1000 ? Math.round(n).toLocaleString() : n.toFix
 const pct = (a: number, b: number) =>
   b === 0 ? (a === 0 ? 0 : Infinity) : ((a - b) / b) * 100;
 
-function diffTable(title: string, getSim: (y: number) => Record<string, number>, refKey: 'sale' | 'stock') {
+function diffTable(title: string, getSim: (y: number) => Record<string, number>, refKey: 'sale' | 'stock'): { flagged: number; total: number } {
   console.log(`\n=== ${title} (Δ% = sim − ref; * = |Δ|>${FLAG}%) ===`);
   console.log('Year   ' + PTS.map(p => p.padStart(22)).join(' '));
-  let flagged = 0;
+  let flagged = 0, total = 0;
   for (let year = 2025; year <= 2055; year++) {
     const refRow = audit.bau_reference[year] || audit.bau_reference[String(year)];
     if (!refRow) continue;
     const simRow = getSim(year);
     const cells = PTS.map(pt => {
       const sim = simRow[pt] ?? 0;
-      // refRow stored with sale keys (when refKey='sale') or stock keys
       const refKeyName = refKey === 'sale' ? pt : `${pt}_stock`;
       const refv = Number(refRow[refKeyName] ?? 0);
       const d = pct(sim, refv);
       const small = refv < 10 && Math.abs(sim - refv) < 10;
       const tag = Math.abs(d) > FLAG && !small ? '*' : ' ';
+      total++;
       if (tag === '*') flagged++;
       const dStr = isFinite(d) ? d.toFixed(1) + '%' : '—';
       return `${fmt(sim).padStart(9)}/${fmt(refv).padStart(9)}${tag}${dStr.padStart(7)}`;
     });
     console.log(`${year}  ${cells.join(' ')}`);
   }
-  console.log(`Flagged cells: ${flagged} / ${31 * PTS.length}`);
+  console.log(`Flagged cells: ${flagged} / ${total}`);
+  return { flagged, total };
 }
 
 diffTable('(3) BAU SALES — sim vs Output Summary', year => {
