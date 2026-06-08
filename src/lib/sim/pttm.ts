@@ -40,22 +40,28 @@ function gompertzShare(args: {
   pilotShare: number;
   share2045: number;
   share2055: number;
+  literalB?: number;
+  literalC?: number;
 }): number {
-  const { year, startYear, inflectionYear, pilotShare, share2045, share2055 } = args;
+  const { year, startYear, inflectionYear, pilotShare, share2045, share2055, literalB, literalC } = args;
 
   if (year < startYear) return 0;
   if (share2055 <= 0) return 0;
 
   const aInitial = share2055;
   const W = pilotShare;
-  const b = Math.log(Math.max(aInitial, W * 1.01) / W);
+  // Use v3 literal b, c when supplied; else derive from anchors (legacy fallback).
+  const b = literalB !== undefined
+    ? literalB
+    : Math.log(Math.max(aInitial, W * 1.01) / W);
   const inflDelta = Math.max(inflectionYear - startYear, 1);
-  const c = -(1 / inflDelta) *
-            Math.log(Math.log(Math.max(aInitial, 0.1001) / 0.1) / b);
+  const c = literalC !== undefined
+    ? literalC
+    : -(1 / inflDelta) * Math.log(Math.log(Math.max(aInitial, 0.1001) / 0.1) / b);
   const endDelta = 2055 - startYear;
-  const a = share2055 / Math.exp(-b * Math.exp(-c * endDelta));
-
+  // a re-derived per-bucket so the un-corrected curve lands on share2055 at 2055
   const normDenom = Math.exp(-b * Math.exp(-c * endDelta));
+  const a = share2055 / normDenom;
 
   // Main Gompertz term (passes through AB at 2055)
   const gompertzMain = (a * Math.exp(-b * Math.exp(-c * (year - startYear)))) / normDenom;
