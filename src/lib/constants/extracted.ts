@@ -284,9 +284,10 @@ export const PTTM_PILOT_SHARE = {
 export const WEIBULL_SHAPE_ALPHA = 5;
 export const WEIBULL_PEAK_YEAR = 2045;
 
-// 2025 known volumes (calibration anchors for Weibull)
-export const CNG_UNITS_2025 = 6318;
-export const LNG_UNITS_2025 = 368;
+// 2025 known volumes (calibration anchors for Weibull) — Turn 3b: exact from
+// Output Summary row 29 (2025), cols J and L of CoEZET_PTCM_v3.xlsx.
+export const CNG_UNITS_2025 = 14892;
+export const LNG_UNITS_2025 = 607;
 
 // ===========================================================================
 // SCENARIO PRESET INFLECTION YEARS (10% share year per powertrain)
