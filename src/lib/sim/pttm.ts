@@ -24,6 +24,8 @@ import { START_YEAR, END_YEAR, YEAR_COUNT } from './timeSeries';
 export interface AnnualPTSales {
   share: Record<Powertrain, number>;
   sales: Record<Powertrain, number>;
+  // Per-bucket share (used downstream for segment / application breakdowns)
+  sharesByBucket: Record<string, Record<Powertrain, number>>;
 }
 
 /**
@@ -128,9 +130,14 @@ export function computePTTM(
 ): AnnualPTSales[] {
   const annual: AnnualPTSales[] = [];
   for (let i = 0; i < YEAR_COUNT; i++) {
+    const sharesByBucket: Record<string, Record<Powertrain, number>> = {};
+    for (const b of buckets) {
+      sharesByBucket[b.id] = { Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 };
+    }
     annual.push({
       share: { Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 },
       sales: { Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 },
+      sharesByBucket,
     });
   }
 
