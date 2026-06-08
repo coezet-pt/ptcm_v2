@@ -231,3 +231,48 @@ console.log(`\nBET 2045 share: ${(y2045.salesByPT['BET']/totalSales2045*100).toF
 
 console.log(`\n=== (8) DIFF TOTALS (|Δ|>${FLAG}%) ===`);
 console.log(`Sales: ${salesDiff.flagged}/${salesDiff.total}   Stock: ${stockDiff.flagged}/${stockDiff.total}   Combined: ${salesDiff.flagged+stockDiff.flagged}/${salesDiff.total+stockDiff.total}`);
+
+// ── 9. Sanity thresholds vs v3 actuals (READ-ONLY) ──────────────────────────
+console.log('\n=== (9) SANITY THRESHOLDS vs v3 ACTUALS (no changes made) ===');
+function v3Totals(year: number) {
+  const r = audit.bau_reference[year] || audit.bau_reference[String(year)];
+  const pts = ['Diesel','CNG','LNG','BET','H2-ICE','H2-FCET'] as const;
+  const byPT: Record<string, number> = {};
+  let total = 0;
+  for (const p of pts) { byPT[p] = Number(r?.[p] ?? 0); total += byPT[p]; }
+  return { byPT, total };
+}
+const v25 = v3Totals(2025), v30 = v3Totals(2030), v45 = v3Totals(2045), v55 = v3Totals(2055);
+const zet45 = (v45.byPT['BET']+v45.byPT['H2-ICE']+v45.byPT['H2-FCET'])/v45.total;
+const zet55 = (v55.byPT['BET']+v55.byPT['H2-ICE']+v55.byPT['H2-FCET'])/v55.total;
+const cng30 = v30.byPT['CNG']/v30.total, cng45 = v45.byPT['CNG']/v45.total, cng55 = v55.byPT['CNG']/Math.max(v55.total,1);
+const lng30 = v30.byPT['LNG']/v30.total, lng45 = v45.byPT['LNG']/v45.total, lng55 = v55.byPT['LNG']/Math.max(v55.total,1);
+
+type Row = { check: string; threshold: string; actual: string; stale: boolean };
+const rows: Row[] = [
+  { check: 'total_sales_2025',  threshold: '262,023–272,717',     actual: Math.round(v25.total).toLocaleString(),    stale: v25.total < 262023 || v25.total > 272717 },
+  { check: 'total_sales_2045',  threshold: '693,105–721,395',     actual: Math.round(v45.total).toLocaleString(),    stale: v45.total < 693105 || v45.total > 721395 },
+  { check: 'total_sales_2055',  threshold: '1,009,233–1,050,427', actual: Math.round(v55.total).toLocaleString(),    stale: v55.total < 1009233 || v55.total > 1050427 },
+  { check: 'zet_share_2045',    threshold: '10%–45%',              actual: (zet45*100).toFixed(1)+'%',                stale: zet45 < 0.10 || zet45 > 0.45 },
+  { check: 'zet_share_2055',    threshold: '30%–70%',              actual: (zet55*100).toFixed(1)+'%',                stale: zet55 < 0.30 || zet55 > 0.70 },
+  { check: 'diesel_2025_units', threshold: '240,000–270,000',     actual: Math.round(v25.byPT['Diesel']).toLocaleString(), stale: v25.byPT['Diesel'] < 240000 || v25.byPT['Diesel'] > 270000 },
+  { check: 'cng_share_2030',    threshold: '1%–15%',               actual: (cng30*100).toFixed(2)+'%',                stale: cng30 < 0.01 || cng30 > 0.15 },
+  { check: 'cng_share_2045',    threshold: '≥2%',                  actual: (cng45*100).toFixed(2)+'%',                stale: cng45 < 0.02 },
+  { check: 'cng_share_2055',    threshold: '≤0.5%',                actual: (cng55*100).toFixed(2)+'%',                stale: cng55 > 0.005 },
+  { check: 'lng_share_2030',    threshold: '≥0.5%',                actual: (lng30*100).toFixed(2)+'%',                stale: lng30 < 0.005 },
+  { check: 'lng_share_2045',    threshold: '≥1.5%',                actual: (lng45*100).toFixed(2)+'%',                stale: lng45 < 0.015 },
+  { check: 'lng_share_2055',    threshold: '≤0.5%',                actual: (lng55*100).toFixed(2)+'%',                stale: lng55 > 0.005 },
+];
+console.log('check                  threshold              v3 actual        stale?');
+for (const r of rows) {
+  console.log(`${r.check.padEnd(22)} ${r.threshold.padEnd(22)} ${r.actual.padEnd(16)} ${r.stale ? 'STALE' : 'OK'}`);
+}
+
+// ── 10. 2045 per-PT shares (sim) ────────────────────────────────────────────
+console.log('\n=== (10) BAU 2045 SHARES (sim, target BET~76% H2-ICE~1.7% H2-FCET~1.6%) ===');
+for (const pt of ['BET','H2-ICE','H2-FCET'] as const) {
+  console.log(`  ${pt.padEnd(9)} sim ${(y2045.salesByPT[pt]/totalSales2045*100).toFixed(2)}%`);
+}
+
+console.log(`\n=== VERDICT ===`);
+console.log(`Sanity ${passed}/${checks.length} passed. Diff cells over 2%: ${salesDiff.flagged+stockDiff.flagged}/${salesDiff.total+stockDiff.total}.`);
