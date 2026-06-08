@@ -1,69 +1,65 @@
-# Turn 4 — Component-level TCO diff for B1 2045 BET
+# Turn 5 — Three TCO stale-constant fixes + revalidate
 
-One change, one deliverable. No code touched outside the harness and a read-only extractor. Banners stay on.
+Independent, additive, low-risk. One validation at the end. Banners stay on. `choiceModel.ts` untouched.
 
-## Goal
+## Fix 1 — Maintenance escalation (`src/lib/sim/tco.ts`)
 
-Identify which TCO component(s) account for the ~6-7 ₹/km shortfall in both Diesel and BET at B1 2045. The choice-model formula is correct; the gap is in the TCO inputs. Hypothesis: at least one per-km charge (toll, or another) scales with year in v3 and our constant is stale, but we do not guess — we line up every row.
+`getMaintenancePerKm(pt, bucket)` currently returns flat per-km values from `bucket.maintDieselPerKm` (Diesel), `bucket.maintCngLngH2icePerKm` (CNG/LNG/H2-ICE), and `bucket.maintDieselPerKm * 0.6` (BET and FCET — the BET=1.68 vs v3=6.64 bug).
 
-## Scope
+Change to year-escalating, with **dedicated** BET and FCET tracks:
 
-Touch only:
 
-- `scripts/validate_against_xlsx.ts` — extend the B1 2045 trace to print a component stack for BET (and Diesel, for symmetry) alongside the v3 reference values pulled live from the workbook.
+| Powertrain         | Base 2025 (₹/km)                         | CAGR  |
+| ------------------ | ---------------------------------------- | ----- |
+| Diesel             | `bucket.maintDieselPerKm` (B1=2.80)      | 4.00% |
+| CNG / LNG / H2-ICE | `bucket.maintCngLngH2icePerKm` (B1=3.30) | 4.00% |
+| BET                | 5.12 (incl. battery replacement)         | 1.31% |
+| H2-FCET            | 5.76                                     | 1.03% |
 
-Do NOT touch: `tco.ts`, `choiceModel.ts`, `pttm.ts`, `extracted.ts`, `useSimulation.ts`, any constants, any UI.
 
-## What the trace must print
+Constants `MAINT_BET_BASE_2025 = 5.12`, `MAINT_BET_CAGR = 0.0131`, `MAINT_FCET_BASE_2025 = 5.76`, `MAINT_FCET_CAGR = 0.0103`, `MAINT_DIESEL_CAGR = 0.04`, `MAINT_OTHER_ICE_CAGR = 0.04` at the top of `tco.ts` next to the existing manpower/toll constants. Signature becomes `getMaintenancePerKm(pt, bucket, year)`, returning `base * (1 + cagr)^(year-2025)`.
 
-For B1 (Rigid 12-19T bucket), year 2045, BET and Diesel side by side:
+Note in a code comment that these are calibrated from B1 (Rigid 12-19T) and per-bucket values may differ; revisit once we have other-bucket TCO sheets parsed.
 
-```text
-Component            Sim ₹/km   v3 ₹/km   Δ
--------------------  ---------  --------  ------
-Capex (amortized)    x.xx       x.xx      ±x.xx
-Opex (fixed)         ...
-Fuel / energy        ...
-Maintenance          ...
-Manpower / driver    ...
-Toll                 ...
-Insurance            ...
-AdBlue               ...
-Resale credit        (x.xx)     (x.xx)    ±x.xx
--------------------  ---------  --------  ------
-TCO ₹/km             x.xx       x.xx      ±x.xx
+## Fix 2 — Toll as ₹/year per bucket (`src/lib/sim/tco.ts`)
+
+Replace `TOLL_BASE_PER_KM = 2.5`, `TOLL_GROWTH = 0.025` with `TOLL_BASE_PER_YEAR_2025 = 572_400` and `TOLL_CAGR = 0.01`.
+
+In `computeTCO` per-bucket loop:
+
+```ts
+const tollPerYear = TOLL_BASE_PER_YEAR_2025 * Math.pow(1 + TOLL_CAGR, dy);
+const tollPerKm = tollPerYear / bucket.annualKm; // per-bucket, not 108k
 ```
 
-## v3 reference extraction
+`effectiveToll` ZET-waiver math stays as-is (multiplies the per-km figure). All powertrains use the same per-year base (v3 rows 59 & 60 are identical).
 
-From sheet `B1 - TCO ML 19T`:
+## Fix 3 — Diesel vehicle price CAGR 3.0 → 3.61% (`src/lib/sim/tco.ts`)
 
-- Diesel component rows are in the block ending at row 78 (TCO/km row).
-- BET component rows are in the block ending at row 146 (TCO/km row).
-- 2045 is column W (index 23). Confirm by printing the header row (row with 2025..2055) once.
+`computeVehiclePrice` uses `Math.pow(1.03, dy)` in five places (Diesel, CNG, LNG, BET diesel-base portion, H2-ICE, H2-FCET diesel-base portion). Replace the literal `1.03` with `DIESEL_PRICE_CAGR_MULT = 1 + 0.0361` (single constant at the top). Verify: 2,750,000 × 1.0361^20 ≈ 5,590,300 ✓.
 
-Steps in the script:
+`BS_VII_PRICE_BUMP_2030` add-on stays unchanged. The constant fix flows automatically into BET/FCET because they reuse `dieselBase`.
 
-1. Open the v3 xlsx with the same loader the harness already uses.
-2. Print column-W header label to confirm year = 2045.
-3. For each component row in the Diesel block (78 and the ~17 rows above it) and the BET block (146 and the rows above it), print `[rowIndex] label = value` for col W. This gives us the authoritative component list before mapping.
-4. Build a name→value map for each powertrain.
+## Files touched
 
-## Sim-side extraction
+- `src/lib/sim/tco.ts` — only. Constants block + `getMaintenancePerKm` signature + `computeVehiclePrice` literal swap + `computeTCO` toll lines.
 
-Call the existing `computeTCO` (or whatever the harness already uses for the B1 2045 trace) and, instead of just returning the totals, return its component object. If `tco.ts` doesn't already expose components in a structured way, read it (without editing) and have the harness re-derive each component from the same inputs it would pass — replicating the math in the harness only, not in product code. Preferred: if `tco.ts` already builds a `breakdown` object, just print it.
+Not touched: `extracted.ts`, `choiceModel.ts`, `pttm.ts`, `useSimulation.ts`, `segments.ts`, UI, scripts (harness already prints what we need).
 
-## Mapping
+## Validation
 
-Manual one-to-one map in the harness from v3 row label → sim component key. Print any unmapped rows as `UNMAPPED` so we see workbook components the sim is missing entirely (likely the real bug).
+Single run of `bun run scripts/validate_against_xlsx.ts`. Paste back:
 
-## Deliverable to paste back
+1. B1 2045 TCO trace — both component tables (Diesel target ≈59.24, BET target ≈45.44, ratio target ≈1.30).
+2. Full BAU sales diff table (years 2025-2055, all 6 PTs).
+3. Resulting BET TCO factor reported in the runtime check (expected to drop from 107 toward ~7).
 
-1. Column-W header confirmation line.
-2. Raw row-by-row dump of Diesel block (rows ~62-78) and BET block (rows ~130-146) at col W.
-3. The two side-by-side tables above (Diesel and BET).
-4. A one-line call-out of the largest `Δ` row for each powertrain.
+No further code changes this turn regardless of residual diff — collect evidence, then decide Turn 6.
 
-No code changes outside the harness. No conclusions drawn in this turn — we collect the evidence first, then decide the fix in Turn 5.
+&nbsp;
 
-One add: when you print the raw v3 block dumps (deliverable #2), also print the row's value at 2025 (col C) next to its 2045 value (col W). That tells us at a glance which components scale with year vs stay flat — a component that's 4.1 in both 2025 and 2045 is a flat charge, one that goes 33→59 is escalating. That distinction tells us whether the stale constant is a base value or a missing growth rate.
+Approved — ship the three fixes. But update the expected target: the 7.186 BET factor was from v4. In v3, BET 2045 TCO is 45.44 (ratio 1.30), so the correct BET TCO factor is ~58-60, not 7. Do NOT treat a post-fix factor of ~58 as a bug — it matches the v3 ratio.
+
+The real question for the diff: after this fix, does BAU BET 2045 share land near the v3 Output Summary value of ~57% (537,962 / 707,250)? If BET still overshoots toward 80-100%, the problem is NOT TCO — it's that the other 4 choice factors (price/payload/TAT/range) aren't pulling BET down enough in v3, OR the normalization needs the supply-readiness cap. Flag that in the diff but don't fix it this turn.
+
+So paste: B1 2045 TCO trace (targets Diesel 59.2 / BET 45.4), the BET *share* at 2045 (target ~57%), and the full sales diff. The TCO factor number itself is now just informational — the share is what matters.

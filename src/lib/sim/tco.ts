@@ -37,14 +37,28 @@ const CNG_TANK_BASE_SMALL = 150000;
 const CNG_TANK_BASE_LARGE = 250000;
 const CNG_TANK_GROWTH = 0.01;
 
+// Diesel vehicle price growth (v3 row 63: 2.75M → 5.59M over 20y = 3.61% CAGR).
+// Drives Diesel/CNG/LNG/H2-ICE vehicle prices and the diesel-base portion of BET/FCET.
+const DIESEL_PRICE_CAGR_MULT = 1 + 0.0361;
+
 // Manpower (driver + crew) constants — back-solved from Excel B1
 const MANPOWER_BASE_2025_DIESEL = 400000;
 const MANPOWER_BASE_2025_BET    = 460000;
 const MANPOWER_GROWTH = 0.04534;
 
-// Toll constants
-const TOLL_BASE_PER_KM = 2.5;
-const TOLL_GROWTH = 0.025;
+// Toll — stored as ₹/year per vehicle (v3 rows 59-60: 572,400 → 698,437 over 20y, ~1% CAGR).
+// Same for all powertrains. Per-km is derived by dividing by each bucket's annualKm.
+const TOLL_BASE_PER_YEAR_2025 = 572_400;
+const TOLL_CAGR = 0.01;
+
+// Maintenance per km — escalates with year (v3 B1 rows 55-58, calibrated for Rigid 12-19T).
+// Per-bucket values may differ; revisit once other-bucket TCO sheets are parsed.
+const MAINT_DIESEL_CAGR     = 0.04;   // r55: 2.80 → 6.14
+const MAINT_OTHER_ICE_CAGR  = 0.04;   // r56: 3.30 → 7.23 (CNG/LNG/H2-ICE)
+const MAINT_BET_BASE_2025   = 5.12;   // r57 — incl. battery replacement
+const MAINT_BET_CAGR        = 0.0131; // 5.12 → 6.64
+const MAINT_FCET_BASE_2025  = 5.76;   // r58
+const MAINT_FCET_CAGR       = 0.0103; // 5.76 → 7.08
 
 function isSmallSize(size: string): boolean {
   return size.includes('15T') || size.includes('19T');
@@ -101,24 +115,24 @@ function computeVehiclePrice(
 
   switch (pt) {
     case 'Diesel': {
-      const price = base.diesel_total * Math.pow(1.03, dy);
+      const price = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy);
       return price + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
     }
     case 'CNG': {
-      const dieselPrice = base.diesel_total * Math.pow(1.03, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
+      const dieselPrice = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
       const tankBase = isSmallSize(bucket.size) ? CNG_TANK_BASE_SMALL : CNG_TANK_BASE_LARGE;
       const tankCost = tankBase * Math.pow(1 + CNG_TANK_GROWTH, dy);
       return dieselPrice + tankCost;
     }
     case 'LNG': {
-      const dieselPrice = base.diesel_total * Math.pow(1.03, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
+      const dieselPrice = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
       const lngTankCostPerKg = getValueAtYear(ts.lng_tank_cost_per_kg, year);
       const lngCapacityKg = isSmallSize(bucket.size) ? 450 * 0.35 : 990 * 0.35;
       const valves = getValueAtYear(ts.lng_valves_piping_per_vehicle, year);
       return dieselPrice + lngCapacityKg * lngTankCostPerKg + valves;
     }
     case 'BET': {
-      const dieselBase = base.diesel_total * Math.pow(1.03, dy)
+      const dieselBase = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy)
         + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
       const dieselPowertrain = base.engine_trans * getValueAtYear(ts.engine_trans_growth, year);
       const ePowertrain = base.e_powertrain * getValueAtYear(ts.e_powertrain_growth, year);
@@ -135,12 +149,12 @@ function computeVehiclePrice(
       return Math.max(0, withMargin - incentive);
     }
     case 'H2-ICE': {
-      const dieselPrice = base.diesel_total * Math.pow(1.03, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
+      const dieselPrice = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy) + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
       const h2TankCost = bucket.h2TankKg * getValueAtYear(ts.h2_tank_cost_per_kg, year);
       return dieselPrice + h2TankCost;
     }
     case 'H2-FCET': {
-      const dieselBase = base.diesel_total * Math.pow(1.03, dy)
+      const dieselBase = base.diesel_total * Math.pow(DIESEL_PRICE_CAGR_MULT, dy)
         + (year >= 2030 ? BS_VII_PRICE_BUMP_2030 : 0);
       const dieselPowertrain = base.engine_trans * getValueAtYear(ts.engine_trans_growth, year);
       const ePowertrain = base.e_powertrain * getValueAtYear(ts.e_powertrain_growth, year);
@@ -197,10 +211,12 @@ function computeFuelCostPerKm(
   }
 }
 
-function getMaintenancePerKm(pt: Powertrain, bucket: Bucket): number {
-  if (pt === 'Diesel') return bucket.maintDieselPerKm;
-  if (pt === 'BET' || pt === 'H2-FCET') return bucket.maintDieselPerKm * 0.6;
-  return bucket.maintCngLngH2icePerKm;
+function getMaintenancePerKm(pt: Powertrain, bucket: Bucket, year: number): number {
+  const dy = year - 2025;
+  if (pt === 'Diesel') return bucket.maintDieselPerKm * Math.pow(1 + MAINT_DIESEL_CAGR, dy);
+  if (pt === 'BET')    return MAINT_BET_BASE_2025  * Math.pow(1 + MAINT_BET_CAGR,  dy);
+  if (pt === 'H2-FCET') return MAINT_FCET_BASE_2025 * Math.pow(1 + MAINT_FCET_CAGR, dy);
+  return bucket.maintCngLngH2icePerKm * Math.pow(1 + MAINT_OTHER_ICE_CAGR, dy);
 }
 
 function isZET(pt: Powertrain): boolean {
@@ -234,7 +250,8 @@ export function computeTCO(
   for (const bucket of buckets) {
     const ptResults = {} as Record<Powertrain, TCOResult>;
     const dy = targetYear - 2025;
-    const tollPerKm = TOLL_BASE_PER_KM * Math.pow(1 + TOLL_GROWTH, dy);
+    const tollPerYear = TOLL_BASE_PER_YEAR_2025 * Math.pow(1 + TOLL_CAGR, dy);
+    const tollPerKm = tollPerYear / bucket.annualKm;
 
     for (const pt of POWERTRAINS) {
       const price = computeVehiclePrice(pt, bucket, targetYear, ts, policy, sbp);
@@ -255,7 +272,7 @@ export function computeTCO(
       const capex = price - resale + interest + insurance;
 
       const fuelPerKm = computeFuelCostPerKm(pt, bucket, targetYear, ts, policy, fp);
-      const maintPerKm = getMaintenancePerKm(pt, bucket);
+      const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear);
 
       let effectiveToll = tollPerKm;
       if (isZET(pt)) {
