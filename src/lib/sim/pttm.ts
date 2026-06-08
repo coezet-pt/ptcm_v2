@@ -86,11 +86,22 @@ function weibullShare(args: {
 }): number {
   const { year, startYear, peakYear, alpha, peakShare2045, units2025, tiv2025 } = args;
 
-  if (year < startYear) return 0;
-  if (peakShare2045 <= 0) return 0;
+  if (peakShare2045 <= 0 && units2025 <= 0) return 0;
 
   const peakDelta = peakYear - startYear;
-  if (peakDelta <= 0) return 0;
+
+  // Quadratic decay for 2025 anchor (applies regardless of startYear)
+  const decay = Math.max(0, 1 - Math.pow((year - 2025) / 20, 2));
+  // Phase-out: linear decline from 2045 to 2055
+  const phaseOut = Math.max(0, Math.min(1, (2055 - year) / 10));
+  // Anchor share from real 2025 units — keeps fleet present pre-startYear
+  const anchorShare2025 = tiv2025 > 0 ? units2025 / tiv2025 : 0;
+  const anchorTerm = anchorShare2025 * decay;
+
+  // Before startYear, only the anchor decay applies (no Weibull main curve yet)
+  if (year < startYear || peakDelta <= 0) {
+    return Math.max(0, anchorTerm * phaseOut);
+  }
 
   // Weibull kernel at any year
   const wbl = (y: number) => {
@@ -103,18 +114,8 @@ function weibullShare(args: {
   const wbl2045 = wbl(2045);
   const norm = wbl2045 > 0 ? peakShare2045 / wbl2045 : peakShare2045;
 
-  // Quadratic decay for 2025 anchor injection
-  const decay = Math.max(0, 1 - Math.pow((year - 2025) / 20, 2));
-
-  // Phase-out: linear decline from 2045 to 2055
-  const phaseOut = Math.max(0, Math.min(1, (2055 - year) / 10));
-
-  // Anchor share from real 2025 units
-  const anchorShare2025 = units2025 / tiv2025;
-
   // Main curve - subtract 2025 position + add real anchor (decaying)
   const main = norm * (wbl(year) - wbl(2025) * decay);
-  const anchorTerm = anchorShare2025 * decay;
 
   return Math.max(0, (main + anchorTerm) * phaseOut);
 }
