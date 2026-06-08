@@ -167,10 +167,11 @@ export function computePTTM(
     const size = bucket.size as VehicleSize;
     const weight = bucket.tivShare2045;
 
-    // Gompertz PTs
+    // Gompertz PTs — use v3 literal a/b/c (global) per powertrain
     for (const pt of GOMPERTZ_PTS) {
-      const startYear = PTTM_PILOT_START_YEAR[pt as keyof typeof PTTM_PILOT_START_YEAR];
-      const W = PTTM_PILOT_SHARE[pt as keyof typeof PTTM_PILOT_SHARE] ?? 0.0001;
+      const lit = GOMPERTZ_PARAMS_BY_PT[pt as keyof typeof GOMPERTZ_PARAMS_BY_PT];
+      const startYear = lit?.startYear ?? PTTM_PILOT_START_YEAR[pt as keyof typeof PTTM_PILOT_START_YEAR];
+      const W = lit?.W ?? PTTM_PILOT_SHARE[pt as keyof typeof PTTM_PILOT_SHARE] ?? 0.0001;
       const AB = shares2055[bucket.id]?.[pt] ?? 0;
       const Z = shares2045[bucket.id]?.[pt] ?? 0;
       const inflYear = inflectionYears[pt] ?? 2038;
@@ -184,6 +185,8 @@ export function computePTTM(
           pilotShare: W,
           share2045: Z,
           share2055: AB,
+          literalB: lit?.b,
+          literalC: lit?.c,
         });
         annual[i].share[pt] += val * weight;
         annual[i].sharesByBucket[bucket.id][pt] = val;
