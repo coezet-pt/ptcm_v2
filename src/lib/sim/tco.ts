@@ -37,14 +37,28 @@ const CNG_TANK_BASE_SMALL = 150000;
 const CNG_TANK_BASE_LARGE = 250000;
 const CNG_TANK_GROWTH = 0.01;
 
+// Diesel vehicle price growth (v3 row 63: 2.75M → 5.59M over 20y = 3.61% CAGR).
+// Drives Diesel/CNG/LNG/H2-ICE vehicle prices and the diesel-base portion of BET/FCET.
+const DIESEL_PRICE_CAGR_MULT = 1 + 0.0361;
+
 // Manpower (driver + crew) constants — back-solved from Excel B1
 const MANPOWER_BASE_2025_DIESEL = 400000;
 const MANPOWER_BASE_2025_BET    = 460000;
 const MANPOWER_GROWTH = 0.04534;
 
-// Toll constants
-const TOLL_BASE_PER_KM = 2.5;
-const TOLL_GROWTH = 0.025;
+// Toll — stored as ₹/year per vehicle (v3 rows 59-60: 572,400 → 698,437 over 20y, ~1% CAGR).
+// Same for all powertrains. Per-km is derived by dividing by each bucket's annualKm.
+const TOLL_BASE_PER_YEAR_2025 = 572_400;
+const TOLL_CAGR = 0.01;
+
+// Maintenance per km — escalates with year (v3 B1 rows 55-58, calibrated for Rigid 12-19T).
+// Per-bucket values may differ; revisit once other-bucket TCO sheets are parsed.
+const MAINT_DIESEL_CAGR     = 0.04;   // r55: 2.80 → 6.14
+const MAINT_OTHER_ICE_CAGR  = 0.04;   // r56: 3.30 → 7.23 (CNG/LNG/H2-ICE)
+const MAINT_BET_BASE_2025   = 5.12;   // r57 — incl. battery replacement
+const MAINT_BET_CAGR        = 0.0131; // 5.12 → 6.64
+const MAINT_FCET_BASE_2025  = 5.76;   // r58
+const MAINT_FCET_CAGR       = 0.0103; // 5.76 → 7.08
 
 function isSmallSize(size: string): boolean {
   return size.includes('15T') || size.includes('19T');
