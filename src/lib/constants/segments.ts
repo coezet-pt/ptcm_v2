@@ -1,45 +1,43 @@
 /**
- * Segment & Application taxonomy.
+ * Segment & Application taxonomy — formal workbook taxonomy (CoEZET_PTCM_v3).
  *
- * Derived from existing BUCKETS (bucket.size → segment, bucket.useCase → application).
- * Does NOT modify extracted.ts. When the v3 workbook's segment-share tables are
- * extracted, this file can be augmented with the formal segment definitions.
+ * Segment = vehicle body family (Rigid / Tipper / Tractor) — derived from
+ *   bucket.size per the Buckets sheet 'Model' column.
+ * Application = use-case — matches bucket.useCase verbatim.
  */
-import { BUCKETS, type Powertrain, type VehicleSize } from './extracted';
+import { BUCKETS, type Powertrain } from './extracted';
 
-// ── Segments = vehicle weight class ──────────────────────────────────────────
-export type Segment = VehicleSize;
+// ── Segments = body family (3 categories per v3 workbook) ───────────────────
+export type Segment = 'Rigid' | 'Tipper (Rigid)' | 'Tractor (T-T)';
 
-export const SEGMENTS: Segment[] = Array.from(
-  new Set(BUCKETS.map(b => b.size))
-) as Segment[];
+export const SEGMENTS: Segment[] = ['Rigid', 'Tipper (Rigid)', 'Tractor (T-T)'];
+
+function sizeToSegment(size: string): Segment {
+  const s = size.toLowerCase();
+  if (s.includes('tip')) return 'Tipper (Rigid)';
+  if (s.includes('tractor')) return 'Tractor (T-T)';
+  return 'Rigid';
+}
 
 export const SEGMENT_OF_BUCKET: Record<string, Segment> = Object.fromEntries(
-  BUCKETS.map(b => [b.id, b.size as Segment])
+  BUCKETS.map(b => [b.id, sizeToSegment(b.size)]),
 );
 
-// Stable colour ramp (distinct from PT palette).
 export const SEGMENT_COLORS: Record<Segment, string> = {
-  '15T Rigid':   '#60a5fa',
-  '19T Rigid':   '#3b82f6',
-  '28T Rigid':   '#2563eb',
-  '35T Rigid':   '#1d4ed8',
-  '48T Rigid':   '#1e40af',
-  '28T Tipper':  '#f59e0b',
-  '35T Tipper':  '#d97706',
-  '40T Tractor': '#10b981',
-  '55T Tractor': '#059669',
+  'Rigid':          '#3b82f6',
+  'Tipper (Rigid)': '#f59e0b',
+  'Tractor (T-T)':  '#10b981',
 };
 
-// ── Applications = useCase ───────────────────────────────────────────────────
+// ── Applications = useCase (9 categories, matches workbook verbatim) ────────
 export type Application = string;
 
 export const APPLICATIONS: Application[] = Array.from(
-  new Set(BUCKETS.map(b => b.useCase))
+  new Set(BUCKETS.map(b => b.useCase)),
 );
 
 export const APPLICATION_OF_BUCKET: Record<string, Application> = Object.fromEntries(
-  BUCKETS.map(b => [b.id, b.useCase])
+  BUCKETS.map(b => [b.id, b.useCase]),
 );
 
 export const APPLICATION_COLORS: Record<Application, string> = {
