@@ -1,103 +1,145 @@
-# Dashboard Improvements — Implementation Plan
+# PTCM v3 — Backend Re-Extraction + Tabbed Chart Selector
 
-Six focused UX changes. No simulation logic touched.
+Two threads: **(A)** rewrite the data layer from the new workbook, **(B)** swap the 5-chart grid for a tab-bar selector showing one chart at a time. UI polish stays for later.
 
-## 1. Summary KPI Row
+---
 
-**New:** `src/components/KpiCard.tsx` — `{ label, value, context? }`. Tabular-nums, muted label, large bold value, optional small context line.
+## A. Backend / Data Layer
 
-**Edit:** `src/pages/Index.tsx` — insert a 5-column grid (`grid-cols-2 md:grid-cols-3 lg:grid-cols-5`) between `<InputPanel />` and the charts section. Cards:
+### A1. Re-extract `src/lib/constants/extracted.ts` from CoEZET_PTCM_v3.xlsx
 
+Run a one-shot Python extractor (`scripts/extract_constants.py`, not shipped) that reads the workbook and rewrites `extracted.ts` end-to-end. The current file's shape (POWERTRAINS, VEHICLE_BASE_PRICES_2025, BUCKETS) stays — but values and several new tables are added.
 
-| Label             | Value                                                        | Source          |
-| ----------------- | ------------------------------------------------------------ | --------------- |
-| Year of 50% ZET   | `result.year50PctZet ?? '—'`                                 | direct          |
-| ZET Share 2045    | `(years.find(y=>y.year===2045).zetShare*100).toFixed(1)+'%'` | computed inline |
-| Total ZET Sales   | `(totalZetSales/1e6).toFixed(1)+'M trucks'`                  | direct          |
-| Diesel Stock Peak | `result.dieselStockPeakYear`                                 | direct          |
-| CO₂ Avoided       | `Math.round(cumulativeCO2Avoided).toLocaleString()+' Mt'`    | direct          |
+**Rewritten existing exports**
 
+- `POWERTRAINS` — unchanged (6).
+- `VEHICLE_BASE_PRICES_2025` — re-read from `Changing with year` R80–R89 (Diesel) plus R36–R45 (E-Powertrain) and R25–R34 (Engine & Transmission). Refresh all 9 vehicle sizes.
+- `BUCKETS` — re-read from `No change with year` (R5–R18). Pull annualKm, workingDays, kmPerDay, ulw, gvw, the 6 efficiencies, battery/tank/FC specs, tyre counts, maintenance per km. Also add the new fields below.
 
-No sparklines.
+**New exports**
 
-## 2. Powertrain Color Consistency
+| Name | Source sheet | Shape |
+|---|---|---|
+| `SEGMENTS` | `Segmentwise Sales ` R2–R8 | 7 segment labels (Rigid 12-19T … TT 46-55T) |
+| `BUCKET_SEGMENT_MAP` | `No change with year` cross-ref | `Record<BucketId, Segment>` |
+| `BUCKET_APPLICATION_MAP` | `Buckets` / `Applicationwise Sales` | `Record<BucketId, Application>` (10 application groups) |
+| `APPLICATIONS` | `Applicationwise Sales` R2–R13 | 10 labels |
+| `RESALE_VALUES` | `No change with year` resale block | `Record<PT, { till2035; y2036_45; after2045 }>` |
+| `MAINT_CURVES` | `Changing with year` R152–R262 | per-bucket × PT maintenance ₹/km, 2025–2055 |
+| `TOLL_PER_KM` / `MANPOWER_PER_KM` | `Changing with year` R264–R306 | per-size × {ICE, ZET}, 2025–2055 |
+| `H2_COST_CHAIN` | `Changing with year` R7–R14 | green/grey production, blend %, compression |
+| `ELECTRICITY_CHAIN` | `Changing with year` R15–R18 | DISCOM, demand charges, CAAS, total |
+| `STEADY_STATE_SHARES` | Estimation 2035 / 2040 / SS2045 / 2050 / 2055 | `Record<TargetYear, Record<BucketId, Record<PT, number>>>` (final PT share after supply-readiness adjustment) |
+| `STEADY_STATE_TIV` | R2 of each Estimation sheet | `Record<TargetYear, number>` |
+| `S_CURVE_PARAMS` | `Segment Wise Split ` cols Q–Y | logistic params for BET/H2-ICE/H2-FCET, bell-curve for CNG/LNG |
 
-**New:** `src/lib/constants/colors.ts` exporting `PT_COLORS` with the 6 hexes from the spec.
+The current `Changing with year` per-year trajectories (diesel price, CNG, LNG, electricity, battery cost, etc.) keep the existing `ParameterConfig` shape — only the numeric values change.
 
-**Edit chart files** to import `PT_COLORS` instead of `POWERTRAIN_COLORS`:
+### A2. Multiple ZET-target scenarios
 
-- `AnnualSalesChart.tsx`, `ShareChart.tsx`, `StockChart.tsx`, `EmissionsChart.tsx`, `ZETPenetrationChart.tsx`, `TCOParityChart.tsx`
-
-(Leave the existing `POWERTRAIN_COLORS` in `extracted.ts` alone per "don't touch extracted.ts" — just stop referencing it from charts.)
-
-## 3. Chart Header — Subtitle Prop
-
-**Edit:** `src/components/ChartCard.tsx` — add optional `subtitle?: string` prop, render below title as `text-xs text-muted-foreground`. Existing `description` stays as-is (it already serves this role); rename usage so `subtitle` shows scenario context like `"Units sold per year · BAU scenario"`. To pass scenario name, each chart accepts a new optional `scenarioName` prop from `Index.tsx` (passed once) and composes its own subtitle string.
-
-Subtitle strings per the spec.
-
-## 4. Scenario Diff Pills
-
-**Edit:** `src/components/ScenarioPicker.tsx` — below the `<Select>`, render a flex-wrap row of small `<Badge variant="secondary">` pills computed from a static lookup:
+Currently a single steady-state assumption is hard-coded inside `pttm.ts`. New `targetYear` field on `ScenarioConfig`:
 
 ```ts
-const SCENARIO_DIFFS: Record<ScenarioName, string[]> = {
-  BAU: [],
-  'BWS-1': ['Interest 11%', 'BET incentive ₹5k/kWh', 'Toll 50% waiver 5yr'],
-  'BWS-2': ['Interest 10%', 'BET incentive ₹7.5k/kWh', 'Toll 75% waiver 5yr'],
-  BEST: ['Interest 10%', 'BET incentive ₹10k/kWh', 'Toll 100% waiver 5yr'],
-};
+targetYear: 2035 | 2040 | 2045 | 2050 | 2055   // default 2045
 ```
 
-Hidden when `activeScenario === 'BAU'` or `'Custom'`.
+`pttm.ts` picks the matching `STEADY_STATE_SHARES[targetYear]` block and the matching supply-readiness multipliers. Add a small Target-Year dropdown inside Advanced Settings → Policy Levers (so it's discoverable but not noisy).
 
-## 5. Recalculation Feedback
+The 4 preset scenarios (BAU / BWS-1 / BWS-2 / BEST) stay mapped to 2045 by default; user can override.
 
-**Edit:** `src/hooks/useSimulation.ts` — change return to `{ result, isComputing }`. Set `isComputing=true` on configKey change, `false` after `setResult`. Update existing call sites (`Index.tsx`, anywhere else) to destructure.
+### A3. Segment & Application breakdowns in simulation output
 
-**Edit:** `src/pages/Index.tsx` — wrap charts grid in a div with `style={{ opacity: isComputing ? 0.6 : 1, transition: 'opacity 0.2s' }}`. Optional: pulse a thin `bg-primary` bar at top of charts section while computing. Skip the green-flash for now (border flicker is more annoying than helpful on multiple charts).
+Extend `AnnualResult` in `src/lib/types.ts`:
 
-## 6. Model Health Tooltip
+```ts
+salesBySegment:        Record<Segment, number>
+salesByApplication:    Record<Application, number>
+stockBySegment:        Record<Segment, number>
+stockByApplication:    Record<Application, number>
+salesBySegmentByPT:    Record<Segment, Record<PT, number>>
+stockBySegmentByPT:    Record<Segment, Record<PT, number>>
+```
 
-**Edit:** `src/components/ModelHealthBadge.tsx` — wrap the existing trigger badge in a shadcn `<Tooltip>` (in addition to current click-to-expand `Collapsible`). Tooltip content shows: `"X/Y checks passing"` plus, if failures exist, `"Failing: " + checks.filter(c=>!c.passed).map(c=>c.message).join('; ')` (truncated to ~200 chars). Add `<TooltipProvider>` in `Index.tsx` if not already present (it usually is via App).
+Computed inside `stockEmissions.ts` (already iterates buckets) by grouping bucket-level results via `BUCKET_SEGMENT_MAP` / `BUCKET_APPLICATION_MAP`. No new simulation logic — pure aggregation.
 
-## Files
+### A4. Diesel-only counterfactual emissions
 
-**New:**
+Already partially present (`dieselCounterfactualEmissions`). Verify it matches the `Diesel Only Emissions` sheet (total stock × diesel emissions factor). If not, fix the aggregation only — formula stays.
 
-- `src/components/KpiCard.tsx`
-- `src/lib/constants/colors.ts`
+### A5. Validation
 
-**Edited:**
+Add a `scripts/validate_against_xlsx.ts` smoke check (dev-only, run manually) that compares simulator output for the BAU preset to `Output Summary` rows 29–59 (2025–2055). Log mismatches > 2 %. Not wired into the UI.
 
-- `src/pages/Index.tsx`
-- `src/components/ChartCard.tsx`
-- `src/components/ScenarioPicker.tsx`
-- `src/components/ModelHealthBadge.tsx`
-- `src/hooks/useSimulation.ts`
-- 6 chart files (color import swap + receive `scenarioName` prop for subtitle)
+---
 
-**Not touched:** simulation, `extracted.ts`, `scenarios.ts`, chart data structures.
+## B. Frontend — Tabbed Chart Selector
 
-&nbsp;
+### B1. New `<ChartTabs />` component
 
-> Approved. One fix to the Scenario Diff Pills (item 4):
->
-> The diff values you listed don't match the actual scenario configs. Use these instead (from the original `scenarios.ts`):
->
-> ts
->
-> ```ts
-> const SCENARIO_DIFFS: Record<string, string[]> = {
->   BAU: [],
->   'BWS-1': ['BET ₹5k/kWh till 2035', 'FCET ₹15k/kWh till 2035', 'H₂ blending allowed'],
->   'BWS-2': ['BWS-1 + cheaper H₂', '₹2/kWh elec subsidy', '50% toll 10yr', 'GVW relief'],
->   'BEST': ['₹10k→5k BET', '₹30k→15k FCET', '10% interest', '100% toll 5yr', 'Range concern gone'],
-> };
-> ```
->
-> Interest rate is 12% for BAU, BWS-1, AND BWS-2. Only BEST gets 10%. Your plan says BWS-1 = 11% and BWS-2 = 10% — those are wrong.
->
-> Everything else: ship as written.
+Replaces the 5-chart grid in `src/pages/Index.tsx`. Uses shadcn `Tabs` (horizontal scroll on mobile). Tabs:
 
-&nbsp;
+1. **Annual Sales by Powertrain** *(default)*
+2. **Market Share**
+3. **Fleet Stock**
+4. **Emissions** *(includes diesel counterfactual line)*
+5. **ZET Penetration**
+6. **Sales by Segment** *(new — stacked area, 7 segments)*
+7. **Stock by Segment** *(new)*
+8. **Sales by Application** *(new — stacked area, 10 applications)*
+9. **Stock by Application** *(new)*
+
+Only the active tab renders; the chart fills the available width (taller, single-column).
+
+### B2. New chart components
+
+- `src/components/charts/SegmentSalesChart.tsx`
+- `src/components/charts/SegmentStockChart.tsx`
+- `src/components/charts/ApplicationSalesChart.tsx`
+- `src/components/charts/ApplicationStockChart.tsx`
+
+Reuse the existing `ChartCard` shell; CSV/PNG export already works. New `SEGMENT_COLORS` / `APPLICATION_COLORS` palettes added to `src/lib/constants/colors.ts`.
+
+### B3. URL/state persistence
+
+Active tab stored in `useState` (no router change). The 5 KPI cards above stay as-is.
+
+### B4. Untouched
+
+- KPI row, ScenarioPicker, InputPanel, ModelHealthBadge
+- Existing chart files keep their props (just imported by ChartTabs)
+- No restyle / visual redesign in this pass
+
+---
+
+## File Touch List
+
+**New**
+- `src/components/ChartTabs.tsx`
+- `src/components/charts/SegmentSalesChart.tsx`
+- `src/components/charts/SegmentStockChart.tsx`
+- `src/components/charts/ApplicationSalesChart.tsx`
+- `src/components/charts/ApplicationStockChart.tsx`
+- `scripts/extract_constants.py` *(dev tool)*
+- `scripts/validate_against_xlsx.ts` *(dev tool)*
+
+**Rewritten**
+- `src/lib/constants/extracted.ts` *(full regeneration from v3)*
+
+**Edited**
+- `src/lib/types.ts` — extend `AnnualResult`, add `targetYear` on `ScenarioConfig`, `Segment` / `Application` types
+- `src/lib/sim/stockEmissions.ts` — segment/application aggregation
+- `src/lib/sim/pttm.ts` — read `STEADY_STATE_SHARES[targetYear]`
+- `src/lib/constants/colors.ts` — segment & application palettes
+- `src/components/PolicyLevers.tsx` — target-year dropdown
+- `src/pages/Index.tsx` — replace chart grid with `<ChartTabs />`
+
+**Not touched**
+- `tco.ts`, `choiceModel.ts`, `sanityCheck.ts`, `scenarios.ts` (preset configs), Supabase schema, KPI row, ScenarioPicker, ModelHealthBadge.
+
+---
+
+## Open Items Worth Flagging
+
+1. The new `extracted.ts` will change simulation outputs vs. the current preview — KPI numbers and chart shapes will shift. Expected, but please review the BAU result before approving the BWS-1/BWS-2/BEST SQL inserts later.
+2. `Segment Wise Split ` has `#NUM!` errors in the source sheet. Extractor will fall back to recomputing from S-curve params rather than reading the broken cells.
+3. UI visual redesign (your "Claude-designed UI") deferred to a follow-up plan as you requested.
