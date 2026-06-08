@@ -1,4 +1,5 @@
-// Shared powertrain color palette — use everywhere across charts/legends/KPIs.
+// Shared colour palettes for charts/legends/KPIs.
+
 export const PT_COLORS: Record<string, string> = {
   Diesel:    '#8e8e93',
   CNG:       '#f5a623',
@@ -7,3 +8,5 @@ export const PT_COLORS: Record<string, string> = {
   BET:       '#34c759',
   'H2-FCET': '#af52de',
 };
+
+export { SEGMENT_COLORS, APPLICATION_COLORS } from './segments';
