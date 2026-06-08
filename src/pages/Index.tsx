@@ -7,11 +7,7 @@ import { useSimulation } from '@/hooks/useSimulation';
 import { Truck } from 'lucide-react';
 import { useEffect } from 'react';
 
-import AnnualSalesChart from '@/components/charts/AnnualSalesChart';
-import ShareChart from '@/components/charts/ShareChart';
-import StockChart from '@/components/charts/StockChart';
-import EmissionsChart from '@/components/charts/EmissionsChart';
-import ZETPenetrationChart from '@/components/charts/ZETPenetrationChart';
+import ChartTabs from '@/components/ChartTabs';
 
 
 const SCENARIO_LABEL: Record<string, string> = {
@@ -94,16 +90,12 @@ function DashboardContent() {
 
         <section>
           {simResult ? (
-            <div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-4"
-              style={{ opacity: isComputing ? 0.6 : 1, transition: 'opacity 0.2s' }}
-            >
-              <AnnualSalesChart years={simResult.years} scenarioLabel={scenarioLabel} />
-              <ShareChart years={simResult.years} scenarioLabel={scenarioLabel} />
-              <StockChart years={simResult.years} scenarioLabel={scenarioLabel} />
-              <EmissionsChart years={simResult.years} scenarioLabel={scenarioLabel} />
-              <ZETPenetrationChart years={simResult.years} policy={config.policy} scenarioLabel={scenarioLabel} />
-            </div>
+            <ChartTabs
+              result={simResult}
+              policy={config.policy}
+              scenarioLabel={scenarioLabel}
+              isComputing={isComputing}
+            />
           ) : (
             <div className="rounded-lg border border-dashed border-border bg-muted/30 flex items-center justify-center min-h-[400px]">
               <p className="text-muted-foreground text-sm">Running simulation…</p>
