@@ -43,18 +43,94 @@ console.log('  A=year | B=Diesel sale | C=Diesel stock | D=BET sale | E=BET stoc
 console.log('  F=H2ICE sale | G=H2ICE stock | H=FCET sale | I=FCET stock');
 console.log('  J=CNG sale | K=CNG stock | L=LNG sale | M=LNG stock | N=Total');
 
-// ── 2. B1 2045 TCO trace ────────────────────────────────────────────────────
-console.log('\n=== (2) B1 2045 TCO TRACE (₹/km) — targets Diesel 56.94, BET 49.68 ===');
+// ── 2. B1 2045 TCO TRACE — component-by-component vs v3 sheet ──────────────
+console.log('\n=== (2) B1 2045 TCO TRACE — component-by-component ===');
+console.log('v3 sheet header confirmation:', JSON.stringify(audit.b1_header_row));
+
+const tco2025 = computeTCO(ts, config.policy, BUCKETS, 2025, config.fixed, config.segmentBasePrices);
 const b1 = tco2045['B1'];
-if (b1) {
-  console.log(`  Diesel: ${b1.Diesel.tcoPerKm.toFixed(2)}  (target 56.94)`);
-  console.log(`  BET   : ${b1.BET.tcoPerKm.toFixed(2)}  (target 49.68)`);
-  console.log(`  ratio Diesel/BET = ${(b1.Diesel.tcoPerKm / b1.BET.tcoPerKm).toFixed(4)}`);
-  console.log('  breakdown (Diesel | BET):');
-  const k = ['capexPerKm','opexPerKm','fuelCostPerKm','maintPerKm','manpowerPerKm','tollPerKm'] as const;
-  for (const f of k) {
-    console.log(`    ${f.padEnd(18)} ${(b1.Diesel[f] as number).toFixed(2).padStart(8)} | ${(b1.BET[f] as number).toFixed(2).padStart(8)}`);
+const b1_2025 = tco2025['B1'];
+const B1_ANNUAL_KM = 108000;
+const B1_LIFE_YEARS = 7;
+const B1_TOTAL_KM = B1_ANNUAL_KM * B1_LIFE_YEARS;
+
+// Raw v3 block dump — show 2025 & 2045 side by side so flat vs escalating is obvious
+console.log('\n--- v3 raw rows 55-170 (col C=2025, col W=2045) ---');
+console.log('row   label                                              2025          2045');
+for (const c of audit.b1_tco_components as Array<{row:number; label:string; v2025:any; v2045:any}>) {
+  const f = (x: any) => x === null || x === undefined ? '       —'
+    : typeof x === 'number' ? x.toLocaleString(undefined,{maximumFractionDigits:3}).padStart(14)
+    : String(x).padStart(14);
+  console.log(`[${String(c.row).padStart(3)}] ${c.label.slice(0,48).padEnd(48)} ${f(c.v2025)} ${f(c.v2045)}`);
+}
+
+// Build {row -> v2045} lookup
+const v3 = new Map<number, number>();
+for (const c of audit.b1_tco_components as Array<{row:number; v2045:any}>) {
+  if (typeof c.v2045 === 'number') v3.set(c.row, c.v2045);
+}
+
+// Compute sim component breakdown (mirroring v3 row layout)
+function simBreakdown(r: typeof b1.Diesel) {
+  // sim's `capexPerKm` already includes interest+insurance (v3 row 74/142 also does)
+  // sim's `opexPerKm` = fuel + maint + manpower + toll. v3 splits: r75=fuel(+adblue for diesel), r76=O&M (maint+manpower+toll+insurance), r77=resale credit
+  const resaleCreditPerKm = (r.vehiclePrice * r.resalePct) / B1_TOTAL_KM;
+  const oemPerKm = r.maintPerKm + r.manpowerPerKm + r.tollPerKm; // insurance already inside capex on our side
+  return {
+    capex: r.capexPerKm,
+    fuel: r.fuelCostPerKm,
+    maint: r.maintPerKm,
+    manpower: r.manpowerPerKm,
+    toll: r.tollPerKm,
+    oem: oemPerKm,
+    resale: resaleCreditPerKm,
+    tco: r.tcoPerKm,
+  };
+}
+
+function compareTable(name: string, sim: ReturnType<typeof simBreakdown>, rows: {label:string; simKey:keyof typeof sim; v3Row:number; sign?:number}[]) {
+  console.log(`\n--- ${name} — Sim vs v3 (₹/km, 2045) ---`);
+  console.log('Component             Sim ₹/km   v3 ₹/km     Δ       v3-row');
+  let maxAbs = 0, maxLabel = '';
+  for (const r of rows) {
+    const s = (sim as any)[r.simKey] as number;
+    const ref = v3.get(r.v3Row);
+    if (ref === undefined) { console.log(`${r.label.padEnd(22)} ${s.toFixed(2).padStart(8)}  (v3 row ${r.v3Row} missing)`); continue; }
+    const sgn = r.sign ?? 1;
+    const sShow = s * sgn, refShow = ref * sgn;
+    const d = sShow - refShow;
+    if (Math.abs(d) > Math.abs(maxAbs)) { maxAbs = d; maxLabel = r.label; }
+    console.log(`${r.label.padEnd(22)} ${sShow.toFixed(2).padStart(8)}  ${refShow.toFixed(2).padStart(8)}  ${(d>=0?'+':'')}${d.toFixed(2).padStart(6)}   r${r.v3Row}`);
   }
+  console.log(`Largest |Δ|: ${maxLabel} (${maxAbs>=0?'+':''}${maxAbs.toFixed(2)} ₹/km)`);
+}
+
+if (b1) {
+  const dSim = simBreakdown(b1.Diesel);
+  compareTable('DIESEL B1 2045', dSim, [
+    { label: 'CAPEX (incl int+ins)', simKey: 'capex',    v3Row: 74 },
+    { label: 'OPEX Fuel (+adblue)',  simKey: 'fuel',     v3Row: 75 },
+    { label: 'O&M (maint+mp+toll)',  simKey: 'oem',      v3Row: 76 },
+    { label: '  └ maint',            simKey: 'maint',    v3Row: 55 },
+    { label: '  └ manpower (info)',  simKey: 'manpower', v3Row: 76 }, // no dedicated per-km row
+    { label: '  └ toll',             simKey: 'toll',     v3Row: 76 }, // toll lives inside r76
+    { label: 'Resale credit',        simKey: 'resale',   v3Row: 77, sign: -1 },
+    { label: 'TCO /km',              simKey: 'tco',      v3Row: 78 },
+  ]);
+
+  const bSim = simBreakdown(b1.BET);
+  compareTable('BET B1 2045', bSim, [
+    { label: 'CAPEX (incl int+ins)', simKey: 'capex',    v3Row: 142 },
+    { label: 'OPEX Energy',          simKey: 'fuel',     v3Row: 143 },
+    { label: 'O&M (maint+mp+toll)',  simKey: 'oem',      v3Row: 144 },
+    { label: '  └ maint',            simKey: 'maint',    v3Row: 57 },
+    { label: '  └ manpower (info)',  simKey: 'manpower', v3Row: 144 },
+    { label: '  └ toll',             simKey: 'toll',     v3Row: 144 },
+    { label: 'Resale credit',        simKey: 'resale',   v3Row: 145, sign: -1 },
+    { label: 'TCO /km',              simKey: 'tco',      v3Row: 146 },
+  ]);
+
+  console.log(`\nRatio Diesel/BET — sim ${(b1.Diesel.tcoPerKm/b1.BET.tcoPerKm).toFixed(4)} | v3 ${((v3.get(78)!)/(v3.get(146)!)).toFixed(4)}`);
 }
 
 // ── 3 & 4. Sales + Stock diff tables ────────────────────────────────────────
