@@ -250,7 +250,8 @@ export function computeTCO(
   for (const bucket of buckets) {
     const ptResults = {} as Record<Powertrain, TCOResult>;
     const dy = targetYear - 2025;
-    const tollPerKm = TOLL_BASE_PER_KM * Math.pow(1 + TOLL_GROWTH, dy);
+    const tollPerYear = TOLL_BASE_PER_YEAR_2025 * Math.pow(1 + TOLL_CAGR, dy);
+    const tollPerKm = tollPerYear / bucket.annualKm;
 
     for (const pt of POWERTRAINS) {
       const price = computeVehiclePrice(pt, bucket, targetYear, ts, policy, sbp);
@@ -271,7 +272,7 @@ export function computeTCO(
       const capex = price - resale + interest + insurance;
 
       const fuelPerKm = computeFuelCostPerKm(pt, bucket, targetYear, ts, policy, fp);
-      const maintPerKm = getMaintenancePerKm(pt, bucket);
+      const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear);
 
       let effectiveToll = tollPerKm;
       if (isZET(pt)) {
