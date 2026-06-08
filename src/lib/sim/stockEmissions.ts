@@ -13,6 +13,12 @@ import {
   PRE_2001_SCRAPPAGE_END_YEAR,
   EMISSION_FACTORS,
 } from '@/lib/constants/extracted';
+import {
+  SEGMENTS,
+  APPLICATIONS,
+  SEGMENT_OF_BUCKET,
+  APPLICATION_OF_BUCKET,
+} from '@/lib/constants/segments';
 import type { SimulationResult, AnnualResult } from '@/lib/types';
 import type { AnnualPTSales } from './pttm';
 import { START_YEAR, END_YEAR, YEAR_COUNT } from './timeSeries';
@@ -132,6 +138,46 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
       dieselStockPeakYear = year;
     }
 
+    // ── Segment / Application breakdowns ──
+    // Sales by bucket = per-bucket share × bucket TIV (proportional to tivShare2045).
+    const tivByBucket: Record<string, number> = {};
+    const totalShare = BUCKETS.reduce((s, b) => s + b.tivShare2045, 0);
+    for (const b of BUCKETS) {
+      tivByBucket[b.id] = tiv * (b.tivShare2045 / totalShare);
+    }
+
+    const salesBySegment: Record<string, number> = {};
+    const salesByApplication: Record<string, number> = {};
+    for (const seg of SEGMENTS) salesBySegment[seg] = 0;
+    for (const app of APPLICATIONS) salesByApplication[app] = 0;
+
+    const bucketShares = annualSales[i].sharesByBucket;
+    for (const b of BUCKETS) {
+      const sb = bucketShares[b.id];
+      let bucketSales = 0;
+      for (const pt of POWERTRAINS) bucketSales += sb[pt] * tivByBucket[b.id];
+      const seg = SEGMENT_OF_BUCKET[b.id];
+      const app = APPLICATION_OF_BUCKET[b.id];
+      salesBySegment[seg] = (salesBySegment[seg] ?? 0) + bucketSales;
+      salesByApplication[app] = (salesByApplication[app] ?? 0) + bucketSales;
+    }
+
+    // Stock by segment / application: distribute total stock across buckets by
+    // bucket tivShare (steady-state weight). A reasonable approximation until
+    // per-bucket stock history is tracked.
+    const totalStockAll = totalStock;
+    const stockBySegment: Record<string, number> = {};
+    const stockByApplication: Record<string, number> = {};
+    for (const seg of SEGMENTS) stockBySegment[seg] = 0;
+    for (const app of APPLICATIONS) stockByApplication[app] = 0;
+    for (const b of BUCKETS) {
+      const share = b.tivShare2045 / totalShare;
+      const seg = SEGMENT_OF_BUCKET[b.id];
+      const app = APPLICATION_OF_BUCKET[b.id];
+      stockBySegment[seg] = (stockBySegment[seg] ?? 0) + totalStockAll * share;
+      stockByApplication[app] = (stockByApplication[app] ?? 0) + totalStockAll * share;
+    }
+
     years.push({
       year,
       tiv,
@@ -142,6 +188,10 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
       totalEmissions,
       dieselCounterfactualEmissions,
       zetShare,
+      salesBySegment,
+      stockBySegment,
+      salesByApplication,
+      stockByApplication,
     });
 
     // Advance stock
