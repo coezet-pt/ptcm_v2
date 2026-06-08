@@ -162,7 +162,7 @@ export function computePTTM(
 
     // Gompertz PTs
     for (const pt of GOMPERTZ_PTS) {
-      const startYear = START_OF_SUPPLY[size]?.[pt] ?? 2025;
+      const startYear = PTTM_PILOT_START_YEAR[pt as keyof typeof PTTM_PILOT_START_YEAR];
       const W = PTTM_PILOT_SHARE[pt as keyof typeof PTTM_PILOT_SHARE] ?? 0.0001;
       const AB = shares2055[bucket.id]?.[pt] ?? 0;
       const Z = shares2045[bucket.id]?.[pt] ?? 0;
