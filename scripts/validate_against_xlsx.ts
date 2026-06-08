@@ -140,37 +140,38 @@ const fmt = (n: number) => (n >= 1000 ? Math.round(n).toLocaleString() : n.toFix
 const pct = (a: number, b: number) =>
   b === 0 ? (a === 0 ? 0 : Infinity) : ((a - b) / b) * 100;
 
-function diffTable(title: string, getSim: (y: number) => Record<string, number>, refKey: 'sale' | 'stock') {
+function diffTable(title: string, getSim: (y: number) => Record<string, number>, refKey: 'sale' | 'stock'): { flagged: number; total: number } {
   console.log(`\n=== ${title} (Δ% = sim − ref; * = |Δ|>${FLAG}%) ===`);
   console.log('Year   ' + PTS.map(p => p.padStart(22)).join(' '));
-  let flagged = 0;
+  let flagged = 0, total = 0;
   for (let year = 2025; year <= 2055; year++) {
     const refRow = audit.bau_reference[year] || audit.bau_reference[String(year)];
     if (!refRow) continue;
     const simRow = getSim(year);
     const cells = PTS.map(pt => {
       const sim = simRow[pt] ?? 0;
-      // refRow stored with sale keys (when refKey='sale') or stock keys
       const refKeyName = refKey === 'sale' ? pt : `${pt}_stock`;
       const refv = Number(refRow[refKeyName] ?? 0);
       const d = pct(sim, refv);
       const small = refv < 10 && Math.abs(sim - refv) < 10;
       const tag = Math.abs(d) > FLAG && !small ? '*' : ' ';
+      total++;
       if (tag === '*') flagged++;
       const dStr = isFinite(d) ? d.toFixed(1) + '%' : '—';
       return `${fmt(sim).padStart(9)}/${fmt(refv).padStart(9)}${tag}${dStr.padStart(7)}`;
     });
     console.log(`${year}  ${cells.join(' ')}`);
   }
-  console.log(`Flagged cells: ${flagged} / ${31 * PTS.length}`);
+  console.log(`Flagged cells: ${flagged} / ${total}`);
+  return { flagged, total };
 }
 
-diffTable('(3) BAU SALES — sim vs Output Summary', year => {
+const salesDiff = diffTable('(3) BAU SALES — sim vs Output Summary', year => {
   const row = sim.years.find(y => y.year === year);
   return row ? row.salesByPT as any : {};
 }, 'sale');
 
-diffTable('(4) BAU STOCK — sim vs Output Summary', year => {
+const stockDiff = diffTable('(4) BAU STOCK — sim vs Output Summary', year => {
   const row = sim.years.find(y => y.year === year);
   return row ? row.stockByPT as any : {};
 }, 'stock');
@@ -186,3 +187,47 @@ for (let year = 2025; year <= 2030; year++) {
     `${fmt(row.salesByPT['LNG']).padStart(8)} / ${fmt(Number(ref.LNG)).padStart(8)}`,
   );
 }
+
+// ── 6. Derived Gompertz a/b/c vs v3 literals ────────────────────────────────
+console.log('\n=== (6) GOMPERTZ PARAMS — sim-derived vs v3 literals ===');
+import { PTTM_PILOT_SHARE, PTTM_PILOT_START_YEAR } from '../src/lib/constants/extracted';
+const V3_LITERAL = {
+  BET:       { startYear: 2025, infl: 2031, a: 1.109,  b: 7.111, c: 0.1130, W: 0.0009052 },
+  'H2-ICE':  { startYear: 2028, infl: 2051, a: 0.0659, b: 6.491, c: 0.0917, W: 0.0001 },
+  'H2-FCET': { startYear: 2030, infl: 2051, a: 0.0616, b: 6.423, c: 0.1043, W: 0.0001 },
+} as const;
+// Use the bucket with the largest tivShare2045 as the representative
+const repBucket = [...BUCKETS].sort((x, y) => y.tivShare2045 - x.tivShare2045)[0];
+console.log(`Representative bucket: ${repBucket.id} (TIV share ${(repBucket.tivShare2045*100).toFixed(1)}%)`);
+console.log('PT        startYr  infl   a(sim/v3)         b(sim/v3)        c(sim/v3)         W(sim/v3)');
+for (const pt of ['BET','H2-ICE','H2-FCET'] as const) {
+  const lit = V3_LITERAL[pt];
+  const startYear = PTTM_PILOT_START_YEAR[pt];
+  const inflYear = (config.policy as any)[pt === 'BET' ? 'bet_inflection_year' : pt === 'H2-ICE' ? 'h2ice_inflection_year' : 'fcet_inflection_year'];
+  const W = PTTM_PILOT_SHARE[pt];
+  const AB = shares2055[repBucket.id]?.[pt] ?? 0;
+  // Mirror gompertzShare derivation:
+  const aInitial = AB;
+  const b = Math.log(Math.max(aInitial, W*1.01) / W);
+  const inflDelta = Math.max(inflYear - startYear, 1);
+  const c = -(1/inflDelta) * Math.log(Math.log(Math.max(aInitial, 0.1001)/0.1) / b);
+  const endDelta = 2055 - startYear;
+  const a = AB / Math.exp(-b * Math.exp(-c * endDelta));
+  const fmt2 = (x:number,d=4)=>x.toFixed(d).padStart(8);
+  console.log(`${pt.padEnd(9)} ${String(startYear).padEnd(7)} ${String(inflYear).padEnd(6)} ${fmt2(a)}/${fmt2(lit.a)}  ${fmt2(b)}/${fmt2(lit.b)}  ${fmt2(c)}/${fmt2(lit.c)}  ${fmt2(W,7)}/${fmt2(lit.W,7)}`);
+}
+
+// ── 7. Sanity checks + diff verdict ─────────────────────────────────────────
+import { runSanityChecks } from '../src/lib/sim/sanityCheck';
+const checks = runSanityChecks(sim as any);
+const passed = checks.filter(c => c.passed).length;
+console.log(`\n=== (7) SANITY CHECKS: ${passed}/${checks.length} passed ===`);
+for (const c of checks) console.log(`  [${c.passed ? 'OK ' : 'FAIL'}] ${c.name}: actual=${c.actual} expected=${c.expected}`);
+
+// BET 2045 share
+const y2045 = sim.years.find(y => y.year === 2045)!;
+const totalSales2045 = (Object.values(y2045.salesByPT) as number[]).reduce((s,n)=>s+n,0);
+console.log(`\nBET 2045 share: ${(y2045.salesByPT['BET']/totalSales2045*100).toFixed(1)}%  (target ~76%)`);
+
+console.log(`\n=== (8) DIFF TOTALS (|Δ|>${FLAG}%) ===`);
+console.log(`Sales: ${salesDiff.flagged}/${salesDiff.total}   Stock: ${stockDiff.flagged}/${stockDiff.total}   Combined: ${salesDiff.flagged+stockDiff.flagged}/${salesDiff.total+stockDiff.total}`);

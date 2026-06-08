@@ -289,6 +289,15 @@ export const WEIBULL_PEAK_YEAR = 2045;
 export const CNG_UNITS_2025 = 14892;
 export const LNG_UNITS_2025 = 607;
 
+// Gompertz pilot/start year per powertrain (v3 PTTM col S, rows 2-4).
+// Used as `startYear` in gompertzShare; supersedes START_OF_SUPPLY for the
+// Gompertz path so the inflection-year math matches the v3 workbook directly.
+export const PTTM_PILOT_START_YEAR = {
+  BET: 2025,
+  'H2-ICE': 2028,
+  'H2-FCET': 2030,
+} as const;
+
 // ===========================================================================
 // SCENARIO PRESET INFLECTION YEARS (10% share year per powertrain)
 // Source: 'Scenarios' sheet rows 20-21 + 'No change with year' V65/W65/X65
@@ -298,7 +307,7 @@ export type ScenarioName = 'BAU' | 'BWS-1' | 'BWS-2' | 'BEST';
 export const SCENARIO_INFLECTION_YEARS: Record<ScenarioName, {
   BET: number; 'H2-ICE': number; 'H2-FCET': number;
 }> = {
-  'BAU':   { BET: 2038, 'H2-ICE': 2050, 'H2-FCET': 2050 },
+  'BAU':   { BET: 2031, 'H2-ICE': 2051, 'H2-FCET': 2051 },
   'BWS-1': { BET: 2036, 'H2-ICE': 2049, 'H2-FCET': 2049 },
   'BWS-2': { BET: 2036, 'H2-ICE': 2049, 'H2-FCET': 2049 },
   'BEST':  { BET: 2032, 'H2-ICE': 2049, 'H2-FCET': 2049 },
@@ -377,9 +386,9 @@ export const BAU_POLICY = {
   electricity_subsidy_per_kwh: 0,
   toll_waiver_pct_first_5y: 0,
   toll_waiver_pct_next_5y: 0,
-  bet_inflection_year: 2038,
-  h2ice_inflection_year: 2050,
-  fcet_inflection_year: 2050,
+  bet_inflection_year: 2031,
+  h2ice_inflection_year: 2051,
+  fcet_inflection_year: 2051,
   h2_source_mix: 'green_only' as const,
   bet_resale_2046_plus: 0.40,
   diesel_price_5pct_yoy_after_2045: false,

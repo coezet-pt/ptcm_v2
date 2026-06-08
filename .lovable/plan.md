@@ -1,65 +1,78 @@
-# Turn 5 — Three TCO stale-constant fixes + revalidate
+# Turn 6 — Refresh Gompertz/Weibull parameter constants from v3 PTTM
 
-Independent, additive, low-risk. One validation at the end. Banners stay on. `choiceModel.ts` untouched.
+One change, parameter constants only. No edits to `tco.ts`, `choiceModel.ts`, or the Gompertz/Weibull math in `pttm.ts`. Banners stay on.
 
-## Fix 1 — Maintenance escalation (`src/lib/sim/tco.ts`)
-
-`getMaintenancePerKm(pt, bucket)` currently returns flat per-km values from `bucket.maintDieselPerKm` (Diesel), `bucket.maintCngLngH2icePerKm` (CNG/LNG/H2-ICE), and `bucket.maintDieselPerKm * 0.6` (BET and FCET — the BET=1.68 vs v3=6.64 bug).
-
-Change to year-escalating, with **dedicated** BET and FCET tracks:
+## Source (v3 PTTM cols S–AB, rows 2–4)
 
 
-| Powertrain         | Base 2025 (₹/km)                         | CAGR  |
-| ------------------ | ---------------------------------------- | ----- |
-| Diesel             | `bucket.maintDieselPerKm` (B1=2.80)      | 4.00% |
-| CNG / LNG / H2-ICE | `bucket.maintCngLngH2icePerKm` (B1=3.30) | 4.00% |
-| BET                | 5.12 (incl. battery replacement)         | 1.31% |
-| H2-FCET            | 5.76                                     | 1.03% |
+| Param                  | BET       | H2-ICE | H2-FCET |
+| ---------------------- | --------- | ------ | ------- |
+| Pilot year (col S)     | 2025      | 2028   | 2030    |
+| Saturation a (col T)   | 1.109     | 0.0659 | 0.0616  |
+| Pilot share W (col V)  | 0.0009052 | 0.0001 | 0.0001  |
+| Displacement b (col W) | 7.111     | 6.491  | 6.423   |
+| Growth rate c (col X)  | 0.1130    | 0.0917 | 0.1043  |
+| Inflection (col U)     | 2031      | 2051   | 2051    |
 
 
-Constants `MAINT_BET_BASE_2025 = 5.12`, `MAINT_BET_CAGR = 0.0131`, `MAINT_FCET_BASE_2025 = 5.76`, `MAINT_FCET_CAGR = 0.0103`, `MAINT_DIESEL_CAGR = 0.04`, `MAINT_OTHER_ICE_CAGR = 0.04` at the top of `tco.ts` next to the existing manpower/toll constants. Signature becomes `getMaintenancePerKm(pt, bucket, year)`, returning `base * (1 + cagr)^(year-2025)`.
+Weibull (CNG/LNG, cols S6–AB8): alpha=5, peak=2045, phase-out linear to 0 by 2055.
 
-Note in a code comment that these are calibrated from B1 (Rigid 12-19T) and per-bucket values may differ; revisit once we have other-bucket TCO sheets parsed.
+## Fix A — Inflection years (the big one)
 
-## Fix 2 — Toll as ₹/year per bucket (`src/lib/sim/tco.ts`)
+`src/lib/constants/extracted.ts`:
 
-Replace `TOLL_BASE_PER_KM = 2.5`, `TOLL_GROWTH = 0.025` with `TOLL_BASE_PER_YEAR_2025 = 572_400` and `TOLL_CAGR = 0.01`.
+- `SCENARIO_INFLECTION_YEARS.BAU`: BET `2038→2031`, H2-ICE `2050→2051`, H2-FCET `2050→2051`.
+- `BAU_POLICY` (lines 380–382): same three values.
+- Leave BWS-1/BWS-2/BEST overrides as-is (they're policy-driven shifts, not v3 BAU calibration). BEST already at 2032 for BET.
 
-In `computeTCO` per-bucket loop:
+## Fix B — Pilot start year for Gompertz path
+
+Currently `startYear = START_OF_SUPPLY[size][pt]` (varies 2027–2028 for BET, 2036 for H2-ICE, 2040 for H2-FCET). v3 uses fixed pilot years 2025 / 2028 / 2030. The mismatch on H2-ICE (2036 vs 2028) and H2-FCET (2040 vs 2030) is significant.
+
+Add to `extracted.ts`:
 
 ```ts
-const tollPerYear = TOLL_BASE_PER_YEAR_2025 * Math.pow(1 + TOLL_CAGR, dy);
-const tollPerKm = tollPerYear / bucket.annualKm; // per-bucket, not 108k
+export const PTTM_PILOT_START_YEAR = {
+  BET: 2025, 'H2-ICE': 2028, 'H2-FCET': 2030,
+} as const;
 ```
 
-`effectiveToll` ZET-waiver math stays as-is (multiplies the per-km figure). All powertrains use the same per-year base (v3 rows 59 & 60 are identical).
+In `src/lib/sim/pttm.ts` Gompertz loop only, replace
+`const startYear = START_OF_SUPPLY[size]?.[pt] ?? 2025;`
+with
+`const startYear = PTTM_PILOT_START_YEAR[pt as keyof typeof PTTM_PILOT_START_YEAR];`
 
-## Fix 3 — Diesel vehicle price CAGR 3.0 → 3.61% (`src/lib/sim/tco.ts`)
+`START_OF_SUPPLY` stays unchanged and is still used by the Weibull path and elsewhere. This is a constants/wiring change, not a formula change.
 
-`computeVehiclePrice` uses `Math.pow(1.03, dy)` in five places (Diesel, CNG, LNG, BET diesel-base portion, H2-ICE, H2-FCET diesel-base portion). Replace the literal `1.03` with `DIESEL_PRICE_CAGR_MULT = 1 + 0.0361` (single constant at the top). Verify: 2,750,000 × 1.0361^20 ≈ 5,590,300 ✓.
+## Fix C — Confirm Weibull + pilot share
 
-`BS_VII_PRICE_BUMP_2030` add-on stays unchanged. The constant fix flows automatically into BET/FCET because they reuse `dieselBase`.
+Already match v3, no edits:
 
-## Files touched
+- `WEIBULL_SHAPE_ALPHA = 5` ✓
+- `WEIBULL_PEAK_YEAR = 2045` ✓
+- Phase-out to 0 by 2055 — `phaseOut = (2055 - year) / 10` in `weibullShare` ✓
+- `PTTM_PILOT_SHARE` = {0.0009052, 0.0001, 0.0001} ✓
 
-- `src/lib/sim/tco.ts` — only. Constants block + `getMaintenancePerKm` signature + `computeVehiclePrice` literal swap + `computeTCO` toll lines.
+## Open item flagged, not fixed this turn
 
-Not touched: `extracted.ts`, `choiceModel.ts`, `pttm.ts`, `useSimulation.ts`, `segments.ts`, UI, scripts (harness already prints what we need).
+v3 hard-codes saturation a, displacement b, and growth rate c. The current `gompertzShare` derives all three from `share2045`, `share2055`, `pilotShare`, `startYear`, `inflectionYear`. Per your instruction "don't touch the Gompertz formula," I'm leaving derivation in place — the inflection-year shift drives most of the residual. Will compare sim-derived a/b/c against v3's literals in the harness output so we can decide next turn whether to switch to literal params.
 
 ## Validation
 
-Single run of `bun run scripts/validate_against_xlsx.ts`. Paste back:
+Re-run `bun run scripts/validate_against_xlsx.ts`. Paste:
 
-1. B1 2045 TCO trace — both component tables (Diesel target ≈59.24, BET target ≈45.44, ratio target ≈1.30).
-2. Full BAU sales diff table (years 2025-2055, all 6 PTs).
-3. Resulting BET TCO factor reported in the runtime check (expected to drop from 107 toward ~7).
+1. Full BAU sales diff table (2025–2055, all 6 PTs).
+2. Sim-derived vs v3-literal a/b/c for BET/H2-ICE/H2-FCET (new debug print in harness, ~10 lines).
+3. BET 2045 share (target ~76%).
 
-No further code changes this turn regardless of residual diff — collect evidence, then decide Turn 6.
+No further code changes regardless of residual. Decide Turn 7 from evidence.
 
-&nbsp;
+## Files touched
 
-Approved — ship the three fixes. But update the expected target: the 7.186 BET factor was from v4. In v3, BET 2045 TCO is 45.44 (ratio 1.30), so the correct BET TCO factor is ~58-60, not 7. Do NOT treat a post-fix factor of ~58 as a bug — it matches the v3 ratio.
+- `src/lib/constants/extracted.ts` — inflection-year values + new `PTTM_PILOT_START_YEAR` export.
+- `src/lib/sim/pttm.ts` — single line in Gompertz loop swapping `START_OF_SUPPLY` for `PTTM_PILOT_START_YEAR`.
+- `scripts/validate_against_xlsx.ts` — add a/b/c derived-vs-v3 print block.
 
-The real question for the diff: after this fix, does BAU BET 2045 share land near the v3 Output Summary value of ~57% (537,962 / 707,250)? If BET still overshoots toward 80-100%, the problem is NOT TCO — it's that the other 4 choice factors (price/payload/TAT/range) aren't pulling BET down enough in v3, OR the normalization needs the supply-readiness cap. Flag that in the diff but don't fix it this turn.
-
-So paste: B1 2045 TCO trace (targets Diesel 59.2 / BET 45.4), the BET *share* at 2045 (target ~57%), and the full sales diff. The TCO factor number itself is now just informational — the share is what matters.
+Not touched: `tco.ts`, `choiceModel.ts`, Gompertz/Weibull math, scenario presets BWS-1/BWS-2/BEST, START_OF_SUPPLY.  
+  
+Approved. One addition to the validation output: also print (a) which sanity checks pass/fail with the count, and (b) the total number of diff cells exceeding 2%. I want the numeric verdict, not an assessment.  
