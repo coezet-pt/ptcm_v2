@@ -166,7 +166,7 @@ function diffTable(title: string, getSim: (y: number) => Record<string, number>,
   return { flagged, total };
 }
 
-diffTable('(3) BAU SALES — sim vs Output Summary', year => {
+const salesDiff = diffTable('(3) BAU SALES — sim vs Output Summary', year => {
   const row = sim.years.find(y => y.year === year);
   return row ? row.salesByPT as any : {};
 }, 'sale');
