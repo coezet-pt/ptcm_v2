@@ -135,6 +135,7 @@ audit = {
     "sum_violations": sum_violations,
     "bau_reference": bau_ref,
     "tiv_estimates": tiv_estimates,
+    "output_summary_headers": output_summary_headers,
 }
 OUT.write_text(json.dumps(audit, indent=2, default=str))
 
