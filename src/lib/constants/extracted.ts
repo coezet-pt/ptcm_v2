@@ -290,12 +290,20 @@ export const CNG_UNITS_2025 = 14892;
 export const LNG_UNITS_2025 = 607;
 
 // Gompertz pilot/start year per powertrain (v3 PTTM col S, rows 2-4).
-// Used as `startYear` in gompertzShare; supersedes START_OF_SUPPLY for the
-// Gompertz path so the inflection-year math matches the v3 workbook directly.
+// Kept for backwards reference — Gompertz loop now reads from GOMPERTZ_PARAMS_BY_PT.
 export const PTTM_PILOT_START_YEAR = {
   BET: 2025,
   'H2-ICE': 2028,
   'H2-FCET': 2030,
+} as const;
+
+// v3 PTTM rows 2-4, cols T (saturation a), V (initial pilot share W),
+// W (displacement b), X (growth rate c). GLOBAL — not per-bucket (PTTM sheet
+// has exactly one parameter row per Gompertz powertrain).
+export const GOMPERTZ_PARAMS_BY_PT = {
+  BET:       { a: 1.1089, b: 7.1107, c: 0.11299, W: 0.0009052, startYear: 2025 },
+  'H2-ICE':  { a: 0.0659, b: 6.4914, c: 0.09171, W: 0.0001,    startYear: 2028 },
+  'H2-FCET': { a: 0.0616, b: 6.4228, c: 0.10427, W: 0.0001,    startYear: 2030 },
 } as const;
 
 // ===========================================================================
