@@ -276,3 +276,86 @@ for (const pt of ['BET','H2-ICE','H2-FCET'] as const) {
 
 console.log(`\n=== VERDICT ===`);
 console.log(`Sanity ${passed}/${checks.length} passed. Diff cells over 2%: ${salesDiff.flagged+stockDiff.flagged}/${salesDiff.total+stockDiff.total}.`);
+
+// ── 11. Choice factor trace — B1 2045 ──────────────────────────────────────
+console.log('\n=== (11) CHOICE FACTOR TRACE — B1 2045 ===');
+import { POWERTRAIN_RATINGS, START_OF_SUPPLY } from '../src/lib/constants/extracted';
+const ELAST = { TCO: 9.0, vehiclePrice: 8.83, ratedPayload: 7.17, tatGradeability: 5.5, rangeFillingTime: 7.5 };
+const GM = 1.5;
+const b1Bucket = BUCKETS.find(b => b.id === 'B1')!;
+const dieselPayload = b1Bucket.gvw - b1Bucket.ulw;
+const PT_PEN = (pt: string) => ({
+  'Diesel': 0,
+  'CNG': 200,
+  'LNG': 300,
+  'BET': b1Bucket.betBatteryKWh * 8,
+  'H2-ICE': b1Bucket.h2TankKg * 40,
+  'H2-FCET': b1Bucket.fcetFuelCellKW * 4 + b1Bucket.fcetBatteryKWh * 8 + b1Bucket.h2TankKg * 40,
+} as any)[pt];
+const dTco = tco2045['B1']['Diesel'].tcoPerKm;
+const dPrice = tco2045['B1']['Diesel'].vehiclePrice;
+const dTAT = POWERTRAIN_RATINGS.tatGradeability['Diesel'];
+const dRng = POWERTRAIN_RATINGS.rangeFillingTime['Diesel'];
+
+const trace: any[] = [];
+for (const pt of ['Diesel','BET','H2-ICE','H2-FCET'] as const) {
+  const r = tco2045['B1'][pt];
+  const supplyYear = (START_OF_SUPPLY as any)[b1Bucket.size]?.[pt] ?? 2025;
+  const plRatio = Math.max(1, dieselPayload - PT_PEN(pt)) / dieselPayload;
+  const tatR = POWERTRAIN_RATINGS.tatGradeability[pt];
+  const rngR = POWERTRAIN_RATINGS.rangeFillingTime[pt];
+  const fTCO = Math.exp(ELAST.TCO * GM * (dTco / r.tcoPerKm - 1));
+  const fPrice = Math.exp(ELAST.vehiclePrice * GM * (dPrice / r.vehiclePrice - 1));
+  const fPL = Math.exp(ELAST.ratedPayload * GM * (plRatio - 1));
+  const fTAT = Math.exp(ELAST.tatGradeability * GM * (tatR / dTAT - 1));
+  const fRng = Math.exp(ELAST.rangeFillingTime * GM * (dRng / rngR - 1));
+  const score = fTCO + fPrice + fPL + fTAT + fRng;
+  trace.push({ pt, supplyYear, tco: r.tcoPerKm, price: r.vehiclePrice, fuel: r.fuelCostPerKm, plRatio,
+    fTCO, fPrice, fPL, fTAT, fRng, score });
+}
+const totalScore = trace.reduce((s,t)=>s+t.score,0);
+trace.forEach(t => t.share = t.score / totalScore);
+
+const colHdr = trace.map(t => t.pt.padStart(10)).join(' ');
+const row = (lbl: string, fmt: (t:any)=>string) =>
+  console.log(lbl.padEnd(22) + trace.map(t => fmt(t).padStart(10)).join(' '));
+console.log(' '.repeat(22) + colHdr);
+row('Supply start year',   t => String(t.supplyYear));
+row('TCO ₹/km',             t => t.tco.toFixed(2));
+row('VehiclePrice ₹M',      t => (t.price/1e6).toFixed(2));
+row('FuelCost ₹/km',        t => t.fuel.toFixed(2));
+row('PayloadRatio',         t => t.plRatio.toFixed(3));
+console.log('─ factors exp(...) ──');
+row(' TCO',                 t => t.fTCO.toFixed(3));
+row(' vehiclePrice',        t => t.fPrice.toFixed(3));
+row(' ratedPayload',        t => t.fPL.toFixed(3));
+row(' tatGradeability',     t => t.fTAT.toFixed(3));
+row(' rangeFillingTime',    t => t.fRng.toFixed(3));
+console.log('─ score / share ─────');
+row(' score (sum)',         t => t.score.toFixed(2));
+row(' share',               t => (t.share*100).toFixed(2) + '%');
+
+for (const pt of ['H2-ICE','H2-FCET'] as const) {
+  const t = trace.find(x => x.pt === pt)!;
+  const items = [['TCO',t.fTCO],['vehiclePrice',t.fPrice],['ratedPayload',t.fPL],['tatGradeability',t.fTAT],['rangeFillingTime',t.fRng]] as [string,number][];
+  items.sort((a,b)=>b[1]-a[1]);
+  console.log(`Largest factor for ${pt}: ${items[0][0]} = ${items[0][1].toFixed(3)}`);
+}
+
+// ── 12. B1 2045 H2 TCO — sim vs v3 ─────────────────────────────────────────
+console.log('\n=== (12) B1 2045 H2 TCO — sim vs v3 (user-provided ground truth) ===');
+const V3_TCO_B1_2045 = { Diesel: 59.24, CNG: 62.58, LNG: 61.75, BET: 45.44, 'H2-ICE': 59.38, 'H2-FCET': 61.70 } as const;
+console.log('PT        sim TCO ₹/km   v3 TCO ₹/km    Δ');
+for (const pt of ['Diesel','BET','H2-ICE','H2-FCET','CNG','LNG'] as const) {
+  const s = tco2045['B1'][pt].tcoPerKm;
+  const v = V3_TCO_B1_2045[pt];
+  console.log(`${pt.padEnd(9)} ${s.toFixed(2).padStart(8)}      ${v.toFixed(2).padStart(8)}     ${(s-v>=0?'+':'')}${(s-v).toFixed(2)}`);
+}
+// H2 fuel cost sanity: green H2 ~₹546.50/kg + compression ₹175/kg = ~₹721.5/kg
+// H2-ICE: ₹/km = 721.5 / h2iceKmPerKg = 721.5/15.6 = ₹46.25/km
+// H2-FCET: ₹/km = 721.5 / fcetKmPerKg = 721.5/20.8 = ₹34.69/km
+console.log('Expected 2025-base H2 fuel cost (₹546.5/kg green + ₹175/kg compression):');
+console.log(`  H2-ICE  @ ${b1Bucket.h2iceKmPerKg} km/kg → ${(721.5/b1Bucket.h2iceKmPerKg).toFixed(2)} ₹/km (2025 basis)`);
+console.log(`  H2-FCET @ ${b1Bucket.fcetKmPerKg} km/kg → ${(721.5/b1Bucket.fcetKmPerKg).toFixed(2)} ₹/km (2025 basis)`);
+console.log(`  sim H2-ICE fuel/km @ 2045: ${tco2045['B1']['H2-ICE'].fuelCostPerKm.toFixed(2)}`);
+console.log(`  sim H2-FCET fuel/km @ 2045: ${tco2045['B1']['H2-FCET'].fuelCostPerKm.toFixed(2)}`);
