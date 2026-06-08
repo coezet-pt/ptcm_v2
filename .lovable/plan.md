@@ -1,98 +1,86 @@
+# Turn 8 — Diagnose H2-ICE/H2-FCET 2045 overshoot in computeShares (no code logic changes)
 
-# Turn 7 — Switch Gompertz to v3 literal a/b/c + dump stale sanity thresholds
+Read-only diagnosis. We confirmed in Turn 7 that Gompertz 2055 literals (a=0.066/0.062) match v3's 2055 shares for H2-ICE/H2-FCET exactly. The leak is at the 2045 target Z fed by `computeShares` — sim produces 3.42% / 2.80% vs v3's 1.68% / 1.61%. Goal this turn: surface the 5 raw choice factors + score sum + normalized share for one representative bucket at 2045, side by side for Diesel / BET / H2-ICE / H2-FCET. No formula or constant edits.
 
-Two scoped changes; one validation run. Banners stay on.
+## What to add
 
-## Confirmed: v3 Gompertz params are GLOBAL, not per-bucket
+### `scripts/validate_against_xlsx.ts` — new section (11)
 
-PTTM sheet has exactly 3 parameter rows (rows 2–4 of cols S–AB) for BET, H2-ICE, H2-FCET. No per-bucket variant. Per-bucket `PTTM 2045 SS (2)` is downstream targets, not parameters. So one literal set per powertrain is correct.
-
-## Part 1 — Use literal a/b/c in `gompertzShare`
-
-### New constant in `src/lib/constants/extracted.ts`
-
-```ts
-// v3 PTTM rows 2-4, cols T (a), V (W), W (b), X (c). Global, not per-bucket.
-export const GOMPERTZ_PARAMS_BY_PT = {
-  BET:       { a: 1.1089, b: 7.1107, c: 0.11299, W: 0.0009052, startYear: 2025 },
-  'H2-ICE':  { a: 0.0659, b: 6.4914, c: 0.09171, W: 0.0001,    startYear: 2028 },
-  'H2-FCET': { a: 0.0616, b: 6.4228, c: 0.10427, W: 0.0001,    startYear: 2030 },
-} as const;
-```
-
-This supersedes the separate `PTTM_PILOT_SHARE` and `PTTM_PILOT_START_YEAR` consumers in `pttm.ts` (those exports stay for backwards-reference but the Gompertz loop reads from `GOMPERTZ_PARAMS_BY_PT`).
-
-### `src/lib/sim/gompertzShare` change
-
-Currently `gompertzShare` derives `a`, `b`, `c` from `share2055`, `share2045`, `pilotShare`, `startYear`, `inflectionYear`, then applies a quadratic correction to force the curve through `share2045`.
-
-New behavior:
-
-1. If literal params exist for the powertrain, use **literal `b` and `c` directly** for the curve shape. Then recompute `a` as the per-bucket normalization so the un-corrected curve hits `share2055` at 2055:
-
-    ```
-    normDenom = exp(-b * exp(-c * (2055 - startYear)))
-    a = share2055 / normDenom
-    gompertzMain(y) = a * exp(-b * exp(-c * (y - startYear)))
-    ```
-
-    This preserves v3's shape (which is what was wrong — derived `c` was 4× too steep for H2-ICE/H2-FCET) while still landing on the bucket-specific 2055 target.
-
-2. Keep the existing quadratic correction term so the final curve passes exactly through `share2045` at 2045 (unchanged math, but now applied on top of the literal-shaped main curve).
-
-3. Fallback path: if a powertrain has no entry in `GOMPERTZ_PARAMS_BY_PT`, derive as today.
-
-### `computePTTM` call site
-
-Change is local to the Gompertz loop in `src/lib/sim/pttm.ts`:
-
-- Resolve `{startYear, W}` from `GOMPERTZ_PARAMS_BY_PT[pt]` instead of `PTTM_PILOT_START_YEAR` + `PTTM_PILOT_SHARE`. `inflectionYear` still comes from policy (used only by the quadratic-correction branch; literal params don't need it for the main curve, but the correction term keeps using it as the pivot point — keep as-is).
-- Pass the literal `{a, b, c}` into `gompertzShare`.
-
-No edits to `tco.ts`, `choiceModel.ts`, `stockEmissions.ts`, scenarios, or UI.
-
-## Part 2 — Sanity-threshold-vs-v3 dump in harness (READ-ONLY)
-
-Do NOT change any threshold in `src/lib/sim/sanityCheck.ts` or `BAU_BASELINE_CHECKS` in `extracted.ts`.
-
-Add a new block at the end of `scripts/validate_against_xlsx.ts` that emits a static table:
+Iterate Diesel, BET, H2-ICE, H2-FCET on bucket B1 at year=2045. For each PT, mirror the exact arithmetic in `src/lib/sim/choiceModel.ts` (ELASTICITIES table + GLOBAL_MULTIPLIER 1.5 + payloadRatio + range_filling_concern policy guard) and print a single table:
 
 ```
-=== (9) SANITY THRESHOLDS vs v3 ACTUALS (no changes made) ===
-check                  threshold              v3 actual          stale?
-total_sales_2025       262,023–272,717        267,370            OK
-total_sales_2045       693,105–721,395        707,250            OK
-total_sales_2055       1,009,233–1,050,427    1,029,830          OK
-zet_share_2045         10%–45%                ~84.0% (BET+H2 of total) STALE
-zet_share_2055         30%–70%                ~100% (diesel→0)         STALE
-diesel_2025_units      240,000–270,000        251,629            OK
-cng_share_2030         1%–15%                 6.03% (19,471/322,721)   OK
-cng_share_2045         ≥2%                    4.91%                    OK
-cng_share_2055         ≤0.5%                  0% (full phase-out)      OK
-lng_share_2030         ≥0.5%                  0.25% (802/322,721)      STALE
-lng_share_2045         ≥1.5%                  0.48%                    STALE
-lng_share_2055         ≤0.5%                  0%                       OK
+=== (11) CHOICE FACTOR TRACE — B1 2045 ===
+                       Diesel   BET     H2-ICE  H2-FCET
+TCO ₹/km               XX.XX    XX.XX   XX.XX   XX.XX
+vehiclePrice ₹         X.XXM    X.XXM   X.XXM   X.XXM
+─ factors (exp(...)) ─
+ TCO                   1.000    7.XX    YY.YY   YY.YY
+ vehiclePrice          1.000    0.XX    0.XX    0.XX
+ ratedPayload          1.000    0.XX    0.XX    0.XX
+ tatGradeability       1.000    X.XX    0.XX    X.XX
+ rangeFillingTime      1.000    0.XX    1.00    1.00
+─ score (sum) ─        S_d      S_bet   S_h2i   S_fcet
+─ share (norm) ─       XX.X%    XX.X%   3.42%   2.80%
 ```
 
-v3 actuals are computed from `audit.bau_reference` rows for 2025/2030/2045/2055 (totals = sum of Diesel+CNG+LNG+BET+H2-ICE+H2-FCET; ZET = (BET+H2-ICE+H2-FCET)/total). Compute these in the harness, do not hardcode.
+Plus a one-line `Largest factor for H2-ICE/H2-FCET: <name> = <value>` so the dominant contributor is obvious. Also include the inputs to the H2 factors that v3 may have stale on our side:
 
-`stale?` flag: print `STALE` when v3 actual falls outside the current threshold band; `OK` otherwise. Pure observational output.
+- `h2TankKg` and `fcetFuelCellKW` from `bucket.B1` (for payload penalty math).
+- `POWERTRAIN_RATINGS.tatGradeability` and `.rangeFillingTime` for H2-ICE/H2-FCET vs Diesel.
+- `START_OF_SUPPLY['15T Rigid' or B1.size]['H2-ICE'/'H2-FCET']` — verify supply-gate is open at 2045.
+
+### Section (12) — H2 TCO vs v3 B1 sheet
+
+The audit already has `b1_tco_components` (rows 55–170 of B1 sheet). v3's B1 sheet has dedicated component rows for H2-ICE around rows ~95–115 and H2-FCET around ~165–185 (workbook varies — print whatever is in the audit). Emit:
+
+```
+=== (12) B1 2045 H2 TCO — sim vs v3 ===
+PT       sim TCO ₹/km   v3 TCO ₹/km   Δ
+H2-ICE   XX.XX          YY.YY         +/-Z.ZZ
+H2-FCET  XX.XX          YY.YY         +/-Z.ZZ
+```
+
+If the v3 H2 TCO rows aren't in the current `b1_tco_components` dump (we only stored Diesel + BET rows for Turn 4), extend `scripts/extract_constants.py` to also capture rows 95–115 (H2-ICE block) and 155–185 (H2-FCET block) labeled by sheet col A, and re-run the extractor — that's a data-collection change to `scripts/`, not to the simulation code. If the workbook isn't accessible from the sandbox this run, fall back to "v3 row missing — extend extractor next turn" and print just the sim side.
+
+## Strict non-scope
+
+- No edits to `choiceModel.ts`, `tco.ts`, `pttm.ts`, `extracted.ts`, `sanityCheck.ts`, `BAU_BASELINE_CHECKS`, scenarios, UI.
+- No threshold updates (the 4 stale sanity bands stay stale — re-derive after H2/LNG fixed).
+- Banners stay on.
+
+## What to paste back
+
+1. Section (11) factor table.
+2. Section (12) H2 TCO comparison (or the extractor-extension note if v3 H2 rows aren't yet captured).
+3. The current full sanity & diff verdict line (no change expected from Turn 7's 9/12 and 313/372 — just confirms harness is the only thing edited).
+
+We use the factor table to identify which of the two hypotheses is right:
+
+- **Hypothesis A** (H2 TCO too low → H2 TCO factor too high): TCO column on H2 will be visibly lower than v3 row, and the `TCO` factor for H2 will be the dominant term (>>1).
+- **Hypothesis B** (supply-readiness not applied to 2045 target): H2 factors look plausible but `rangeFillingTime`/`tatGradeability` for H2 won't be penalized vs v3's penalty schedule, or `START_OF_SUPPLY` lets H2 in too freely.
+
+Decide Turn 9 fix from the numbers.
 
 ## Files touched
 
-- `src/lib/constants/extracted.ts` — add `GOMPERTZ_PARAMS_BY_PT`.
-- `src/lib/sim/pttm.ts` — `gompertzShare` body + Gompertz loop in `computePTTM`.
-- `scripts/validate_against_xlsx.ts` — append section (9).
+- `scripts/validate_against_xlsx.ts` — append sections (11) and (12).
+- `scripts/extract_constants.py` — optional, only if H2 rows aren't in `b1_tco_components` yet.
+- `scripts/extracted_audit.json` — regenerated by the extractor if (and only if) the python script ran.
 
-Not touched: `sanityCheck.ts`, `BAU_BASELINE_CHECKS`, `tco.ts`, `choiceModel.ts`, scenarios, UI.
+Nothing under `src/` changes.  
+  
+Approved — run the section (11) factor trace and (12) H2 TCO comparison. I've pulled the v3 ground truth so you can hardcode it into section (12) directly (the block order in B1 sheet is Diesel→CNG→LNG→H2-ICE→BET→FCET):
 
-## Validation
+**v3 B1 2045 TCO/km targets:**
 
-Single run of `bun run scripts/validate_against_xlsx.ts`. Paste back:
+- H2-ICE = 59.38 ₹/km (row 129)
+- H2-FCET = 61.70 ₹/km (row 163)
+- (for reference: Diesel 59.24, CNG 62.58, LNG 61.75, BET 45.44)
 
-1. Full BAU sales diff (years 2025–2055, all 6 PTs) — section (3).
-2. BET / H2-ICE / H2-FCET 2045 shares (targets: BET ~76%, H2-ICE ~1.7%, H2-FCET ~1.6% per v3 row 23/AB).
-3. The (9) threshold-vs-v3 table.
-4. Numeric verdict line: `Sanity X/12 passed. Diff cells over 2%: N/372.`
+Key expectation: in v3, H2-ICE TCO ≈ diesel (ratio 1.0, factor ~0.97) and H2-FCET is *more expensive* than diesel (factor ~0.58). So H2 should get NO cost advantage. If your sim's H2 TCO comes out below ~59, that's the bug — the H2 TCO factor flips above 1 and inflates the share.
 
-No further code changes regardless of residual.
+In section (11), specifically print the H2-ICE and H2-FCET **TCO ₹/km** and **fuel/energy cost per km** — I expect the H2 fuel cost is too low (stale H2 price or wrong kg/km). Compare your H2 fuel cost against what ₹546/kg green H2 + ₹175/kg compression implies at the bucket's H2 efficiency.
+
+Don't fix anything — just print. Keep banners on, leave thresholds stale.
+
+&nbsp;
