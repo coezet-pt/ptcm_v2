@@ -1,145 +1,134 @@
-# PTCM v3 — Backend Re-Extraction + Tabbed Chart Selector
+# Two focused turns: (1) Preliminary label, (2) Full extracted.ts regeneration
 
-Two threads: **(A)** rewrite the data layer from the new workbook, **(B)** swap the 5-chart grid for a tab-bar selector showing one chart at a time. UI polish stays for later.
+## Turn 1 — Tag placeholder tabs (tiny)
+
+Add a `preliminary` flag to the 4 derived tabs so users don't mistake them for validated workbook output.
+
+**Edit** `src/components/ChartTabs.tsx`:
+
+- Add `preliminary?: true` to the TABS entries for `seg-sales`, `seg-stock`, `app-sales`, `app-stock`.
+- In `TabsTrigger`, when `preliminary`, render the label with a small grey `(preliminary)` suffix in `text-[10px] text-muted-foreground ml-1`.
+- Above each preliminary chart, render a single line: *"Preliminary grouping — uses vehicle size / use-case from BUCKETS. Will switch to the workbook's formal 7-segment / 10-application taxonomy after the v3 extraction."* (`text-xs text-muted-foreground mb-2`)
+
+No simulation or aggregation changes.
 
 ---
 
-## A. Backend / Data Layer
+## Turn 2 — Backend extraction (Thread A) + validation
 
-### A1. Re-extract `src/lib/constants/extracted.ts` from CoEZET_PTCM_v3.xlsx
+Self-contained, no UI changes. Done as a separate turn after Turn 1 ships.
 
-Run a one-shot Python extractor (`scripts/extract_constants.py`, not shipped) that reads the workbook and rewrites `extracted.ts` end-to-end. The current file's shape (POWERTRAINS, VEHICLE_BASE_PRICES_2025, BUCKETS) stays — but values and several new tables are added.
+### Step 1. Write the extractor
 
-**Rewritten existing exports**
+`scripts/extract_constants.py` (Python, openpyxl, runs locally in `/tmp`, not shipped to the app). Reads `/mnt/user-uploads/CoEZET_PTCM_v3.xlsx` and emits a fully rewritten `src/lib/constants/extracted.ts`.
 
-- `POWERTRAINS` — unchanged (6).
-- `VEHICLE_BASE_PRICES_2025` — re-read from `Changing with year` R80–R89 (Diesel) plus R36–R45 (E-Powertrain) and R25–R34 (Engine & Transmission). Refresh all 9 vehicle sizes.
-- `BUCKETS` — re-read from `No change with year` (R5–R18). Pull annualKm, workingDays, kmPerDay, ulw, gvw, the 6 efficiencies, battery/tank/FC specs, tyre counts, maintenance per km. Also add the new fields below.
+**Existing exports — rewritten with v3 numbers**
+
+
+| Export                                                                            | Source                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POWERTRAINS`                                                                     | unchanged                                                                                                                                                                                                                                                                                                             |
+| `VEHICLE_BASE_PRICES_2025`                                                        | `Changing with year` R25–R34 (engine+trans), R36–R45 (e-powertrain), R80–R89 (diesel total) — all 9 sizes                                                                                                                                                                                                             |
+| `BUCKETS`                                                                         | `No change with year` R5–R18 — refresh annualKm/workingDays/kmPerDay/ulw/gvw, 6 efficiencies, BET/FCET battery & FC specs, h2 tank, tyre counts, maintenance per km, **plus** new fields: `payloadDiesel`, `payloadBET`, `payloadFCET`, `revisedGVW_BET`, `revisedGVW_FCET`, `engineRunHrs`, `avgSpeed`, `loadingPct` |
+| `RESALE_VALUES`                                                                   | `No change with year` resale-value block (3-tier per PT, per bucket profile) — replaces hard-coded `general` / `high_duty` if profile data differs                                                                                                                                                                    |
+| `TIV_PROJECTION`                                                                  | `Output Summary` rows 29–59 col "Total Trucks Sale" (2025–2055)                                                                                                                                                                                                                                                       |
+| `HISTORICAL_SALES`, `DIESEL_STOCK_END_2024`                                       | `Output Summary` rows 3–28 (1999–2024)                                                                                                                                                                                                                                                                                |
+| `EMISSION_FACTORS`                                                                | `Parameters Fixed` (verify against current values; flag any drift)                                                                                                                                                                                                                                                    |
+| `START_OF_SUPPLY`, `PTTM_PILOT_SHARE`, `WEIBULL_SHAPE_ALPHA`, `WEIBULL_PEAK_YEAR` | `Segment Wise Split` cols Q–Y                                                                                                                                                                                                                                                                                         |
+
 
 **New exports**
 
-| Name | Source sheet | Shape |
-|---|---|---|
-| `SEGMENTS` | `Segmentwise Sales ` R2–R8 | 7 segment labels (Rigid 12-19T … TT 46-55T) |
-| `BUCKET_SEGMENT_MAP` | `No change with year` cross-ref | `Record<BucketId, Segment>` |
-| `BUCKET_APPLICATION_MAP` | `Buckets` / `Applicationwise Sales` | `Record<BucketId, Application>` (10 application groups) |
-| `APPLICATIONS` | `Applicationwise Sales` R2–R13 | 10 labels |
-| `RESALE_VALUES` | `No change with year` resale block | `Record<PT, { till2035; y2036_45; after2045 }>` |
-| `MAINT_CURVES` | `Changing with year` R152–R262 | per-bucket × PT maintenance ₹/km, 2025–2055 |
-| `TOLL_PER_KM` / `MANPOWER_PER_KM` | `Changing with year` R264–R306 | per-size × {ICE, ZET}, 2025–2055 |
-| `H2_COST_CHAIN` | `Changing with year` R7–R14 | green/grey production, blend %, compression |
-| `ELECTRICITY_CHAIN` | `Changing with year` R15–R18 | DISCOM, demand charges, CAAS, total |
-| `STEADY_STATE_SHARES` | Estimation 2035 / 2040 / SS2045 / 2050 / 2055 | `Record<TargetYear, Record<BucketId, Record<PT, number>>>` (final PT share after supply-readiness adjustment) |
-| `STEADY_STATE_TIV` | R2 of each Estimation sheet | `Record<TargetYear, number>` |
-| `S_CURVE_PARAMS` | `Segment Wise Split ` cols Q–Y | logistic params for BET/H2-ICE/H2-FCET, bell-curve for CNG/LNG |
 
-The current `Changing with year` per-year trajectories (diesel price, CNG, LNG, electricity, battery cost, etc.) keep the existing `ParameterConfig` shape — only the numeric values change.
+| Export                   | Source                                        | Shape                                                                                                 |
+| ------------------------ | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `SEGMENTS`               | `Segmentwise Sales` R2–R8                     | `['Rigid 12-19T','Rigid 19-28.5T','Rigid 28.5-40T','Rigid >40T','TT 31-40T','TT 40-46T','TT 46-55T']` |
+| `BUCKET_SEGMENT_MAP`     | `Buckets` cross-ref + GVW thresholds          | `Record<BucketId, Segment>`                                                                           |
+| `APPLICATIONS`           | `Applicationwise Sales` R2–R13                | 10 application labels                                                                                 |
+| `BUCKET_APPLICATION_MAP` | `Buckets` sheet                               | `Record<BucketId, Application>`                                                                       |
+| `MAINT_CURVES`           | `Changing with year` R152–R262                | `Record<BucketId, Record<PT, number[31]>>` — per-bucket × PT × year                                   |
+| `TOLL_PER_KM`            | `Changing with year` R264–R284                | per-size × {ICE|ZET} × 31 yrs                                                                         |
+| `MANPOWER_PER_KM`        | `Changing with year` R286–R306                | per-size × {ICE|ZET} × 31 yrs                                                                         |
+| `H2_COST_CHAIN`          | `Changing with year` R7–R14                   | green/grey production cost, blend %, compression — per year                                           |
+| `ELECTRICITY_CHAIN`      | `Changing with year` R15–R18                  | DISCOM, demand charges, CAAS, total — per year                                                        |
+| `STEADY_STATE_SHARES`    | Estimation 2035 / 2040 / SS2045 / 2050 / 2055 | `Record<TargetYear, Record<BucketId, Record<PT, number>>>` (final adjusted PT share)                  |
+| `STEADY_STATE_TIV`       | R2 of each Estimation sheet                   | `Record<TargetYear, number>`                                                                          |
+| `S_CURVE_PARAMS`         | `Segment Wise Split` right-hand table         | logistic (BET, H2-ICE, H2-FCET) + bell-curve (CNG, LNG)                                               |
 
-### A2. Multiple ZET-target scenarios
 
-Currently a single steady-state assumption is hard-coded inside `pttm.ts`. New `targetYear` field on `ScenarioConfig`:
+The current `Changing with year` per-year scalar trajectories (diesel price, CNG, LNG, electricity, battery cost, fuel cell, h2 tank, lng tank, adblue) keep their existing `ParameterConfig` shape — only numeric values change.
 
-```ts
-targetYear: 2035 | 2040 | 2045 | 2050 | 2055   // default 2045
-```
+### Step 2. Swap segment/application taxonomy
 
-`pttm.ts` picks the matching `STEADY_STATE_SHARES[targetYear]` block and the matching supply-readiness multipliers. Add a small Target-Year dropdown inside Advanced Settings → Policy Levers (so it's discoverable but not noisy).
+After `extracted.ts` is rewritten:
 
-The 4 preset scenarios (BAU / BWS-1 / BWS-2 / BEST) stay mapped to 2045 by default; user can override.
+- `src/lib/constants/segments.ts` switches from "vehicle size from BUCKETS" to importing `SEGMENTS`, `BUCKET_SEGMENT_MAP`, `APPLICATIONS`, `BUCKET_APPLICATION_MAP` from `extracted.ts`.
+- Updates `SEGMENT_COLORS` keys to the 7 real segments and `APPLICATION_COLORS` keys to the 10 real applications.
+- The 4 new chart components don't change — they iterate `SEGMENTS` / `APPLICATIONS` already.
+- Remove the `(preliminary)` flag from those tabs.
 
-### A3. Segment & Application breakdowns in simulation output
+### Step 3. Validation harness
 
-Extend `AnnualResult` in `src/lib/types.ts`:
+`scripts/validate_against_xlsx.ts` (dev-only Node script, runnable via `bun scripts/validate_against_xlsx.ts`):
 
-```ts
-salesBySegment:        Record<Segment, number>
-salesByApplication:    Record<Application, number>
-stockBySegment:        Record<Segment, number>
-stockByApplication:    Record<Application, number>
-salesBySegmentByPT:    Record<Segment, Record<PT, number>>
-stockBySegmentByPT:    Record<Segment, Record<PT, number>>
-```
+1. Load the BAU preset config (same as the app's default).
+2. Run the full simulation pipeline (`buildTimeSeries` → `computeTCO` × 2 → `computeShares` × 2 → `computePTTM` → `computeStockEmissions`).
+3. Read `Output Summary` rows 29–59 (2025–2055) from CoEZET v3.
+4. Compare year by year, per-PT:
+  - Annual sales (units) — Diesel, CNG, LNG, BET, H2-ICE, H2-FCET, Total
+  - Cumulative stock (units) — same 6 PTs + Total
+  - Total ZET sale + stock
+5. Output a markdown comparison table to stdout: `Year | PT | Model | Workbook | Δ% | Pass(≤2 %)?`.
+6. Highlight rows with |Δ| > 2 % in red.
 
-Computed inside `stockEmissions.ts` (already iterates buckets) by grouping bucket-level results via `BUCKET_SEGMENT_MAP` / `BUCKET_APPLICATION_MAP`. No new simulation logic — pure aggregation.
+**Deliverable to the user before any further work**: paste the validation report. No follow-on changes until it's reviewed.
 
-### A4. Diesel-only counterfactual emissions
+### Step 4. Multi-target ZET scenario — NOT done in this turn
 
-Already partially present (`dieselCounterfactualEmissions`). Verify it matches the `Diesel Only Emissions` sheet (total stock × diesel emissions factor). If not, fix the aggregation only — formula stays.
+Plumbing `targetYear` through `ScenarioConfig` and `pttm.ts` happens in a later turn, once validation passes. Reason: changes the simulator output, easier to verify it works against the 2045 baseline first.
 
-### A5. Validation
+### Files
 
-Add a `scripts/validate_against_xlsx.ts` smoke check (dev-only, run manually) that compares simulator output for the BAU preset to `Output Summary` rows 29–59 (2025–2055). Log mismatches > 2 %. Not wired into the UI.
+**New (dev-only, gitignored)**
 
----
-
-## B. Frontend — Tabbed Chart Selector
-
-### B1. New `<ChartTabs />` component
-
-Replaces the 5-chart grid in `src/pages/Index.tsx`. Uses shadcn `Tabs` (horizontal scroll on mobile). Tabs:
-
-1. **Annual Sales by Powertrain** *(default)*
-2. **Market Share**
-3. **Fleet Stock**
-4. **Emissions** *(includes diesel counterfactual line)*
-5. **ZET Penetration**
-6. **Sales by Segment** *(new — stacked area, 7 segments)*
-7. **Stock by Segment** *(new)*
-8. **Sales by Application** *(new — stacked area, 10 applications)*
-9. **Stock by Application** *(new)*
-
-Only the active tab renders; the chart fills the available width (taller, single-column).
-
-### B2. New chart components
-
-- `src/components/charts/SegmentSalesChart.tsx`
-- `src/components/charts/SegmentStockChart.tsx`
-- `src/components/charts/ApplicationSalesChart.tsx`
-- `src/components/charts/ApplicationStockChart.tsx`
-
-Reuse the existing `ChartCard` shell; CSV/PNG export already works. New `SEGMENT_COLORS` / `APPLICATION_COLORS` palettes added to `src/lib/constants/colors.ts`.
-
-### B3. URL/state persistence
-
-Active tab stored in `useState` (no router change). The 5 KPI cards above stay as-is.
-
-### B4. Untouched
-
-- KPI row, ScenarioPicker, InputPanel, ModelHealthBadge
-- Existing chart files keep their props (just imported by ChartTabs)
-- No restyle / visual redesign in this pass
-
----
-
-## File Touch List
-
-**New**
-- `src/components/ChartTabs.tsx`
-- `src/components/charts/SegmentSalesChart.tsx`
-- `src/components/charts/SegmentStockChart.tsx`
-- `src/components/charts/ApplicationSalesChart.tsx`
-- `src/components/charts/ApplicationStockChart.tsx`
-- `scripts/extract_constants.py` *(dev tool)*
-- `scripts/validate_against_xlsx.ts` *(dev tool)*
+- `scripts/extract_constants.py`
+- `scripts/validate_against_xlsx.ts`
 
 **Rewritten**
-- `src/lib/constants/extracted.ts` *(full regeneration from v3)*
+
+- `src/lib/constants/extracted.ts`
+- `src/lib/constants/segments.ts` (re-export real taxonomy from extracted.ts)
 
 **Edited**
-- `src/lib/types.ts` — extend `AnnualResult`, add `targetYear` on `ScenarioConfig`, `Segment` / `Application` types
-- `src/lib/sim/stockEmissions.ts` — segment/application aggregation
-- `src/lib/sim/pttm.ts` — read `STEADY_STATE_SHARES[targetYear]`
-- `src/lib/constants/colors.ts` — segment & application palettes
-- `src/components/PolicyLevers.tsx` — target-year dropdown
-- `src/pages/Index.tsx` — replace chart grid with `<ChartTabs />`
+
+- `src/lib/types.ts` — `Segment` / `Application` types become string-literal unions of the real labels
+- `src/lib/constants/colors.ts` — SEGMENT_COLORS / APPLICATION_COLORS keyed by real labels
+- `src/components/ChartTabs.tsx` — drop `preliminary` tag
 
 **Not touched**
-- `tco.ts`, `choiceModel.ts`, `sanityCheck.ts`, `scenarios.ts` (preset configs), Supabase schema, KPI row, ScenarioPicker, ModelHealthBadge.
 
----
+- `tco.ts`, `choiceModel.ts`, `pttm.ts`, `stockEmissions.ts` (simulation logic stays, only the constants under it change)
+- `scenarios.ts` preset configs, Supabase schema
+- Any UI component
 
-## Open Items Worth Flagging
+### Risks & checkpoints
 
-1. The new `extracted.ts` will change simulation outputs vs. the current preview — KPI numbers and chart shapes will shift. Expected, but please review the BAU result before approving the BWS-1/BWS-2/BEST SQL inserts later.
-2. `Segment Wise Split ` has `#NUM!` errors in the source sheet. Extractor will fall back to recomputing from S-curve params rather than reading the broken cells.
-3. UI visual redesign (your "Claude-designed UI") deferred to a follow-up plan as you requested.
+1. **Simulation output will shift** when extracted.ts changes. Expected. The validation report against `Output Summary` is exactly how we confirm the shift matches the workbook.
+2. `**Segment Wise Split`  has `#NUM!` cells.** Extractor recomputes S-curve params from the logistic/bell parameter table (cols Q–Y) instead of reading the broken output cells.
+3. **Estimation sheets vary in column layout.** Extractor handles each sheet name explicitly, asserts expected column headers, fails loudly on mismatch.
+4. **Bucket-to-segment mapping isn't a column in `Buckets**` (sub-agent noted). Extractor will derive it from GVW thresholds (Rigid: 12–19 / 19–28.5 / 28.5–40 / >40 T; TT: 31–40 / 40–46 / 46–55 T) and print the resulting map for you to spot-check before commit.
+5. **No backend migration.** All changes are in-app TypeScript constants; Supabase schema is untouched.
+
+&nbsp;
+
+&nbsp;
+
+Approved — ship Turn 1 now, then Turn 2 as its own turn. Three hard gates on Turn 2 before you commit extracted.ts:
+
+**Gate 1:** After deriving BUCKET_SEGMENT_MAP from GVW thresholds, print the full 14-bucket → segment map and STOP. I need to eyeball it before you proceed — some buckets (48T, 55T Tractor) sit on Rigid/TT boundaries and a wrong classification corrupts every segment chart. Don't commit until I confirm.
+
+**Gate 2:** For STEADY_STATE_SHARES, after extracting all 5 Estimation sheets, assert each bucket's 6 powertrain shares sum to 1.0 ±0.5% in every target year (2035/2040/2045/2050/2055). The 2055 sheet has a different layout (A1:T162 vs A1:Z175 for the others) — confirm you're reading the right columns by checking the sums, not just the headers. Print any bucket/year that fails the sum check.
+
+**Gate 3:** The validation harness must compare against the FINAL Output Summary values (post supply-readiness adjustment), matching what PTTM actually outputs. Confirm Output Summary rows 29–59 are the adjusted final sales/stock, not an intermediate calc.
+
+Run the extraction, hit all 3 gates, paste me: (a) the bucket→segment map, (b) any sum-check failures, (c) the BAU validation report. No commit, no taxonomy swap, no removing the preliminary flag until I review all three.
