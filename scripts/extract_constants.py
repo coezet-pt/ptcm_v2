@@ -125,6 +125,31 @@ for year, sn in EST_SHEETS.items():
 
 
 # --------------------------------------------------------------------------
+# 5) B1 TCO component dump (sheet 'B1 - TCO ML 19T') — rows 55-170, cols C/W
+# --------------------------------------------------------------------------
+b1_sheet = wb["B1 - TCO ML 19T"]
+b1_components = []
+for r in range(55, 170):
+    label = b1_sheet.cell(r, 1).value or b1_sheet.cell(r, 2).value
+    v2025 = b1_sheet.cell(r, 3).value
+    v2045 = b1_sheet.cell(r, 23).value
+    if label is None and v2025 is None and v2045 is None:
+        continue
+    b1_components.append({
+        "row": r,
+        "label": str(label).strip() if label is not None else "",
+        "v2025": v2025,
+        "v2045": v2045,
+    })
+b1_header_row = None
+for r in range(1, 15):
+    row = [b1_sheet.cell(r, c).value for c in range(1, 30)]
+    if any(v == 2045 for v in row if isinstance(v, (int, float))):
+        b1_header_row = {"row": r, "col_W_value": row[22], "col_C_value": row[2]}
+        break
+
+
+# --------------------------------------------------------------------------
 # Dump audit JSON
 # --------------------------------------------------------------------------
 audit = {
@@ -136,6 +161,8 @@ audit = {
     "bau_reference": bau_ref,
     "tiv_estimates": tiv_estimates,
     "output_summary_headers": output_summary_headers,
+    "b1_tco_components": b1_components,
+    "b1_header_row": b1_header_row,
 }
 OUT.write_text(json.dumps(audit, indent=2, default=str))
 
