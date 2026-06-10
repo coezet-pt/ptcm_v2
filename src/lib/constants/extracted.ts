@@ -334,75 +334,41 @@ export const SCENARIO_MATURITY_YEARS: Record<ScenarioName, {
 // BAU DEFAULT SCENARIO CONFIG — drop-in for ScenarioConfig.parameters
 // All deltas are decimal (0.025 = 2.5% per year)
 // ===========================================================================
-// BAU defaults — REFRESHED from CoEZET_PTCM_v3.xlsx 'Changing with year' (Turn 3a)
-// Deltas are implicit CAGRs per period: 2025→2030 (5y), 2030→2040 (10y),
-// 2040→2050 (10y), 2050→2055 (5y). Matches workbook endpoint values.
-// Legacy 4-range form (kept for reference / DB compatibility).
-const BAU_PARAMETERS_V3 = {
-  diesel_price_per_l:           { baseValue: 88.93,  d2630: 0.0380, d3140: 0.0200, d4150: 0.0200, d5155: 0.0200 },
-  cng_price_per_kg:             { baseValue: 87,     d2630: 0.0343, d3140: 0.0300, d4150: 0.0300, d5155: 0.0300 },
-  lng_price_per_kg:             { baseValue: 83,     d2630: 0.0312, d3140: 0.0300, d4150: 0.0300, d5155: 0.0300 },
-  electricity_incl_caas_per_kwh:{ baseValue: 11.93,  d2630: 0.0031, d3140: -0.0324, d4150: 0.0042, d5155: 0.0313 },
-  green_h2_production_per_kg:   { baseValue: 546.50, d2630: 0.0020, d3140: -0.0377, d4150: -0.0334, d5155: 0.0021 },
-  grey_h2_production_per_kg:    { baseValue: 250,    d2630: 0.0200, d3140: 0.0200, d4150: 0.0200, d5155: 0.0200 },
-  h2_compression_storage_per_kg:{ baseValue: 175,    d2630: -0.0400, d3140: -0.0300, d4150: -0.0300, d5155: -0.0200 },
-  electricity_per_kwh:          { baseValue: 18,     d2630: 0,      d3140: -0.02,  d4150: -0.02,  d5155: -0.01  },
-  battery_cost_per_kwh:         { baseValue: 9900,   d2630: -0.0150, d3140: -0.0250, d4150: -0.0100, d5155: 0.0100 },
-  fuel_cell_cost_per_kw:        { baseValue: 36000,  d2630: -0.0300, d3140: -0.0300, d4150: -0.0200, d5155: 0.0100 },
-  lng_tank_cost_per_kg:         { baseValue: 3050,   d2630: 0.0100, d3140: 0.0100, d4150: 0.0100, d5155: 0.0100 },
-  h2_tank_cost_per_kg:          { baseValue: 56000,  d2630: -0.0500, d3140: -0.0400, d4150: 0.0100, d5155: 0.0100 },
-  adblue_per_l:                 { baseValue: 55,     d2630: 0.0250, d3140: 0.0250, d4150: 0.0250, d5155: 0.0250 },
-  diesel_vehicle_growth:        { baseValue: 0,      d2630: 0.0300, d3140: 0.0300, d4150: 0.0300, d5155: 0.0300 },
-  engine_trans_growth:          { baseValue: 0,      d2630: 0.0200, d3140: 0.0200, d4150: 0.0200, d5155: 0.0200 },
-  e_powertrain_growth:          { baseValue: 0,      d2630: -0.0400, d3140: -0.0100, d4150: 0.0100, d5155: 0.0100 },
-  // New v9 parameters
-  discom_electricity_per_kwh:   { baseValue: 7.50,   d2630: 0.0200, d3140: -0.0200, d4150: -0.0100, d5155: 0.0250 },
-  fixed_demand_charges_per_kwh: { baseValue: 2.40,   d2630: -0.0882, d3140: -0.0516, d4150: 0.0016, d5155: -0.0032 },
-  charging_infra_per_kwh:       { baseValue: 2.03,   d2630: 0.0273, d3140: -0.0755, d4150: 0.0689, d5155: 0.0620 },
-  green_h2_electricity_per_kg:  { baseValue: 291.50, d2630: 0.0269, d3140: -0.0329, d4150: -0.0248, d5155: 0.0221 },
-  green_h2_capex_per_kg:        { baseValue: 115,    d2630: -0.0300, d3140: -0.0400, d4150: -0.0500, d5155: -0.0500 },
-  green_h2_opex_margin_per_kg:  { baseValue: 140,    d2630: -0.0300, d3140: -0.0500, d4150: -0.0500, d5155: -0.0500 },
-  grey_h2_blend_fraction:       { baseValue: 0,      d2630: 0,      d3140: 0,      d4150: 0,      d5155: 0      },
-  lng_valves_piping_per_vehicle:{ baseValue: 100000, d2630: 0.0100, d3140: 0.0100, d4150: 0.0100, d5155: 0.0100 },
-};
+// BAU defaults — natively encoded in the v4 6-range CAGR shape.
+// Category A: CAGRs computed directly from CoEZET_PTCM_v4.xlsx 'Changing with year'
+//   at each range endpoint: cagr = (V_end / V_start)^(1/years) - 1.
+// Category B (// FLAG): v3 fallback values spread across the 6 ranges
+//   (v3 d2630 → d2530, v3 d3140 → d3135 & d3640, v3 d4150 → d4145 & d4650, v3 d5155 → d5155).
+//   These params aren't user-editable in the v4 Dashboard spec; re-extract from v4 later.
+export const BAU_PARAMETERS = {
+  // Category A — native v4 6-range
+  diesel_price_per_l:            { baseValue: 88.9263, d2530:  0.0380, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
+  cng_price_per_kg:              { baseValue: 87,      d2530:  0.0343, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
+  lng_price_per_kg:              { baseValue: 83,      d2530:  0.0312, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
+  electricity_incl_caas_per_kwh: { baseValue: 11.9298, d2530:  0.0031, d3135: -0.0546, d3640: -0.0097, d4145:  0.0026, d4650:  0.0057, d5155:  0.0313 },
+  green_h2_production_per_kg:    { baseValue: 546.50,  d2530:  0.0020, d3135: -0.0409, d3640: -0.0344, d4145: -0.0403, d4650: -0.0264, d5155:  0.0021 },
+  h2_compression_storage_per_kg: { baseValue: 175,     d2530: -0.0400, d3135: -0.0300, d3640: -0.0300, d4145: -0.0300, d4650: -0.0300, d5155: -0.0200 },
+  battery_cost_per_kwh:          { baseValue: 9900,    d2530: -0.0150, d3135: -0.0250, d3640: -0.0250, d4145: -0.0100, d4650: -0.0100, d5155:  0.0100 },
+  fuel_cell_cost_per_kw:         { baseValue: 36000,   d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155:  0.0100 },
+  adblue_per_l:                  { baseValue: 55,      d2530:  0.0250, d3135:  0.0250, d3640:  0.0250, d4145:  0.0250, d4650:  0.0250, d5155:  0.0250 },
+  grey_h2_production_per_kg:     { baseValue: 250,     d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
+  discom_electricity_per_kwh:    { baseValue: 7.50,    d2530:  0.0200, d3135: -0.0200, d3640: -0.0200, d4145: -0.0100, d4650: -0.0100, d5155:  0.0250 },
+  fixed_demand_charges_per_kwh:  { baseValue: 2.3964,  d2530: -0.0882, d3135: -0.1005, d3640:  0.0000, d4145:  0.0032, d4650:  0.0000, d5155: -0.0032 },
+  charging_infra_per_kwh:        { baseValue: 2.0334,  d2530:  0.0273, d3135: -0.1971, d3640:  0.0645, d4145:  0.0709, d4650:  0.0669, d5155:  0.0620 },
+  green_h2_electricity_per_kg:   { baseValue: 291.50,  d2530:  0.0269, d3135: -0.0380, d3640: -0.0277, d4145: -0.0349, d4650: -0.0146, d5155:  0.0221 },
+  green_h2_capex_per_kg:         { baseValue: 115,     d2530: -0.0300, d3135: -0.0400, d3640: -0.0400, d4145: -0.0500, d4650: -0.0500, d5155: -0.0500 },
+  green_h2_opex_margin_per_kg:   { baseValue: 140,     d2530: -0.0300, d3135: -0.0500, d3640: -0.0500, d4145: -0.0500, d4650: -0.0500, d5155: -0.0500 },
+  grey_h2_blend_fraction:        { baseValue: 0,       d2530:  0,      d3135:  0,      d3640:  0,      d4145:  0,      d4650:  0,      d5155:  0      },
 
-// v4 expansion: split the legacy 4-range CAGRs into the 6 ranges (mechanical).
-// d2630 → d2530 ; d3140 → d3135 + d3640 ; d4150 → d4145 + d4650 ; d5155 → d5155.
-// Selected v4 trajectories override below with values computed from the
-// v4 'Changing with year' sheet (6-range CAGRs at the actual range endpoints).
-export function expandV3ToV6<T extends Record<string, { baseValue: number; d2630: number; d3140: number; d4150: number; d5155: number }>>(p: T) {
-  const out: any = {};
-  for (const [k, v] of Object.entries(p)) {
-    out[k] = {
-      baseValue: v.baseValue,
-      d2530: v.d2630,
-      d3135: v.d3140,
-      d3640: v.d3140,
-      d4145: v.d4150,
-      d4650: v.d4150,
-      d5155: v.d5155,
-    };
-  }
-  return out as Record<keyof T, import('@/lib/types').ParameterConfig>;
-}
-
-export const BAU_PARAMETERS = expandV3ToV6(BAU_PARAMETERS_V3);
-
-// v4-accurate overrides for the 6 primary trajectory params (CAGRs computed
-// from the v4 workbook's per-year values at each range endpoint).
-const V4_PRIMARY_CAGRS = {
-  diesel_price_per_l:            { d2530: 0.0380, d3135: 0.0200, d3640: 0.0200, d4145: 0.0200, d4650: 0.0200, d5155: 0.0200 },
-  cng_price_per_kg:              { d2530: 0.0343, d3135: 0.0300, d3640: 0.0300, d4145: 0.0300, d4650: 0.0300, d5155: 0.0300 },
-  lng_price_per_kg:              { d2530: 0.0312, d3135: 0.0300, d3640: 0.0300, d4145: 0.0300, d4650: 0.0300, d5155: 0.0300 },
-  electricity_incl_caas_per_kwh: { d2530: 0.0031, d3135: -0.0546, d3640: -0.0097, d4145: 0.0027, d4650: 0.0057, d5155: 0.0313 },
-  green_h2_production_per_kg:    { d2530: 0.0020, d3135: -0.0409, d3640: -0.0344, d4145: -0.0403, d4650: -0.0264, d5155: 0.0021 },
-  h2_compression_storage_per_kg: { baseValue: 175, d2530: -0.0400, d3135: -0.0300, d3640: -0.0300, d4145: -0.0300, d4650: -0.0300, d5155: -0.0200 },
-  battery_cost_per_kwh:          { d2530: -0.0150, d3135: -0.0250, d3640: -0.0250, d4145: -0.0100, d4650: -0.0100, d5155: 0.0100 },
-  fuel_cell_cost_per_kw:         { d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155: 0.0100 },
-} as const;
-for (const [k, v] of Object.entries(V4_PRIMARY_CAGRS)) {
-  Object.assign((BAU_PARAMETERS as any)[k], v);
-}
+  // Category B — FLAG: v3 fallback; re-extract from v4 'Changing with year' in a later round.
+  electricity_per_kwh:           { baseValue: 18,      d2530:  0,      d3135:  0,      d3640: -0.02,   d4145: -0.02,   d4650: -0.02,   d5155: -0.01   }, // FLAG: v3 fallback (superseded by electricity_incl_caas_per_kwh in v4)
+  lng_tank_cost_per_kg:          { baseValue: 3050,    d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 LNG tank row
+  lng_valves_piping_per_vehicle: { baseValue: 100000,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback
+  h2_tank_cost_per_kg:           { baseValue: 56000,   d2530: -0.0500, d3135: -0.0400, d3640: -0.0400, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 H2 tank row
+  diesel_vehicle_growth:         { baseValue: 0,       d2530:  0.0300, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 }, // FLAG: v3 fallback
+  engine_trans_growth:           { baseValue: 0,       d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 }, // FLAG: v3 fallback
+  e_powertrain_growth:           { baseValue: 0,       d2530: -0.0400, d3135: -0.0100, d3640: -0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback
+} satisfies Record<string, import('@/lib/types').ParameterConfig>;
 
 // BAU fixed (non-trajectory) parameters
 export const BAU_FIXED = {

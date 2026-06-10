@@ -1,94 +1,86 @@
+# Revision: drop adapter, re-encode presets natively, keep PolicyLevers
 
-# Input Panel — v4 Dashboard Rebuild
+## 1. Native 6-range preset encoding (no adapter)
 
-UI/input-structure change driven by the Dashboard sheet of `CoEZET_PTCM_v4.xlsx`. The simulation engine (`tco.ts`, `choiceModel.ts`, `pttm.ts`, `stockEmissions.ts`) is not touched. The only sim-adjacent edit is extending `timeSeries.ts` from 4 to 6 CAGR ranges (mechanical).
+Remove `adaptParam` / `adaptParameters` from `ScenarioContext.tsx`; revert `ensureFullConfig` to a plain merge against the BAU defaults. Remove `expandV3ToV6` from `extracted.ts` and delete the `BAU_PARAMETERS_V3` literal. Re-declare `BAU_PARAMETERS` directly in the 6-range shape (`baseValue, d2530, d3135, d3640, d4145, d4650, d5155`).
 
-## Confirmed decisions
-- Battery & Fuel Cell base value: **no hard cap** (only ±10% applies to CAGRs, ₹500 cap applies only to fuel rows 1–4).
-- Diesel / LNG / CNG: **independent CAGR set per fuel** (3 × 6 = 18 CAGR fields).
-- Funding rate **and** tenure are **both editable** for ZET and non-ZET.
-- Maintenance per bucket: **dropdown — one bucket at a time** for params 7–9.
+For each of the 25 params, the source of truth for the 6 CAGRs is the v4 workbook's `Changing with year` sheet. Endpoints per range:
 
-## Final parameter inventory (13)
+- d2530 = (V2030/V2025)^(1/5) − 1
+- d3135 = (V2035/V2030)^(1/5) − 1
+- d3640 = (V2040/V2035)^(1/5) − 1
+- d4145 = (V2045/V2040)^(1/5) − 1
+- d4650 = (V2050/V2045)^(1/5) − 1
+- d5155 = (V2055/V2050)^(1/5) − 1
 
-Pattern A (base value + 6 CAGR ranges: 2025-30, 2031-35, 2036-40, 2041-45, 2046-50, 2051-55):
-1. Diesel Price (₹/L, default 88.93, cap ₹500)
-   LNG Price (₹/kg, default 83, cap ₹500)
-   CNG Price (₹/kg, default 87, cap ₹500)
-2. Energy Price incl. CAAS (₹/kWh, default 11.93, cap ₹500)
-3. Green H₂ Production (₹/kg, default 546.50, cap ₹500)
-4. H₂ Compression/Transport/Dispense (₹/kg, default 175, cap ₹500)
-5. Battery Price (₹/kWh, default 9,900, no cap)
-6. Fuel Cell Price (₹/kW, default 36,000, no cap)
+Categories:
 
-Pattern A + Bucket selector (B1–B14):
-7. Diesel Maintenance ₹/km per bucket
-8. BET Aggregates Maintenance ₹/km per bucket (incl. battery replacement)
-9. FCET Aggregates Maintenance ₹/km per bucket (incl. battery + FC replacement)
+**A. Native v4 6-range (extractable this round)** — values pulled directly from `Changing with year`:
 
-Pattern B (simple constants):
-10. Battery Life — cycles (default 3,000; 4-digit)
-11. Fuel Cell Life — hours (default 25,000; 5-digit)
-12. Funding non-ZET — Rate % (12) + Tenure yrs (7)
-13. Funding ZET — Rate % (12) + Tenure yrs (7)
+- `diesel_price_per_l`, `cng_price_per_kg`, `lng_price_per_kg`
+- `electricity_incl_caas_per_kwh`
+- `green_h2_production_per_kg`
+- `h2_compression_storage_per_kg`
+- `battery_cost_per_kwh`, `fuel_cell_cost_per_kw`
+- `adblue_per_l`, `grey_h2_production_per_kg`
+- `discom_electricity_per_kwh`, `fixed_demand_charges_per_kwh`, `charging_infra_per_kwh`
+- `green_h2_electricity_per_kg`, `green_h2_capex_per_kg`, `green_h2_opex_margin_per_kg`
+- `grey_h2_blend_fraction`
 
-All CAGR inputs capped ±10% with inline error (no silent clamp).
+**B. Fallback (kept as `// FLAG: v3 fallback — v4 trajectory not extracted this round`)** — values not found cleanly in v4 `Changing with year`, kept on the prior v3-shaped numbers but spread across all six ranges using a constant CAGR (the v3 d3140 for the middle four ranges, v3 d2630 for d2530, v3 d5155 for d5155). These are non-trivial to derive cleanly from v4 and aren't the Dashboard spec's 13 user-editable params:
 
-## UI layout
+- `electricity_per_kwh` (superseded by `electricity_incl_caas_per_kwh` in v4)
+- `lng_tank_cost_per_kg`, `lng_valves_piping_per_vehicle`
+- `h2_tank_cost_per_kg`
+- `diesel_vehicle_growth`, `engine_trans_growth`, `e_powertrain_growth`
+
+Each Category-B entry gets an inline `// FLAG` comment naming what v4 source row to re-extract from later.
+
+For the 4 scenario presets:
+
+- **BAU**: uses `BAU_PARAMETERS` directly — fully native v4 for Category A, flagged fallback for Category B.
+- **BWS-1 / BWS-2**: inherit `...BAU_PARAMETERS` (same trajectories as BAU per existing structure) — already native.
+- **BEST**: 3 native 6-range overrides already in place (`green_h2_production_per_kg`, `h2_compression_storage_per_kg`, `diesel_price_per_l`) — keep as-is, they're hand-encoded in the 6-range shape.
+
+No adapter runs on DB-loaded preset configs. If a DB row's `config.parameters` is missing or in old shape, `ensureFullConfig` simply falls back to `BAU_PARAMETERS` for that key (existing spread merge), which is the safe default.
+
+## 2. Keep PolicyLevers mounted
+
+Add a third item to the Advanced accordion in `InputPanel.tsx`:
 
 ```text
-┌─ Primary Cost Trajectories (always open) ───────────────────┐
-│  Fuel Prices                                                │
-│    Diesel  [88.93] ₹/L   CAGR % per range: [ ][ ][ ][ ][ ][]│
-│    LNG     [83.00] ₹/kg  CAGR % per range: [ ][ ][ ][ ][ ][]│
-│    CNG     [87.00] ₹/kg  CAGR % per range: [ ][ ][ ][ ][ ][]│
-│  Energy Price (incl. CAAS)  [11.93] ₹/kWh   CAGR: [..]      │
-│  Green H₂ Production        [546.50] ₹/kg   CAGR: [..]      │
-│  H₂ Compression & Dispense  [175]    ₹/kg   CAGR: [..]      │
-│  Battery Price              [9,900]  ₹/kWh  CAGR: [..]      │
-│  Fuel Cell Price            [36,000] ₹/kW   CAGR: [..]      │
-└─────────────────────────────────────────────────────────────┘
-┌─ Advanced (collapsed) ──────────────────────────────────────┐
-│  ▸ Maintenance (per bucket)                                 │
-│      Bucket: [B1 ▼]                                         │
-│      Diesel Maint    [..] ₹/km  CAGR: [..]                  │
-│      BET Maint       [..] ₹/km  CAGR: [..]                  │
-│      FCET Maint      [..] ₹/km  CAGR: [..]                  │
-│  ▸ Constants                                                │
-│      Battery Life [3000] cycles                             │
-│      Fuel Cell Life [25000] hours                           │
-│      Funding non-ZET   Rate [12]%  Tenure [7] yrs           │
-│      Funding ZET       Rate [12]%  Tenure [7] yrs           │
-└─────────────────────────────────────────────────────────────┘
-[Reset to defaults]            [Discard]  [Apply Changes ▶]
+▸ Maintenance (per bucket)
+▸ Constants (battery / FC life, funding)
+▸ Policy Levers   ← new, mounts <PolicyLevers />
 ```
 
-Sticky Apply/Discard bar is preserved.
+`PolicyLevers.tsx` is not modified — same incentives, toll waivers, inflection years, electricity subsidy, ZET interest controls it ships with today. This preserves the ability to differentiate BAU vs BWS vs BEST in the UI even though the Dashboard sheet doesn't spec policy.
 
-## Files to change
+`FixedParamGroup` and `SegmentBasePricesTable` stay unmounted (superseded by the 13-param spec). The files remain in the repo unused.
 
-- **`src/lib/types.ts`** — extend `ParameterConfig` from 4 deltas to 6: `d2530, d3135, d3640, d4145, d4650, d5155`. Add new Pattern-B field types on `FixedParameters` (battery_life_cycles already exists; add `fc_life_hours`, `funding_nonzet_rate`, `funding_nonzet_tenure`, `funding_zet_rate`, `funding_zet_tenure`). Add a `bucketMaintenance: Record<'diesel'|'bet'|'fcet', Record<BucketId, ParameterConfig>>` shape.
-- **`src/lib/sim/timeSeries.ts`** — replace the 4-range if/else with a 6-range mapping (≤2030 → d2530; ≤2035 → d3135; ≤2040 → d3640; ≤2045 → d4145; ≤2050 → d4650; else d5155). Same compound logic.
-- **`src/lib/constants/extracted.ts`** — refresh defaults for the 13 params with 6-range CAGRs computed from the Dashboard "Changing with year" rows: range CAGR = `(V_end / V_start)^(1/years) − 1`. Bucket maintenance defaults read from the per-bucket section.
-- **`src/lib/constants/parameterMeta.ts`** — update labels/units/tooltips/caps for the 13 params; mark cap policy (per-row max + per-CAGR ±10%).
-- **`src/components/ParameterRow.tsx`** — render 6 CAGR inputs (label row 2025-30 / 2031-35 / 2036-40 / 2041-45 / 2046-50 / 2051-55), enforce caps with inline error message, no clamping.
-- **New `src/components/BucketMaintenanceInput.tsx`** — bucket dropdown (B1–B14) + 3 stacked ParameterRow-style inputs (diesel/BET/FCET) bound to the selected bucket.
-- **New `src/components/FundingInput.tsx`** — rate% + tenure pair, used twice (ZET / non-ZET).
-- **`src/components/InputPanel.tsx`** — rebuild to the structure above. Primary card always visible; Advanced accordion with two items (Maintenance, Constants). Keep existing `useScenario` + debounced recompute wiring intact. Add a "Reset to defaults" button that calls a new `resetToDefaults()` on the context (uses the refreshed defaults from `extracted.ts`).
-- **`src/contexts/ScenarioContext.tsx`** — add `resetToDefaults()`; extend `updateParameter` signature to accept the new 6 delta keys; add `updateBucketMaintenance(metric, bucket, field, value)` and `updateFunding(kind, field, value)` helpers.
-- **`src/components/FixedParamGroup.tsx`, `PolicyLevers.tsx`, `SegmentBasePricesTable.tsx`** — keep files but remove their mounting from `InputPanel` (they fall outside the 13-param spec). Note: scenario presets in DB still carry the old 4-delta shape; a tiny adapter in `ScenarioContext` will map legacy `d2630/d3140/d4150/d5155` → the new 6 ranges (duplicate 2630→2530+3135 split, 4150→4145+4650 split) so presets keep loading without engine changes. This adapter is the only legacy-compat code added.
+## Files touched (delta vs. the build that just shipped)
 
-## Out of scope (explicit)
+- `src/contexts/ScenarioContext.tsx` — remove `adaptParam` / `adaptParameters` and the `LegacyParameterConfig` import; restore the plain spread in `ensureFullConfig`.
+- `src/lib/types.ts` — remove `LegacyParameterConfig` (no longer referenced).
+- `src/lib/constants/extracted.ts` — delete `BAU_PARAMETERS_V3`, `expandV3ToV6`, and the `V4_PRIMARY_CAGRS` mutation block; rewrite `BAU_PARAMETERS` as a single 6-range literal with native CAGRs for Category A and `// FLAG` fallbacks for Category B.
+- `src/components/InputPanel.tsx` — add the `Policy Levers` accordion item importing and rendering `PolicyLevers`.
 
-- No changes to `tco.ts`, `choiceModel.ts`, `pttm.ts`, `stockEmissions.ts`.
-- No chart, KPI, or scenario-preset DB changes.
-- No new bucket-maintenance consumption inside the sim engine yet (the values flow into state; engine wiring can come in a follow-up round).
+## Out of scope
+
+- No engine changes. No DB writes. No re-encoding of BWS-1/BWS-2/BEST trajectories beyond what already exists (their differences live in `policy`, which `PolicyLevers` continues to expose).
+- Category-B trajectory re-extraction from v4 is deferred to a follow-up round.
 
 ## Acceptance
 
-- Primary card shows fuel prices (3 fuels, independent CAGRs), energy, green H₂, H₂ dispense, battery, fuel cell — each with base + 6 CAGR inputs.
-- Advanced accordion → Maintenance (bucket dropdown) + Constants (4 simple inputs incl. two funding rate/tenure pairs).
-- Caps enforced with inline errors (₹500 for fuel rows, ±10% for every CAGR, digit-count for life fields); no silent clamping.
-- Reset restores all 13 to workbook defaults.
-- Edits trigger the existing 300 ms debounced recompute; charts continue updating.
-- Build passes; existing presets still load via the legacy-shape adapter.
+- `extracted.ts` has no v3-shaped data and no adapter function; every param literal uses the 6 new delta keys.
+- `ScenarioContext.tsx` does not transform parameter shapes on load.
+- Advanced accordion shows three items, the third one renders `PolicyLevers` and edits flow through `updatePolicy` as before.
+- Build passes; charts continue to update on Apply.
+
+&nbsp;
+
+pproved — this correctly removes the adapter I should have caught before shipping the last plan. Ship it.
+
+One verification, not a blocker: confirm in v4 that BWS-1/BWS-2 genuinely share BAU's cost trajectories (differing only in policy levers). In v3 that was true. If v4 changed it, flag it — otherwise inheriting `...BAU_PARAMETERS` is correct.
+
+The Category-B `// FLAG` fallbacks are fine as scoped — they're all non-user-facing params and explicitly marked for v4 re-extraction. Just keep those flags visible so we don't forget them when we do the full v4 cost refresh.

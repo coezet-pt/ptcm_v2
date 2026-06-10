@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice, ParameterConfig, LegacyParameterConfig } from '@/lib/types';
+import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice, ParameterConfig } from '@/lib/types';
 import type { ScenarioName, VehicleSize } from '@/lib/constants/extracted';
 import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES } from '@/lib/constants/extracted';
 import { SCENARIO_CONFIGS } from '@/lib/constants/scenarios';
@@ -12,27 +12,6 @@ const bauConfig: ScenarioConfig = {
   fixed: structuredClone(BAU_FIXED) as FixedParameters,
   segmentBasePrices: structuredClone(BAU_SEGMENT_BASE_PRICES) as ScenarioConfig['segmentBasePrices'],
 };
-
-// Legacy v3 (4-range) → v4 (6-range) param-config adapter so DB presets keep loading.
-function adaptParam(p: any): ParameterConfig {
-  if (p && typeof p === 'object' && 'd2530' in p) return p as ParameterConfig;
-  const legacy = p as LegacyParameterConfig;
-  return {
-    baseValue: legacy?.baseValue ?? 0,
-    d2530: legacy?.d2630 ?? 0,
-    d3135: legacy?.d3140 ?? 0,
-    d3640: legacy?.d3140 ?? 0,
-    d4145: legacy?.d4150 ?? 0,
-    d4650: legacy?.d4150 ?? 0,
-    d5155: legacy?.d5155 ?? 0,
-  };
-}
-function adaptParameters(params: Record<string, any> | undefined): ScenarioConfig['parameters'] {
-  const merged: any = { ...bauConfig.parameters };
-  if (!params) return merged;
-  for (const [k, v] of Object.entries(params)) merged[k] = adaptParam(v);
-  return merged;
-}
 
 interface ScenarioContextValue {
   presets: Record<ScenarioName, { id: string; description: string; config: ScenarioConfig }>;
@@ -57,7 +36,7 @@ const ScenarioContext = createContext<ScenarioContextValue | null>(null);
 
 function ensureFullConfig(cfg: Partial<ScenarioConfig> | undefined): ScenarioConfig {
   return {
-    parameters: adaptParameters(cfg?.parameters as any),
+    parameters: { ...bauConfig.parameters, ...(cfg?.parameters ?? {}) } as ScenarioConfig['parameters'],
     policy: { ...bauConfig.policy, ...(cfg?.policy ?? {}) },
     fixed: { ...bauConfig.fixed, ...(cfg?.fixed ?? {}) },
     segmentBasePrices: { ...bauConfig.segmentBasePrices, ...(cfg?.segmentBasePrices ?? {}) },
