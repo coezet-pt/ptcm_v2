@@ -6,6 +6,7 @@ import AnnualSalesChart from '@/components/charts/AnnualSalesChart';
 import ShareChart from '@/components/charts/ShareChart';
 import StockChart from '@/components/charts/StockChart';
 import EmissionsChart from '@/components/charts/EmissionsChart';
+import CumulativeAvoidedChart from '@/components/charts/CumulativeAvoidedChart';
 import ZETPenetrationChart from '@/components/charts/ZETPenetrationChart';
 import SegmentSalesChart from '@/components/charts/SegmentSalesChart';
 import SegmentStockChart from '@/components/charts/SegmentStockChart';
@@ -30,6 +31,7 @@ const TABS: TabDef[] = [
   { id: 'share',     label: 'Market Share' },
   { id: 'stock',     label: 'Fleet Stock' },
   { id: 'emissions', label: 'Emissions' },
+  { id: 'co2-avoided', label: 'CO₂ Avoided' },
   { id: 'zet',       label: 'ZET Penetration' },
   { id: 'seg-sales', label: 'Sales by Segment',     preliminary: true },
   { id: 'seg-stock', label: 'Stock by Segment',     preliminary: true },
@@ -77,6 +79,9 @@ export default function ChartTabs({ result, policy, scenarioLabel, isComputing }
         </TabsContent>
         <TabsContent value="emissions" className="mt-0">
           <EmissionsChart years={result.years} scenarioLabel={scenarioLabel} />
+        </TabsContent>
+        <TabsContent value="co2-avoided" className="mt-0">
+          <CumulativeAvoidedChart years={result.years} scenarioLabel={scenarioLabel} />
         </TabsContent>
         <TabsContent value="zet" className="mt-0">
           <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
