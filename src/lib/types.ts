@@ -10,6 +10,8 @@ export interface ParameterConfig {
   d4145: number;
   d4650: number;
   d5155: number;
+  /** Per-year absolute-value overrides (2026–2055). Cleared when the CAGR for the containing range is edited. */
+  overrides?: Record<number, number>;
 }
 
 
