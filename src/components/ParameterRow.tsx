@@ -13,14 +13,12 @@ const CAGR_MAX = 0.10; // ±10% per Dashboard spec
 
 interface Props {
   paramKey: ParameterKey;
-  /** Max cap on base value. Undefined = no cap. */
-  baseValueMax?: number;
   /** Override label/unit (for parameters that don't yet exist in PARAMETER_META). */
   labelOverride?: string;
   unitOverride?: string;
 }
 
-export default function ParameterRow({ paramKey, baseValueMax, labelOverride, unitOverride }: Props) {
+export default function ParameterRow({ paramKey, labelOverride, unitOverride }: Props) {
   const { draftConfig, updateParameter } = useScenario();
   const meta = PARAMETER_META[paramKey];
   const param = draftConfig.parameters[paramKey];
@@ -29,6 +27,7 @@ export default function ParameterRow({ paramKey, baseValueMax, labelOverride, un
   const label = labelOverride ?? meta?.label ?? paramKey;
   const unit = unitOverride ?? meta?.unit ?? '';
   const tooltip = meta?.tooltip ?? '';
+  const baseValueMax = meta?.maxValue;
 
   const baseExceeded = baseValueMax !== undefined && param.baseValue > baseValueMax;
 
