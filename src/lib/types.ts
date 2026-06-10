@@ -1,7 +1,19 @@
 import type { Powertrain, ScenarioName, VehicleSize } from './constants/extracted';
 
 // ── Parameter config (cost trajectories) ──
+// 6 CAGR ranges (v4 Dashboard spec): 2025-30, 2031-35, 2036-40, 2041-45, 2046-50, 2051-55
 export interface ParameterConfig {
+  baseValue: number;
+  d2530: number;
+  d3135: number;
+  d3640: number;
+  d4145: number;
+  d4650: number;
+  d5155: number;
+}
+
+// Legacy (v3) 4-range shape — kept so DB-stored presets still load.
+export interface LegacyParameterConfig {
   baseValue: number;
   d2630: number;
   d3140: number;
@@ -49,6 +61,16 @@ export interface FixedParameters {
   fuel_cell_power_density_kg_per_kw: number;
   tat_gradeability: Record<Powertrain, number>;
   range_filling_time: Record<Powertrain, number>;
+  // v4 Dashboard: non-ZET funding tenure (rate already lives on interest_rate_ice).
+  // Held in state for the input UI; engine still reads policy.loan_tenure_years for ZET.
+  loan_tenure_years_nonzet?: number;
+  // v4 Dashboard bucket-level maintenance trajectories (Pattern A per B1–B14).
+  // In state only this round; not yet consumed by the sim engine.
+  bucket_maintenance?: {
+    diesel: Record<string, ParameterConfig>;
+    bet: Record<string, ParameterConfig>;
+    fcet: Record<string, ParameterConfig>;
+  };
 }
 
 // ── Per-segment vehicle base prices (2025 INR) ──
