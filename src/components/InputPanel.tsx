@@ -9,6 +9,7 @@ import { Play, Undo2, RotateCcw } from 'lucide-react';
 import ParameterRow from './ParameterRow';
 import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
+import PolicyLevers from './PolicyLevers';
 import { useScenario } from '@/contexts/ScenarioContext';
 
 const FUEL_CAP = 500;
@@ -94,6 +95,15 @@ export default function InputPanel() {
                   <FundingInput label="Funding (non-ZETs)" kind="nonzet" />
                   <FundingInput label="Funding (ZETs)"     kind="zet" />
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="policy">
+              <AccordionTrigger className="text-sm font-medium">
+                Policy Levers (incentives, toll waivers, inflection years)
+              </AccordionTrigger>
+              <AccordionContent>
+                <PolicyLevers />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
