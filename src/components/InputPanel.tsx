@@ -12,7 +12,7 @@ import FundingInput from './FundingInput';
 import PolicyLevers from './PolicyLevers';
 import { useScenario } from '@/contexts/ScenarioContext';
 
-const FUEL_CAP = 500;
+
 
 export default function InputPanel() {
   const { isDirty, applyChanges, discardChanges, resetToDefaults, draftConfig, updateFixed } = useScenario();
@@ -35,14 +35,14 @@ export default function InputPanel() {
         <CardContent className="divide-y divide-border/50">
           <div className="pb-2">
             <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fuel Prices</h4>
-            <ParameterRow paramKey="diesel_price_per_l" baseValueMax={FUEL_CAP} />
-            <ParameterRow paramKey="lng_price_per_kg"   baseValueMax={FUEL_CAP} />
-            <ParameterRow paramKey="cng_price_per_kg"   baseValueMax={FUEL_CAP} />
+            <ParameterRow paramKey="diesel_price_per_l" />
+            <ParameterRow paramKey="lng_price_per_kg"   />
+            <ParameterRow paramKey="cng_price_per_kg"   />
           </div>
           <div className="pt-2">
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" baseValueMax={FUEL_CAP} labelOverride="Energy Price (incl. CAAS)" />
-            <ParameterRow paramKey="green_h2_production_per_kg"    baseValueMax={FUEL_CAP} labelOverride="Green H₂ Production Cost" />
-            <ParameterRow paramKey="h2_compression_storage_per_kg" baseValueMax={FUEL_CAP} labelOverride="H₂ Compression, Transport & Dispense" />
+            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Energy Price (incl. CAAS)" />
+            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green H₂ Production Cost" />
+            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="H₂ Compression, Transport & Dispense" />
             <ParameterRow paramKey="battery_cost_per_kwh"          labelOverride="Battery Price" />
             <ParameterRow paramKey="fuel_cell_cost_per_kw"         labelOverride="Fuel Cell Price" />
           </div>
