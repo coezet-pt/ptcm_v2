@@ -83,9 +83,9 @@ export const SCENARIO_CONFIGS: Record<string, ScenarioConfig> = {
   BEST: {
     parameters: {
       ...BAU_PARAMETERS,
-      green_h2_production_per_kg:    { baseValue: 600, d2630: -0.04, d3140: -0.035, d4150: -0.03, d5155: -0.03 },
-      h2_compression_storage_per_kg: { baseValue: 175, d2630: -0.04, d3140: -0.03,  d4150: -0.03, d5155: -0.02 },
-      diesel_price_per_l:            { baseValue: 88.93, d2630: 0.0208, d3140: 0.0208, d4150: 0.0208, d5155: 0.05 },
+      green_h2_production_per_kg:    { baseValue: 600,   d2530: -0.04,   d3135: -0.035, d3640: -0.035, d4145: -0.03,  d4650: -0.03,  d5155: -0.03 },
+      h2_compression_storage_per_kg: { baseValue: 175,   d2530: -0.04,   d3135: -0.03,  d3640: -0.03,  d4145: -0.03,  d4650: -0.03,  d5155: -0.02 },
+      diesel_price_per_l:            { baseValue: 88.93, d2530: 0.0208,  d3135: 0.0208, d3640: 0.0208, d4145: 0.0208, d4650: 0.0208, d5155: 0.05 },
     } as ScenarioConfig['parameters'],
     policy: {
       ...BAU_POLICY,

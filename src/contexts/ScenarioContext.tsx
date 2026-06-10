@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice } from '@/lib/types';
+import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice, ParameterConfig, LegacyParameterConfig } from '@/lib/types';
 import type { ScenarioName, VehicleSize } from '@/lib/constants/extracted';
 import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES } from '@/lib/constants/extracted';
 import { SCENARIO_CONFIGS } from '@/lib/constants/scenarios';
@@ -12,6 +12,27 @@ const bauConfig: ScenarioConfig = {
   fixed: structuredClone(BAU_FIXED) as FixedParameters,
   segmentBasePrices: structuredClone(BAU_SEGMENT_BASE_PRICES) as ScenarioConfig['segmentBasePrices'],
 };
+
+// Legacy v3 (4-range) → v4 (6-range) param-config adapter so DB presets keep loading.
+function adaptParam(p: any): ParameterConfig {
+  if (p && typeof p === 'object' && 'd2530' in p) return p as ParameterConfig;
+  const legacy = p as LegacyParameterConfig;
+  return {
+    baseValue: legacy?.baseValue ?? 0,
+    d2530: legacy?.d2630 ?? 0,
+    d3135: legacy?.d3140 ?? 0,
+    d3640: legacy?.d3140 ?? 0,
+    d4145: legacy?.d4150 ?? 0,
+    d4650: legacy?.d4150 ?? 0,
+    d5155: legacy?.d5155 ?? 0,
+  };
+}
+function adaptParameters(params: Record<string, any> | undefined): ScenarioConfig['parameters'] {
+  const merged: any = { ...bauConfig.parameters };
+  if (!params) return merged;
+  for (const [k, v] of Object.entries(params)) merged[k] = adaptParam(v);
+  return merged;
+}
 
 interface ScenarioContextValue {
   presets: Record<ScenarioName, { id: string; description: string; config: ScenarioConfig }>;
@@ -26,6 +47,8 @@ interface ScenarioContextValue {
   updateFixed: <K extends keyof FixedParameters>(key: K, value: FixedParameters[K]) => void;
   updateSegmentPrice: (size: VehicleSize, field: keyof SegmentBasePrice, value: number) => void;
   resetToBAU: () => void;
+  resetToDefaults: () => void;
+  updateBucketMaintenance: (metric: 'diesel' | 'bet' | 'fcet', bucketId: string, field: keyof ParameterConfig, value: number) => void;
   applyChanges: () => void;
   discardChanges: () => void;
 }
@@ -34,7 +57,7 @@ const ScenarioContext = createContext<ScenarioContextValue | null>(null);
 
 function ensureFullConfig(cfg: Partial<ScenarioConfig> | undefined): ScenarioConfig {
   return {
-    parameters: { ...bauConfig.parameters, ...(cfg?.parameters ?? {}) } as ScenarioConfig['parameters'],
+    parameters: adaptParameters(cfg?.parameters as any),
     policy: { ...bauConfig.policy, ...(cfg?.policy ?? {}) },
     fixed: { ...bauConfig.fixed, ...(cfg?.fixed ?? {}) },
     segmentBasePrices: { ...bauConfig.segmentBasePrices, ...(cfg?.segmentBasePrices ?? {}) },
@@ -133,6 +156,37 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(false);
   }, []);
 
+  const resetToDefaults = useCallback(() => {
+    const next = structuredClone(bauConfig);
+    setActiveScenarioState('BAU');
+    setConfig(next);
+    setDraftConfig(structuredClone(next));
+    setIsDirty(false);
+  }, []);
+
+  const updateBucketMaintenance = useCallback(
+    (metric: 'diesel' | 'bet' | 'fcet', bucketId: string, field: keyof ParameterConfig, value: number) => {
+      setActiveScenarioState('Custom');
+      setIsDirty(true);
+      setDraftConfig(prev => {
+        const bm = prev.fixed.bucket_maintenance ?? { diesel: {}, bet: {}, fcet: {} };
+        const group = { ...(bm[metric] ?? {}) };
+        const current = group[bucketId] ?? {
+          baseValue: 0, d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0,
+        };
+        group[bucketId] = { ...current, [field]: value };
+        return {
+          ...prev,
+          fixed: {
+            ...prev.fixed,
+            bucket_maintenance: { ...bm, [metric]: group },
+          },
+        };
+      });
+    },
+    [],
+  );
+
   const applyChanges = useCallback(() => {
     setConfig(structuredClone(draftConfig));
     setIsDirty(false);
@@ -147,7 +201,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     <ScenarioContext.Provider value={{
       presets, loading, activeScenario, config, draftConfig, isDirty,
       setActiveScenario, updateParameter, updatePolicy, updateFixed, updateSegmentPrice,
-      resetToBAU, applyChanges, discardChanges,
+      resetToBAU, resetToDefaults, updateBucketMaintenance, applyChanges, discardChanges,
     }}>
       {children}
     </ScenarioContext.Provider>

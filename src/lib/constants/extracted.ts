@@ -337,7 +337,8 @@ export const SCENARIO_MATURITY_YEARS: Record<ScenarioName, {
 // BAU defaults — REFRESHED from CoEZET_PTCM_v3.xlsx 'Changing with year' (Turn 3a)
 // Deltas are implicit CAGRs per period: 2025→2030 (5y), 2030→2040 (10y),
 // 2040→2050 (10y), 2050→2055 (5y). Matches workbook endpoint values.
-export const BAU_PARAMETERS = {
+// Legacy 4-range form (kept for reference / DB compatibility).
+const BAU_PARAMETERS_V3 = {
   diesel_price_per_l:           { baseValue: 88.93,  d2630: 0.0380, d3140: 0.0200, d4150: 0.0200, d5155: 0.0200 },
   cng_price_per_kg:             { baseValue: 87,     d2630: 0.0343, d3140: 0.0300, d4150: 0.0300, d5155: 0.0300 },
   lng_price_per_kg:             { baseValue: 83,     d2630: 0.0312, d3140: 0.0300, d4150: 0.0300, d5155: 0.0300 },
@@ -364,6 +365,44 @@ export const BAU_PARAMETERS = {
   grey_h2_blend_fraction:       { baseValue: 0,      d2630: 0,      d3140: 0,      d4150: 0,      d5155: 0      },
   lng_valves_piping_per_vehicle:{ baseValue: 100000, d2630: 0.0100, d3140: 0.0100, d4150: 0.0100, d5155: 0.0100 },
 };
+
+// v4 expansion: split the legacy 4-range CAGRs into the 6 ranges (mechanical).
+// d2630 → d2530 ; d3140 → d3135 + d3640 ; d4150 → d4145 + d4650 ; d5155 → d5155.
+// Selected v4 trajectories override below with values computed from the
+// v4 'Changing with year' sheet (6-range CAGRs at the actual range endpoints).
+export function expandV3ToV6<T extends Record<string, { baseValue: number; d2630: number; d3140: number; d4150: number; d5155: number }>>(p: T) {
+  const out: any = {};
+  for (const [k, v] of Object.entries(p)) {
+    out[k] = {
+      baseValue: v.baseValue,
+      d2530: v.d2630,
+      d3135: v.d3140,
+      d3640: v.d3140,
+      d4145: v.d4150,
+      d4650: v.d4150,
+      d5155: v.d5155,
+    };
+  }
+  return out as Record<keyof T, import('@/lib/types').ParameterConfig>;
+}
+
+export const BAU_PARAMETERS = expandV3ToV6(BAU_PARAMETERS_V3);
+
+// v4-accurate overrides for the 6 primary trajectory params (CAGRs computed
+// from the v4 workbook's per-year values at each range endpoint).
+const V4_PRIMARY_CAGRS = {
+  diesel_price_per_l:            { d2530: 0.0380, d3135: 0.0200, d3640: 0.0200, d4145: 0.0200, d4650: 0.0200, d5155: 0.0200 },
+  cng_price_per_kg:              { d2530: 0.0343, d3135: 0.0300, d3640: 0.0300, d4145: 0.0300, d4650: 0.0300, d5155: 0.0300 },
+  lng_price_per_kg:              { d2530: 0.0312, d3135: 0.0300, d3640: 0.0300, d4145: 0.0300, d4650: 0.0300, d5155: 0.0300 },
+  electricity_incl_caas_per_kwh: { d2530: 0.0031, d3135: -0.0546, d3640: -0.0097, d4145: 0.0027, d4650: 0.0057, d5155: 0.0313 },
+  green_h2_production_per_kg:    { d2530: 0.0020, d3135: -0.0409, d3640: -0.0344, d4145: -0.0403, d4650: -0.0264, d5155: 0.0021 },
+  h2_compression_storage_per_kg: { baseValue: 175, d2530: -0.0400, d3135: -0.0300, d3640: -0.0300, d4145: -0.0300, d4650: -0.0300, d5155: -0.0200 },
+  battery_cost_per_kwh:          { d2530: -0.0150, d3135: -0.0250, d3640: -0.0250, d4145: -0.0100, d4650: -0.0100, d5155: 0.0100 },
+  fuel_cell_cost_per_kw:         { d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155: 0.0100 },
+} as const;
+for (const [k, v] of Object.entries(V4_PRIMARY_CAGRS)) {
+  Object.assign((BAU_PARAMETERS as any)[k], v);
+}
 
 // BAU fixed (non-trajectory) parameters
 export const BAU_FIXED = {
@@ -420,9 +459,9 @@ export const BAU_POLICY = {
 // BEST scenario overrides (apply on top of BAU)
 export const BEST_OVERRIDES = {
   parameters: {
-    green_h2_production_per_kg:  { baseValue: 600, d2630: -0.04, d3140: -0.035, d4150: -0.03, d5155: -0.03 },
-    h2_compression_storage_per_kg:{ baseValue: 175, d2630: -0.04, d3140: -0.03,  d4150: -0.03, d5155: -0.02 },
-    diesel_price_per_l:          { baseValue: 88.93, d2630: 0.0208, d3140: 0.0208, d4150: 0.0208, d5155: 0.05 }, // +5% YoY after 2045
+    green_h2_production_per_kg:   { baseValue: 600,   d2530: -0.04,   d3135: -0.035, d3640: -0.035, d4145: -0.03,  d4650: -0.03,  d5155: -0.03 },
+    h2_compression_storage_per_kg:{ baseValue: 175,   d2530: -0.04,   d3135: -0.03,  d3640: -0.03,  d4145: -0.03,  d4650: -0.03,  d5155: -0.02 },
+    diesel_price_per_l:           { baseValue: 88.93, d2530: 0.0208,  d3135: 0.0208, d3640: 0.0208, d4145: 0.0208, d4650: 0.0208, d5155: 0.05 }, // +5% YoY after 2045
   },
   policy: {
     bet_demand_incentive_per_kwh: 10000, // until 2030, then 5000 till 2035

@@ -38,10 +38,12 @@ export function buildTimeSeries(
     for (let i = 1; i < YEAR_COUNT; i++) {
       const year = START_YEAR + i;
       let delta: number;
-      if (year <= 2030) delta = p.d2630;
-      else if (year <= 2040) delta = p.d3140;
-      else if (year <= 2050) delta = p.d4150;
-      else delta = p.d5155;
+      if (year <= 2030)      delta = p.d2530;
+      else if (year <= 2035) delta = p.d3135;
+      else if (year <= 2040) delta = p.d3640;
+      else if (year <= 2045) delta = p.d4145;
+      else if (year <= 2050) delta = p.d4650;
+      else                   delta = p.d5155;
 
       // Override diesel price growth post-2045 when policy flag is set
       if (policy?.diesel_price_5pct_yoy_after_2045 && key === 'diesel_price_per_l' && year > 2045) {
