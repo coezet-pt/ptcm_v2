@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AreaChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
+import { Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
@@ -28,17 +28,9 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
   return (
     <ChartCard
       title="Cumulative CO₂ Avoided"
-      subtitle={`Mt CO₂e, running total 2025\u2013${years[years.length - 1]?.year ?? 2055} · vs diesel-only counterfactual${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      subtitle={`Mt CO₂e, running total 2025\u2013${years[years.length - 1]?.year ?? 2055} · vs diesel-only counterfactual · ${totalAvoided.toLocaleString(undefined, { maximumFractionDigits: 1 })} Mt avoided by ${years[years.length - 1]?.year ?? 2055}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
       csvFilename="cumulative_co2_avoided"
-      headerExtra={
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">By {years[years.length - 1]?.year ?? 2055}</div>
-          <div className="font-mono text-lg font-semibold text-emerald-500">
-            {totalAvoided.toLocaleString(undefined, { maximumFractionDigits: 1 })} Mt
-          </div>
-        </div>
-      }
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <ComposedChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
