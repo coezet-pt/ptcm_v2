@@ -51,6 +51,12 @@ export function buildTimeSeries(
       }
 
       arr[i] = arr[i - 1] * (1 + delta);
+
+      // v4 Dashboard: spot-year override pins absolute value for this year.
+      // Subsequent years compound from the pinned value.
+      if (!isGrowthRate && p.overrides && p.overrides[year] !== undefined) {
+        arr[i] = p.overrides[year];
+      }
     }
 
     result[key] = arr;
