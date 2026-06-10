@@ -12,14 +12,7 @@ export interface ParameterConfig {
   d5155: number;
 }
 
-// Legacy (v3) 4-range shape — kept so DB-stored presets still load.
-export interface LegacyParameterConfig {
-  baseValue: number;
-  d2630: number;
-  d3140: number;
-  d4150: number;
-  d5155: number;
-}
+
 
 export type ParameterKey =
   // Primary fuel/energy
