@@ -41,10 +41,11 @@ function gompertzShare(args: {
   pilotShare: number;
   share2045: number;
   share2055: number;
+  literalA?: number;
   literalB?: number;
   literalC?: number;
 }): number {
-  const { year, startYear, inflectionYear, pilotShare, share2045, share2055, literalB, literalC } = args;
+  const { year, startYear, inflectionYear, pilotShare, share2045, share2055, literalA, literalB, literalC } = args;
 
   if (year < startYear) return 0;
   if (share2055 <= 0) return 0;
@@ -60,9 +61,10 @@ function gompertzShare(args: {
     ? literalC
     : -(1 / inflDelta) * Math.log(Math.log(Math.max(aInitial, 0.1001) / 0.1) / b);
   const endDelta = 2055 - startYear;
-  // a re-derived per-bucket so the un-corrected curve lands on share2055 at 2055
   const normDenom = Math.exp(-b * Math.exp(-c * endDelta));
-  const a = share2055 / normDenom;
+  // Prefer the Excel PTTM literal saturation parameter when supplied;
+  // fall back to deriving from share2055 only as a legacy path.
+  const a = literalA !== undefined ? literalA : share2055 / normDenom;
 
   // Main Gompertz term (passes through AB at 2055)
   const gompertzMain = (a * Math.exp(-b * Math.exp(-c * (year - startYear)))) / normDenom;
@@ -185,6 +187,7 @@ export function computePTTM(
           pilotShare: W,
           share2045: Z,
           share2055: AB,
+          literalA: lit?.a,
           literalB: lit?.b,
           literalC: lit?.c,
         });
