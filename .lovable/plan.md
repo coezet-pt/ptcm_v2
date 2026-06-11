@@ -1,49 +1,57 @@
-## Goal
+## Fix Diesel Premature Zeroing (2048 → should be 2055)
 
-Match the Dashboard sheet's dual input pattern: every cost/maintenance parameter (rows 1–9) should let the user either override the value at a specific year (2026–2055) OR adjust the CAGR % for one of the six year-ranges. The current UI exposes only CAGRs. This change is UI + state only — no engine math changes beyond a tiny interpolation tweak in `timeSeries.ts`.
+### Root cause
 
-## UX
+In `src/lib/sim/pttm.ts`, `gompertzShare()` double-normalizes:
 
-Each parameter row in `InputPanel` stays compact (label + small "current 2025 value" + chevron). Clicking the row expands an inline panel containing:
-
-- **Spot-year editor** — Year dropdown (2026…2055) + numeric value input + "Pin" button. Pinned years are listed below as removable chips ("2032: ₹95.40 ✕").
-- **CAGR editor** — Six rows, one per range (2025-30 / 31-35 / 36-40 / 41-45 / 46-50 / 51-55), each a small `%` input (±10% cap, existing inline error).
-- **Sparkline** of the resulting 2025-2055 trajectory, so the user sees the combined effect.
-
-For params 7-9 the existing bucket dropdown sits at the top of the expanded panel; everything below is per-bucket.
-
-Params 10-13 (battery life, FC life, funding rate+tenure) are unchanged.
-
-## Behaviour
-
-- Pinning year Y sets `overrides[Y] = value`.
-- Editing the CAGR for a range clears all overrides whose year falls inside that range (decision: CAGR wins).
-- Reset-to-defaults clears all overrides too.
-- "Apply Changes" / "Discard" still gate engine recompute.
-
-## Technical
-
-**`src/lib/types.ts`** — extend `ParameterConfig`:
 ```ts
-overrides?: Record<number, number>;  // year → absolute value
+const normDenom = Math.exp(-b * Math.exp(-c * endDelta));
+const a = share2055 / normDenom;
+const gompertzMain = (a * Math.exp(-b * Math.exp(-c * (year - startYear)))) / normDenom;
 ```
 
-**`src/lib/sim/timeSeries.ts`** — single change in the per-year loop: after computing `arr[i] = arr[i-1] * (1+delta)`, if `p.overrides?.[year]` is defined, set `arr[i] = p.overrides[year]`. The next year's compounding then proceeds from the override. (One-line interpolation tweak, no formula rewrite.)
+At `year = 2055` this evaluates to `share2055 / normDenom` (BET: normDenom ≈ 0.787 ⇒ ~1.27× target), not `share2055`. The curve overshoots, BET + H2-ICE + H2-FCET exceeds 1.0 by 2048, and the residual diesel clamp (`Math.max(0, 1 − sum)`) zeroes diesel six years too early.
 
-**`src/components/ParameterRow.tsx`** — replace inline 6-CAGR layout with collapsed-by-default summary; on expand, render new `ParameterEditor` panel (extract into a sibling component) containing:
-- spot-year `Select` (2026-2055) + value `Input` + "Pin" button
-- list of pin chips with remove (✕)
-- six CAGR `Input`s with their existing ±10% validation
-- mini sparkline (reuse `recharts` `LineChart`; the editor will compute its own preview series via `buildTimeSeries` on the single draft param)
+`GOMPERTZ_PARAMS_BY_PT` in `extracted.ts` already stores the correct Excel PTTM literal `a` per powertrain, but only `literalB` and `literalC` are threaded into `gompertzShare()` — `a` is re-derived from `share2055` instead.
 
-**`src/components/BucketMaintenanceInput.tsx`** — switch the per-bucket editor to use the same `ParameterEditor` panel so params 7-9 inherit the spot-year + CAGR + sparkline UX.
+### Changes
 
-**`src/contexts/ScenarioContext.tsx`** — add `setOverride(paramKey, year, value)` and `clearOverride(paramKey, year)` mutators; CAGR mutator clears overrides whose year falls in the edited range.
+**File 1 — `src/lib/sim/pttm.ts`**
 
-**Defaults / presets** — `BAU_PARAMETERS` and the other presets need no schema change; `overrides` is optional and defaults to undefined.
+1a. Add `literalA?: number` to the `gompertzShare` args type.
 
-## Out of scope
+1b. Replace the `a` derivation:
+```ts
+const a = args.literalA !== undefined ? args.literalA : share2055 / normDenom;
+```
 
-- No changes to `tco.ts`, `choiceModel.ts`, `pttm.ts`, `stockEmissions.ts`.
-- No changes to chart components or scenario presets.
-- Per-param cap values, ±10% CAGR cap, bucket dropdown, funding inputs, policy-levers accordion — all stay as-is.
+1c. In `computePTTM`, pass `literalA: lit?.a` alongside the existing `literalB` / `literalC`.
+
+**File 2 — `src/lib/constants/extracted.ts`**
+
+2a. Update BET Gompertz params to v4 values:
+```ts
+BET: { a: 1.0382, b: 7.5299, c: 0.12560, W: 0.0005572, startYear: 2025 },
+```
+(H2-ICE, H2-FCET already match v4.)
+
+2b. Update 2025 anchors:
+```ts
+export const CNG_UNITS_2025 = 11875;  // was 14892
+export const LNG_UNITS_2025 = 368;    // was 607
+```
+
+### Expected outcome (BAU)
+
+- 2045: BET ≈ 76%, Diesel ≈ 15%, CNG ≈ 4.9%
+- 2047: Diesel ≈ 10–12%
+- 2048: Diesel ≈ 8–10% (was 0%)
+- 2054: Diesel > 0
+- 2055: Diesel = 0
+- 2025: CNG ≈ 11,875 units, LNG ≈ 368 units
+
+### Verification
+
+1. Open dashboard → BAU → Annual Sales chart. Diesel line should taper smoothly to 0 only at 2055.
+2. Market Share tab CSV export: spot-check 2045 / 2047 / 2048 / 2054 / 2055 against the Excel `PTTM` sheet.
+3. Console Layer 4 dump: 2045 BET ≈ 0.76, Diesel ≈ 0.15; 2055 ZET sum ≈ 1.0.
