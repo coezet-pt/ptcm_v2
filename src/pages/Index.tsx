@@ -1,6 +1,6 @@
 import { ScenarioProvider, useScenario } from '@/contexts/ScenarioContext';
 import ScenarioPicker from '@/components/ScenarioPicker';
-import InputPanel from '@/components/InputPanel';
+import InputPanel, { InputActionBar } from '@/components/InputPanel';
 import ModelHealthBadge from '@/components/ModelHealthBadge';
 import KpiCard from '@/components/KpiCard';
 import KpiRail, { type KpiItem } from '@/components/KpiRail';
@@ -85,14 +85,17 @@ function DashboardContent() {
 
       <div className="flex flex-col lg:flex-row items-stretch">
         {/* Left sidebar — transition controls */}
-        <aside className="w-full lg:w-[360px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-border lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto px-4 py-5">
-          <div className="mb-4">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Transition controls</p>
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-              Adjust cost trajectories, constants and policy levers, then apply to refresh the model.
-            </p>
+        <aside className="w-full lg:w-[360px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-border lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:flex lg:flex-col">
+          <div className="flex-1 min-h-0 lg:overflow-y-auto overflow-x-hidden px-4 py-5">
+            <div className="mb-4">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Transition controls</p>
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                Adjust cost trajectories, constants and policy levers, then apply to refresh the model.
+              </p>
+            </div>
+            <InputPanel />
           </div>
-          <InputPanel />
+          <InputActionBar />
         </aside>
 
         {/* Center — editorial title + stacked chart sections */}

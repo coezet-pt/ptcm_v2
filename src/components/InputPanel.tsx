@@ -15,7 +15,7 @@ import { useScenario } from '@/contexts/ScenarioContext';
 
 
 export default function InputPanel() {
-  const { isDirty, applyChanges, discardChanges, resetToDefaults, draftConfig, updateFixed } = useScenario();
+  const { draftConfig, updateFixed } = useScenario();
 
   const batteryLife = draftConfig.fixed.battery_life_cycles;
   const fcLife = draftConfig.fixed.fuel_cell_life_hours;
@@ -110,26 +110,36 @@ export default function InputPanel() {
         </CardContent>
       </Card>
 
-      {/* Sticky Apply / Discard / Reset bar */}
-      <div className="sticky bottom-0 z-20 -mx-4 px-4 py-3 bg-card/90 backdrop-blur-md border-t border-border flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {isDirty ? (
-            <Badge variant="outline" className="text-warning border-warning">Unapplied changes</Badge>
-          ) : (
-            <span className="text-xs text-muted-foreground">Charts are up to date</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={resetToDefaults} className="gap-1.5">
-            <RotateCcw className="h-3.5 w-3.5" /> Reset to defaults
-          </Button>
-          <Button variant="outline" size="sm" disabled={!isDirty} onClick={discardChanges} className="gap-1.5">
-            <Undo2 className="h-3.5 w-3.5" /> Discard
-          </Button>
-          <Button size="sm" disabled={!isDirty} onClick={applyChanges} className="gap-1.5">
-            <Play className="h-3.5 w-3.5" /> Apply Changes
-          </Button>
-        </div>
+    </div>
+  );
+}
+
+/**
+ * Apply / Discard / Reset bar — rendered outside the sidebar's scroll area
+ * so it stays pinned at the bottom. Two stacked rows to fit a narrow column.
+ */
+export function InputActionBar() {
+  const { isDirty, applyChanges, discardChanges, resetToDefaults } = useScenario();
+
+  return (
+    <div className="sticky bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur-md px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        {isDirty ? (
+          <Badge variant="outline" className="text-warning border-warning">Unapplied changes</Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">Charts are up to date</span>
+        )}
+        <Button variant="ghost" size="sm" onClick={resetToDefaults} className="gap-1.5 shrink-0">
+          <RotateCcw className="h-3.5 w-3.5" /> Reset to defaults
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled={!isDirty} onClick={discardChanges} className="gap-1.5 flex-1">
+          <Undo2 className="h-3.5 w-3.5" /> Discard
+        </Button>
+        <Button size="sm" disabled={!isDirty} onClick={applyChanges} className="gap-1.5 flex-1">
+          <Play className="h-3.5 w-3.5" /> Apply Changes
+        </Button>
       </div>
     </div>
   );
