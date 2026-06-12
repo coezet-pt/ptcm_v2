@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts';
 import type { AnnualResult, PolicyConfig } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
+import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, REF_LINE_COLOR } from '@/lib/chartTheme';
 
 interface Props {
   years: AnnualResult[];
@@ -34,17 +35,18 @@ export default function ZETPenetrationChart({ years, policy, scenarioLabel }: Pr
       csvFilename="zet_penetration"
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-          <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-          <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10 }} width={40} />
-          <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} labelFormatter={l => `Year ${l}`} />
-          <Line type="monotone" dataKey="ZET Share" stroke="#10b981" strokeWidth={2} dot={false} />
+        <LineChart data={data} margin={CHART_MARGIN}>
+          <CartesianGrid {...GRID_PROPS} />
+          <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+          <YAxis tickFormatter={v => `${v}%`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={40} />
+          <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => `${v.toFixed(1)}%`} labelFormatter={l => `Year ${l}`} />
+          <Line type="monotone" dataKey="ZET Share" stroke="#059669" strokeWidth={2.5} dot={false} />
           {inflections.map(inf => (
-            <ReferenceLine key={inf.label} x={inf.year} stroke="#94a3b8" strokeDasharray="4 4"
-              label={{ value: inf.label, position: 'top', fontSize: 9, fill: '#94a3b8' }} />
+            <ReferenceLine key={inf.label} x={inf.year} stroke={REF_LINE_COLOR} strokeDasharray="4 4"
+              label={{ value: inf.label, position: 'top', fontSize: 9, fill: REF_LINE_COLOR }} />
           ))}
-          <ReferenceLine y={50} stroke="#ef4444" strokeDasharray="3 3"
-            label={{ value: '50%', position: 'right', fontSize: 9, fill: '#ef4444' }} />
+          <ReferenceLine y={50} stroke="#b91c1c" strokeDasharray="3 3"
+            label={{ value: '50%', position: 'right', fontSize: 9, fill: '#b91c1c' }} />
         </LineChart>
       </ResponsiveContainer>
     </ChartCard>

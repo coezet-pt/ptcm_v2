@@ -59,8 +59,8 @@ export const SEGMENT_COLORS: Record<Segment, string> = {
   'Rigid 28.5-40T': '#1d4ed8',
   'Rigid >40T':     '#1e3a8a',
   'TT 31-40T':      '#fbbf24',
-  'TT 40-46T':      '#f59e0b',
-  'TT 46-55T':      '#b45309',
+  'TT 40-46T':      '#ea580c',
+  'TT 46-55T':      '#9a3412',
 };
 
 // ── Applications = useCase (9 categories, matches workbook verbatim) ────────
@@ -75,15 +75,15 @@ export const APPLICATION_OF_BUCKET: Record<string, Application> = Object.fromEnt
 );
 
 export const APPLICATION_COLORS: Record<Application, string> = {
-  'Market Load':                       '#3b82f6',
+  'Market Load':                       '#2563eb',
   'Parcel Load and FMCG':              '#8b5cf6',
-  'Perishables':                       '#06b6d4',
-  'Construction & Mining':             '#f59e0b',
-  'Cement (Bulkers & Bagged)':         '#a3a3a3',
+  'Perishables':                       '#0891b2',
+  'Construction & Mining':             '#e8a020',
+  'Cement (Bulkers & Bagged)':         '#a8a29e',
   'Steel & metal products':            '#64748b',
-  'Tankers - POL & CNG cascades':      '#ef4444',
-  'Tankers - Non POL':                 '#ec4899',
-  'LPG bullet tankers':                '#14b8a6',
+  'Tankers - POL & CNG cascades':      '#dc2626',
+  'Tankers - Non POL':                 '#db2777',
+  'LPG bullet tankers':                '#0d9488',
 };
 
 export type BucketSalesByPT = Record<string, Record<Powertrain, number>>;

@@ -27,7 +27,7 @@ export default function InputPanel() {
       {/* Primary trajectories — always visible */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Primary Cost Trajectories</CardTitle>
+          <CardTitle className="text-xs font-semibold uppercase tracking-[0.14em]">Primary Cost Trajectories</CardTitle>
           <p className="text-xs text-muted-foreground">
             2025 base value + CAGR % for each of the six year-range buckets (max ±10%).
           </p>

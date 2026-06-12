@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { POWERTRAINS } from '@/lib/constants/extracted';
 import { PT_COLORS } from '@/lib/constants/colors';
+import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
@@ -30,10 +31,12 @@ export default function ShareChart({ years, scenarioLabel }: Props) {
       csvFilename="market_share"
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <AreaChart data={data} stackOffset="expand" margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-          <XAxis dataKey="year" tick={{ fontSize: 10 }} />
-          <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fontSize: 10 }} width={40} />
-          <Tooltip formatter={(v: number) => `${(v * 100).toFixed(1)}%`} labelFormatter={l => `Year ${l}`} />
+        <AreaChart data={data} stackOffset="expand" margin={CHART_MARGIN}>
+          <CartesianGrid {...GRID_PROPS} />
+          <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+          <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={40} />
+          <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => `${(v * 100).toFixed(1)}%`} labelFormatter={l => `Year ${l}`} />
+          <Legend {...LEGEND_PROPS} />
           {[...POWERTRAINS].reverse().map(pt => (
             <Area key={pt} type="monotone" dataKey={pt} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
