@@ -112,14 +112,14 @@ export function runSanityChecks(result: SimulationResult): SanityCheckResult[] {
     ));
   }
 
-  // LNG share checks
+  // LNG share checks — Excel PTTM (BAU): 0.14% in 2030, 0.48% in 2045
   if (y2030) {
     const lngShare2030 = y2030.shareByPT.LNG;
     checks.push(check(
       'lng_share_2030',
       parseFloat((lngShare2030 * 100).toFixed(3)),
-      '≥0.5%',
-      lngShare2030 >= 0.005,
+      '0.05%–0.5%',
+      lngShare2030 >= 0.0005 && lngShare2030 <= 0.005,
       `LNG share 2030: ${(lngShare2030 * 100).toFixed(2)}%`,
     ));
   }
@@ -128,8 +128,8 @@ export function runSanityChecks(result: SimulationResult): SanityCheckResult[] {
     checks.push(check(
       'lng_share_2045',
       parseFloat((lngShare2045 * 100).toFixed(3)),
-      '≥1.5%',
-      lngShare2045 >= 0.015,
+      '0.1%–1.5%',
+      lngShare2045 >= 0.001 && lngShare2045 <= 0.015,
       `LNG share 2045: ${(lngShare2045 * 100).toFixed(2)}%`,
     ));
   }

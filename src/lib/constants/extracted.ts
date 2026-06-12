@@ -642,10 +642,11 @@ export const BAU_BASELINE_CHECKS = {
   total_sales_2025: { value: 267370, tolerance: 0.02 },
   total_sales_2045: { value: 707250, tolerance: 0.02 },
   total_sales_2055: { value: 1029830, tolerance: 0.02 },
-  zet_share_2045_min: 0.10,  // BAU should give ≥10% ZET share by 2045
-  zet_share_2045_max: 0.45,
-  zet_share_2055_min: 0.30,
-  zet_share_2055_max: 0.70,
+  // Excel PTTM sheet (BAU): ZET share 79.35% in 2045, 100% in 2055
+  zet_share_2045_min: 0.70,
+  zet_share_2045_max: 0.90,
+  zet_share_2055_min: 0.95,
+  zet_share_2055_max: 1.0,
   diesel_2025_units_min: 240000,
   diesel_2025_units_max: 270000,
 };
