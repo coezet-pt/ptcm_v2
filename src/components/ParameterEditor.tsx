@@ -106,14 +106,18 @@ export default function ParameterEditor({
 }: Props) {
   const [year, setYear] = useState<number>(2030);
   const [draftVal, setDraftVal] = useState<string>('');
-  // CAGR edit awaiting confirmation because it would delete pins in its range
-  const [pendingCagr, setPendingCagr] = useState<{ field: DeltaKey; raw: string } | null>(null);
+  // CAGR edit awaiting confirmation because it would delete pins. field 'all' = uniform edit.
+  const [pendingCagr, setPendingCagr] = useState<{ field: DeltaKey | 'all'; raw: string } | null>(null);
 
   const series = useMemo(() => buildSeries(config, !!isGrowthRate), [config, isGrowthRate]);
   const baseExceeded = baseValueMax !== undefined && config.baseValue > baseValueMax;
   const overrides = (!isGrowthRate && config.overrides) || {};
   const pinnedYears = Object.keys(overrides).map(Number).sort((a, b) => a - b);
   const hasPins = pinnedYears.length > 0;
+
+  // Uniform vs by-range CAGR entry. "Uniform" is just all six deltas equal.
+  const allEqual = DELTA_KEYS.every(dk => config[dk] === config[DELTA_KEYS[0]]);
+  const [cagrMode, setCagrMode] = useState<'uniform' | 'ranges'>(allEqual ? 'uniform' : 'ranges');
 
   // CAGR-only trajectory, used for the ghost curve and per-pin "vs trend" deltas
   const trendSeries = useMemo(
@@ -142,12 +146,41 @@ export default function ParameterEditor({
     }
   };
 
+  const applyUniform = (raw: string) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return;
+    for (const dk of DELTA_KEYS) onCagrChange(dk, n / 100);
+  };
+
+  const handleUniformInput = (raw: string) => {
+    if (hasPins) {
+      setPendingCagr({ field: 'all', raw });
+    } else {
+      applyUniform(raw);
+      if (pendingCagr?.field === 'all') setPendingCagr(null);
+    }
+  };
+
   const applyPendingCagr = () => {
     if (!pendingCagr) return;
-    const n = Number(pendingCagr.raw);
-    if (Number.isFinite(n)) onCagrChange(pendingCagr.field, n / 100);
+    if (pendingCagr.field === 'all') {
+      applyUniform(pendingCagr.raw);
+    } else {
+      const n = Number(pendingCagr.raw);
+      if (Number.isFinite(n)) onCagrChange(pendingCagr.field, n / 100);
+    }
     setPendingCagr(null);
   };
+
+  const switchCagrMode = (mode: 'uniform' | 'ranges') => {
+    setCagrMode(mode);
+    setPendingCagr(null);
+  };
+
+  // Pins affected by a pending edit (one range, or all of them for uniform)
+  const pendingPins = pendingCagr
+    ? (pendingCagr.field === 'all' ? pinnedYears : pinsInRange(pendingCagr.field))
+    : [];
 
   return (
     <div className="space-y-4 pt-3 pl-1">
@@ -232,49 +265,110 @@ export default function ParameterEditor({
         </div>
       )}
 
-      {/* CAGR by range */}
+      {/* CAGR — uniform or by range */}
       <div className="space-y-2">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          CAGR % by range <span className="normal-case opacity-70">(max ±10%)</span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            CAGR % <span className="normal-case opacity-70">(max ±10%)</span>
+          </div>
+          <div className="inline-flex rounded-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => switchCagrMode('uniform')}
+              className={`px-2 py-1 text-[10px] font-medium transition-colors ${cagrMode === 'uniform' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-secondary'}`}
+            >
+              Same every year
+            </button>
+            <button
+              type="button"
+              onClick={() => switchCagrMode('ranges')}
+              className={`px-2 py-1 text-[10px] font-medium transition-colors border-l border-border ${cagrMode === 'ranges' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-secondary'}`}
+            >
+              Vary by range
+            </button>
+          </div>
         </div>
-        <div className="flex items-end gap-2 flex-wrap">
-          {DELTA_KEYS.map((dk, i) => {
-            const isPending = pendingCagr?.field === dk;
-            const displayed = isPending ? pendingCagr.raw : (config[dk] * 100).toFixed(2);
+
+        {cagrMode === 'uniform' ? (
+          (() => {
+            const isPending = pendingCagr?.field === 'all';
+            const displayed = isPending ? pendingCagr.raw : (allEqual ? (config.d2530 * 100).toFixed(2) : '');
             const over = Math.abs(Number(displayed)) > CAGR_MAX * 100;
-            const rangePins = pinsInRange(dk);
             return (
-              <div key={dk} className="flex flex-col">
-                <span className="text-[10px] text-muted-foreground mb-0.5 inline-flex items-center gap-1">
-                  {DELTA_LABELS[i]}
-                  {rangePins.length > 0 && (
-                    <span
-                      className="inline-flex items-center gap-0.5 text-primary"
-                      title={`Pinned year${rangePins.length > 1 ? 's' : ''} in this range: ${rangePins.join(', ')}`}
-                    >
-                      <Pin className="h-2.5 w-2.5" />{rangePins.length}
-                    </span>
-                  )}
-                </span>
-                <Input
-                  type="number"
-                  step={0.1}
-                  className={`h-8 w-20 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${over ? 'border-destructive ring-1 ring-destructive' : ''} ${isPending ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
-                  value={displayed}
-                  onChange={e => handleCagrInput(dk, e.target.value)}
-                  title={over ? 'Exceeds ±10% cap' : undefined}
-                />
+              <div className="flex items-end gap-2 flex-wrap">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground mb-0.5 inline-flex items-center gap-1">
+                    All years 2025–2055
+                    {hasPins && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-primary"
+                        title={`Pinned year${pinnedYears.length > 1 ? 's' : ''}: ${pinnedYears.join(', ')}`}
+                      >
+                        <Pin className="h-2.5 w-2.5" />{pinnedYears.length}
+                      </span>
+                    )}
+                  </span>
+                  <Input
+                    type="number"
+                    step={0.1}
+                    placeholder={allEqual ? undefined : 'e.g. 5'}
+                    className={`h-8 w-24 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${over ? 'border-destructive ring-1 ring-destructive' : ''} ${isPending ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
+                    value={displayed}
+                    onChange={e => handleUniformInput(e.target.value)}
+                    title={over ? 'Exceeds ±10% cap' : undefined}
+                  />
+                </div>
+                {!allEqual && !isPending && (
+                  <span className="text-[10px] text-muted-foreground pb-2 max-w-[200px]">
+                    Ranges currently differ — entering a value applies it to all six ranges.
+                  </span>
+                )}
               </div>
             );
-          })}
-        </div>
+          })()
+        ) : (
+          <div className="flex items-end gap-2 flex-wrap">
+            {DELTA_KEYS.map((dk, i) => {
+              const isPending = pendingCagr?.field === dk;
+              const displayed = isPending ? pendingCagr.raw : (config[dk] * 100).toFixed(2);
+              const over = Math.abs(Number(displayed)) > CAGR_MAX * 100;
+              const rangePins = pinsInRange(dk);
+              return (
+                <div key={dk} className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground mb-0.5 inline-flex items-center gap-1">
+                    {DELTA_LABELS[i]}
+                    {rangePins.length > 0 && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-primary"
+                        title={`Pinned year${rangePins.length > 1 ? 's' : ''} in this range: ${rangePins.join(', ')}`}
+                      >
+                        <Pin className="h-2.5 w-2.5" />{rangePins.length}
+                      </span>
+                    )}
+                  </span>
+                  <Input
+                    type="number"
+                    step={0.1}
+                    className={`h-8 w-20 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${over ? 'border-destructive ring-1 ring-destructive' : ''} ${isPending ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
+                    value={displayed}
+                    onChange={e => handleCagrInput(dk, e.target.value)}
+                    title={over ? 'Exceeds ±10% cap' : undefined}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {pendingCagr && (
           <div className="flex items-center gap-2 flex-wrap rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1.5 text-[11px]">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
             <span>
-              Changing {DELTA_LABELS[DELTA_KEYS.indexOf(pendingCagr.field)]} will remove{' '}
-              {pinsInRange(pendingCagr.field).length} pin{pinsInRange(pendingCagr.field).length > 1 ? 's' : ''}{' '}
-              ({pinsInRange(pendingCagr.field).join(', ')}).
+              {pendingCagr.field === 'all'
+                ? 'Setting one CAGR for all years'
+                : `Changing ${DELTA_LABELS[DELTA_KEYS.indexOf(pendingCagr.field)]}`}{' '}
+              will remove {pendingPins.length} pin{pendingPins.length > 1 ? 's' : ''}{' '}
+              ({pendingPins.join(', ')}).
             </span>
             <Button type="button" size="sm" variant="destructive" className="h-6 px-2 text-[11px]" onClick={applyPendingCagr}>
               Apply &amp; remove pins
