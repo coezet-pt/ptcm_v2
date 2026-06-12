@@ -30,6 +30,17 @@ function DashboardContent() {
 
   const scenarioLabel = SCENARIO_LABEL[activeScenario] ?? activeScenario;
   const y2045 = simResult?.years.find(y => y.year === 2045);
+  const y2025 = simResult?.years[0];
+  const yFinal = simResult?.years[simResult.years.length - 1];
+
+  // Derived end-state metrics for the rail
+  const finalStockTotal = yFinal ? Object.values(yFinal.stockByPT).reduce((a, b) => a + b, 0) : 0;
+  const finalZetStock = yFinal ? yFinal.stockByPT.BET + yFinal.stockByPT['H2-ICE'] + yFinal.stockByPT['H2-FCET'] : 0;
+  const finalZetStockShare = finalStockTotal > 0 ? (finalZetStock / finalStockTotal) * 100 : 0;
+  const finalDieselSalesShare = yFinal ? (yFinal.shareByPT.Diesel ?? 0) * 100 : 0;
+  const emissionsDeltaPct = y2025 && yFinal && y2025.totalEmissions > 0
+    ? ((yFinal.totalEmissions - y2025.totalEmissions) / y2025.totalEmissions) * 100
+    : 0;
 
   const kpis: KpiItem[] = simResult ? [
     {
@@ -56,6 +67,26 @@ function DashboardContent() {
       label: 'CO₂ Avoided',
       value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} Mt`,
       context: 'Cumulative vs diesel counterfactual',
+    },
+    {
+      label: 'ZET Fleet 2055',
+      value: `${finalZetStockShare.toFixed(0)}%`,
+      context: `${(finalZetStock / 1e6).toFixed(1)}M of ${(finalStockTotal / 1e6).toFixed(1)}M trucks on road`,
+    },
+    {
+      label: 'Diesel Sales 2055',
+      value: `${finalDieselSalesShare.toFixed(1)}%`,
+      context: 'Diesel share of new sales in final year',
+    },
+    {
+      label: 'Emissions 2055',
+      value: `${yFinal ? yFinal.totalEmissions.toFixed(0) : '—'} Mt`,
+      context: `${emissionsDeltaPct >= 0 ? '+' : ''}${emissionsDeltaPct.toFixed(0)}% vs 2025 · WTW per year`,
+    },
+    {
+      label: 'Market Size 2055',
+      value: `${yFinal ? (yFinal.tiv / 1000).toFixed(0) : '—'}k`,
+      context: 'Total industry volume, trucks per year',
     },
   ] : [];
 
