@@ -25,10 +25,13 @@ function stableStringify(obj: unknown): string {
 function runSimulation(config: ScenarioConfig): SimulationResult {
   const ts = buildTimeSeries(config.parameters, config.policy);
   const tco2045 = computeTCO(ts, config.policy, BUCKETS, 2045, config.fixed, config.segmentBasePrices);
+  const tco2050 = computeTCO(ts, config.policy, BUCKETS, 2050, config.fixed, config.segmentBasePrices);
   const tco2055 = computeTCO(ts, config.policy, BUCKETS, 2055, config.fixed, config.segmentBasePrices);
   const shares2045 = computeShares(tco2045, BUCKETS, 2045, config.policy);
-  const shares2055 = computeShares(tco2055, BUCKETS, 2055, config.policy);
-  const annualSales = computePTTM(shares2045, shares2055, config.policy);
+  const shares2050 = computeShares(tco2050, BUCKETS, 2050, config.policy);
+  // 2055 is the Excel '100% ZET' anchor — diesel/CNG/LNG excluded by design
+  const shares2055 = computeShares(tco2055, BUCKETS, 2055, config.policy, true);
+  const annualSales = computePTTM(shares2045, shares2050, shares2055, config.policy);
   const result = computeStockEmissions(annualSales);
 
   // 🔬 Diagnostic dump

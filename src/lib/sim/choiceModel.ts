@@ -12,42 +12,27 @@ import {
   POWERTRAINS,
   POWERTRAIN_RATINGS,
   START_OF_SUPPLY,
+  CHOICE_SHARE_ADJUSTMENT,
+  BUCKET_CHOICE_ELASTICITIES,
+  BUCKET_PAYLOADS,
 } from '@/lib/constants/extracted';
 import type { BucketTCOMap } from './tco';
 
 // Per-bucket, per-powertrain share
 export type BucketShares = Record<string, Record<Powertrain, number>>;
 
-/** Averaged per-bucket ratings from Excel (one number per factor) */
-const ELASTICITIES = {
-  TCO: 9.0,               // AVERAGE(10,9,8,9,9,9)
-  vehiclePrice: 8.83,     // AVERAGE(9,9,9,9,9,8)
-  ratedPayload: 7.17,     // AVERAGE(6,9,6,6,9,7)
-  tatGradeability: 5.5,   // AVERAGE(3,9,4,7,5,5)
-  rangeFillingTime: 7.5,  // AVERAGE(8,10,7,8,6,6)
-};
-
-/** Excel cell E2/F2 — global multiplier */
-const GLOBAL_MULTIPLIER = 1.5;
-let __debugDone = false;
-let __debugDone2 = false;
-
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
+// Excel B-sheets: Diesel/CNG/LNG/H2-ICE share the diesel payload; only BET
+// and FCET carry a payload penalty (rows 17-19 per sheet).
 function payloadRatio(bucket: Bucket, pt: Powertrain): number {
-  const dieselPayload = bucket.gvw - bucket.ulw;
-  const penalty: Record<Powertrain, number> = {
-    'Diesel': 0,
-    'CNG': 200,
-    'LNG': 300,
-    'BET': bucket.betBatteryKWh * 8,
-    'H2-ICE': bucket.h2TankKg * 40,
-    'H2-FCET': bucket.fcetFuelCellKW * 4 + bucket.fcetBatteryKWh * 8 + bucket.h2TankKg * 40,
-  };
-  const ptPayload = Math.max(1, dieselPayload - penalty[pt]);
-  return ptPayload / dieselPayload;
+  const pl = BUCKET_PAYLOADS[bucket.id];
+  if (!pl) return 1;
+  if (pt === 'BET') return pl.bet / pl.diesel;
+  if (pt === 'H2-FCET') return pl.fcet / pl.diesel;
+  return 1;
 }
 
 export function computeShares(
@@ -55,6 +40,9 @@ export function computeShares(
   buckets: Bucket[],
   targetYear: number,
   policy?: PolicyConfig,
+  // Excel 'Estimation 100% ZET 2055': diesel/CNG/LNG are excluded from the
+  // 2055 choice set, shares renormalize among BET / H2-ICE / H2-FCET only.
+  zetOnly = false,
 ): BucketShares {
   const result: BucketShares = {};
 
@@ -62,14 +50,27 @@ export function computeShares(
     const tco = tcoResults[bucket.id];
     if (!tco) continue;
 
-    const dieselTCO = tco['Diesel'].tcoPerKm;
+    // Excel quirk: the Input Sheet "2055 Diesel VE" cells for B9 and B11
+    // reference the LNG TCO row (AG167) instead of Diesel (AG165), so their
+    // 2055 ZET factors are computed against the LNG baseline.
+    const dieselTCO = (zetOnly && (bucket.id === 'B9' || bucket.id === 'B11'))
+      ? tco['LNG'].tcoPerKm
+      : tco['Diesel'].tcoPerKm;
     const dieselPrice = tco['Diesel'].vehiclePrice;
     const dieselTAT = POWERTRAIN_RATINGS.tatGradeability['Diesel'];
     const dieselRange = POWERTRAIN_RATINGS.rangeFillingTime['Diesel'];
 
     const rawScores: Record<Powertrain, number> = {} as any;
+    const el = BUCKET_CHOICE_ELASTICITIES[bucket.id];
+    // TCO factor per PT kept separately so the B12 quirk below can swap them
+    const tcoFactors: Record<Powertrain, number> = {} as any;
+    const otherFactors: Record<Powertrain, number> = {} as any;
 
     for (const pt of POWERTRAINS) {
+      if (zetOnly && (pt === 'Diesel' || pt === 'CNG' || pt === 'LNG')) {
+        rawScores[pt] = 0;
+        continue;
+      }
       const supplyYear = START_OF_SUPPLY[bucket.size as VehicleSize]?.[pt] ?? 2025;
       if (targetYear < supplyYear) {
         rawScores[pt] = 0;
@@ -77,71 +78,39 @@ export function computeShares(
       }
 
       // Factor 1: TCO — diesel/pt (lower TCO better)
-      const tcoArg = ELASTICITIES.TCO * GLOBAL_MULTIPLIER * (dieselTCO / tco[pt].tcoPerKm - 1);
+      const tcoArg = el.tco * (dieselTCO / tco[pt].tcoPerKm - 1);
 
       // Factor 2: Vehicle Price — diesel/pt (lower price better)
-      const priceArg = ELASTICITIES.vehiclePrice * GLOBAL_MULTIPLIER * (dieselPrice / tco[pt].vehiclePrice - 1);
+      const priceArg = el.price * (dieselPrice / tco[pt].vehiclePrice - 1);
 
       // Factor 3: Rated Payload — pt/diesel (higher payload better)
-      const plRatio = payloadRatio(bucket, pt);
-      const payloadArg = ELASTICITIES.ratedPayload * GLOBAL_MULTIPLIER * (plRatio / 1.0 - 1);
+      const payloadArg = el.payload * (payloadRatio(bucket, pt) - 1);
 
       // Factor 4: TAT/Gradeability — pt/diesel (higher rating better)
       const tatRating = POWERTRAIN_RATINGS.tatGradeability[pt];
-      const tatArg = ELASTICITIES.tatGradeability * GLOBAL_MULTIPLIER * (tatRating / dieselTAT - 1);
+      const tatArg = el.tat * (tatRating / dieselTAT - 1);
 
       // Factor 5: Range/Filling — diesel/pt (lower penalty better)
       const rangeRating = (policy?.range_filling_concern_after_2035 === false && targetYear >= 2035)
         ? 1.0
         : POWERTRAIN_RATINGS.rangeFillingTime[pt];
-      const rangeArg = ELASTICITIES.rangeFillingTime * GLOBAL_MULTIPLIER * (dieselRange / rangeRating - 1);
+      const rangeArg = el.range * (dieselRange / rangeRating - 1);
 
-      const factors = {
-        TCO: Math.exp(clamp(tcoArg, -50, 50)),
-        vehiclePrice: Math.exp(clamp(priceArg, -50, 50)),
-        ratedPayload: Math.exp(clamp(payloadArg, -50, 50)),
-        tatGradeability: Math.exp(clamp(tatArg, -50, 50)),
-        rangeFillingTime: Math.exp(clamp(rangeArg, -50, 50)),
-      };
+      tcoFactors[pt] = Math.exp(clamp(tcoArg, -50, 50));
+      otherFactors[pt] = Math.exp(clamp(priceArg, -50, 50))
+        + Math.exp(clamp(payloadArg, -50, 50))
+        + Math.exp(clamp(tatArg, -50, 50))
+        + Math.exp(clamp(rangeArg, -50, 50));
+      rawScores[pt] = tcoFactors[pt] + otherFactors[pt];
+    }
 
-      if (bucket.id === 'B1' && targetYear === 2045 && !__debugDone2) {
-        __debugDone2 = true;
-        const dieselTco = tco['Diesel'].tcoPerKm;
-        const betTco = tco['BET'].tcoPerKm;
-        const ratio = dieselTco / betTco;
-        console.log('🔬 ACTUAL ARG TRACE:');
-        console.log('  Diesel TCO:', dieselTco);
-        console.log('  BET TCO:', betTco);
-        console.log('  Ratio:', ratio);
-        console.log('  ELASTICITIES.TCO:', ELASTICITIES.TCO);
-        console.log('  GLOBAL_MULTIPLIER:', GLOBAL_MULTIPLIER);
-        console.log('  Computed arg:', ELASTICITIES.TCO * GLOBAL_MULTIPLIER * (ratio - 1));
-        console.log('  Math.exp(arg):', Math.exp(ELASTICITIES.TCO * GLOBAL_MULTIPLIER * (ratio - 1)));
-        console.log('  Expected: ~7.186');
-      }
-
-      if (bucket.id === 'B1' && targetYear === 2045 && pt === 'BET' && !__debugDone) {
-        __debugDone = true;
-        const tcoFactorBET = factors.TCO;
-        console.log(`🧪 RUNTIME CHECK: B1 BET TCO factor = ${tcoFactorBET.toFixed(3)} (Excel expects 7.186, broken value would be ~6400)`);
-        console.log('  Actually stored factors:', JSON.stringify({
-          TCO: factors.TCO.toFixed(4),
-          price: factors.vehiclePrice.toFixed(4),
-          payload: factors.ratedPayload.toFixed(4),
-          TAT: factors.tatGradeability.toFixed(4),
-          range: factors.rangeFillingTime.toFixed(4),
-        }));
-      console.log(`ℹ️ B1 BET TCO factor = ${tcoFactorBET.toFixed(3)}. Excel reference = 7.186. ` +
-            `Discrepancy means TCO INPUTS are wrong — check tco.ts, not choiceModel.ts.`);
-      }
-
-      const score = factors.TCO
-        + factors.vehiclePrice
-        + factors.ratedPayload
-        + factors.tatGradeability
-        + factors.rangeFillingTime;
-
-      rawScores[pt] = score;
+    // Excel quirk: B12's BET and H2-ICE TCO factor cells are cross-wired in
+    // the workbook (Estimation sheets 2045 & 2050), so each PT scores with
+    // the other's TCO factor. Replicated for fidelity with the source model.
+    if (bucket.id === 'B12' && !zetOnly
+      && rawScores['BET'] > 0 && rawScores['H2-ICE'] > 0) {
+      rawScores['BET'] = tcoFactors['H2-ICE'] + otherFactors['BET'];
+      rawScores['H2-ICE'] = tcoFactors['BET'] + otherFactors['H2-ICE'];
     }
 
     // Normalize
@@ -149,6 +118,20 @@ export function computeShares(
     const shares: Record<Powertrain, number> = {} as any;
     for (const pt of POWERTRAINS) {
       shares[pt] = total > 0 ? rawScores[pt] / total : 0;
+    }
+
+    // Excel Estimation-sheet adjustments: multiply shares by the per-bucket
+    // supply-delay / maturity / potential-TIV factors, then renormalize.
+    const adj = CHOICE_SHARE_ADJUSTMENT[targetYear]?.[bucket.id];
+    if (adj) {
+      let adjTotal = 0;
+      for (const pt of POWERTRAINS) {
+        shares[pt] *= adj[pt] ?? 1;
+        adjTotal += shares[pt];
+      }
+      if (adjTotal > 0) {
+        for (const pt of POWERTRAINS) shares[pt] /= adjTotal;
+      }
     }
 
     result[bucket.id] = shares;
@@ -176,30 +159,8 @@ export function computeShares(
           }
         });
       }
-      const b1tco = tcoResults['B1'];
-      if (b1tco && b1tco['CNG']) {
-        const dTCO = b1tco['Diesel'].tcoPerKm;
-        const dPrice = b1tco['Diesel'].vehiclePrice;
-        console.log('[ChoiceModel DEBUG] B1 CNG factor args at 2045:', {
-          tcoArg: (ELASTICITIES.TCO * GLOBAL_MULTIPLIER * (dTCO / b1tco['CNG'].tcoPerKm - 1)).toFixed(4),
-          priceArg: (ELASTICITIES.vehiclePrice * GLOBAL_MULTIPLIER * (dPrice / b1tco['CNG'].vehiclePrice - 1)).toFixed(4),
-          tatArg: (ELASTICITIES.tatGradeability * GLOBAL_MULTIPLIER * (POWERTRAIN_RATINGS.tatGradeability['CNG'] / POWERTRAIN_RATINGS.tatGradeability['Diesel'] - 1)).toFixed(4),
-          rangeArg: (ELASTICITIES.rangeFillingTime * GLOBAL_MULTIPLIER * (POWERTRAIN_RATINGS.rangeFillingTime['Diesel'] / POWERTRAIN_RATINGS.rangeFillingTime['CNG'] - 1)).toFixed(4),
-        });
-      }
     }
   }
 
   return result;
-}
-
-// Self-test on module load — throws if formula is broken
-if (typeof window !== 'undefined') {
-  const testBET_TCO = Math.exp(9.0 * 1.5 * (56.94 / 49.68 - 1));
-  const expected = 7.186;
-  if (Math.abs(testBET_TCO - expected) > 0.05) {
-    console.error(`❌ Choice model formula BROKEN: expected ${expected}, got ${testBET_TCO.toFixed(3)}`);
-  } else {
-    console.log('✅ Choice model formula verified against Excel B1 BET TCO');
-  }
 }

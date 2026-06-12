@@ -120,7 +120,7 @@ export const OTHER_DIESEL_TIV_SHARE = 1 - BUCKET_TIV_SHARE_TOTAL;
 // Tier1 = until 2035 sales | Tier2 = 2036-2045 | Tier3 = after 2045
 // Two profile groups in Excel — "high duty" (cement, mining, tipper) and "general"
 // ===========================================================================
-export type ResaleProfile = 'general' | 'high_duty';
+export type ResaleProfile = 'general' | 'high_duty' | 'tipper';
 
 export const RESALE_VALUES: Record<ResaleProfile, Record<Powertrain, [number, number, number]>> = {
   general:   { // applies to B1, B2, B4, B5, B6, B12, B13, B14
@@ -131,7 +131,7 @@ export const RESALE_VALUES: Record<ResaleProfile, Record<Powertrain, [number, nu
     'H2-ICE':  [0.25, 0.35, 0.40],
     'H2-FCET': [0.10, 0.20, 0.30],
   },
-  high_duty: { // applies to B3, B7, B8, B9, B10, B11
+  high_duty: { // applies to B3, B9, B10, B11
     'Diesel':  [0.50, 0.40, 0.30],
     'CNG':     [0.45, 0.35, 0.25],
     'LNG':     [0.45, 0.35, 0.25],
@@ -139,14 +139,115 @@ export const RESALE_VALUES: Record<ResaleProfile, Record<Powertrain, [number, nu
     'H2-ICE':  [0.20, 0.30, 0.35],
     'H2-FCET': [0.05, 0.15, 0.25],
   },
+  tipper: { // applies to B7, B8 (Excel B7/B8 TCO sheets, resale ÷ vehicle cost)
+    'Diesel':  [0.30, 0.25, 0.20],
+    'CNG':     [0.25, 0.20, 0.15],
+    'LNG':     [0.25, 0.20, 0.15],
+    'BET':     [0.10, 0.20, 0.25],
+    'H2-ICE':  [0.15, 0.20, 0.25],
+    'H2-FCET': [0.05, 0.15, 0.20],
+  },
 };
 
 // Maps each bucket to its resale profile
 export const BUCKET_RESALE_PROFILE: Record<string, ResaleProfile> = {
   'B1': 'general',  'B2': 'general',  'B3': 'high_duty', 'B4': 'general',
-  'B5': 'general',  'B6': 'general',  'B7': 'high_duty', 'B8': 'high_duty',
+  'B5': 'general',  'B6': 'general',  'B7': 'tipper',    'B8': 'tipper',
   'B9': 'high_duty','B10': 'high_duty','B11': 'high_duty','B12': 'general',
   'B13': 'general', 'B14': 'general',
+};
+
+// ===========================================================================
+// CHOICE MODEL — per-bucket effective elasticities (impact rating × weight ×
+// 1.5 global multiplier already folded in). Back-solved exactly from the
+// Excel Estimation SS2045 factor rows against the Input Sheet value blocks;
+// identical within each use-case group.
+// ===========================================================================
+export interface ChoiceElasticities {
+  tco: number; price: number; payload: number; tat: number; range: number;
+}
+const CE_ML:      ChoiceElasticities = { tco: 13.5,     price: 13.25, payload: 10.75, tat: 8.25, range: 11.25 };    // B1-B3 Market Load
+const CE_PARCEL:  ChoiceElasticities = { tco: 13.03125, price: 8.625, payload: 7.5,   tat: 8.25, range: 12.84375 }; // B4-B6 Parcel/FMCG/Perishables
+const CE_TIPPER:  ChoiceElasticities = { tco: 13.5,     price: 13.5,  payload: 8.5,   tat: 10.5, range: 12 };       // B7-B8 Construction & Mining
+const CE_CEMENT:  ChoiceElasticities = { tco: 13.5,     price: 13.2,  payload: 10.8,  tat: 8.1,  range: 12 };       // B9-B10 Cement
+const CE_STEEL:   ChoiceElasticities = { tco: 12.9,     price: 11.7,  payload: 8.7,   tat: 5.7,  range: 8.7 };      // B11 Steel & metal
+const CE_TANKER:  ChoiceElasticities = { tco: 13,       price: 12.5,  payload: 13,    tat: 3.5,  range: 7 };        // B12-B14 Tankers
+export const BUCKET_CHOICE_ELASTICITIES: Record<string, ChoiceElasticities> = {
+  B1: CE_ML, B2: CE_ML, B3: CE_ML,
+  B4: CE_PARCEL, B5: CE_PARCEL, B6: CE_PARCEL,
+  B7: CE_TIPPER, B8: CE_TIPPER,
+  B9: CE_CEMENT, B10: CE_CEMENT,
+  B11: CE_STEEL,
+  B12: CE_TANKER, B13: CE_TANKER, B14: CE_TANKER,
+};
+
+// Rated payloads per bucket (Excel B-sheet rows 17-19). Diesel/CNG/LNG/H2-ICE
+// share the diesel payload; only BET and FCET carry a payload penalty.
+export const BUCKET_PAYLOADS: Record<string, { diesel: number; bet: number; fcet: number }> = {
+  B1:  { diesel: 10500, bet: 8900,  fcet: 9600 },
+  B2:  { diesel: 19000, bet: 17000, fcet: 18100 },
+  B3:  { diesel: 35000, bet: 32200, fcet: 33900 },
+  B4:  { diesel: 10500, bet: 8900,  fcet: 9600 },
+  B5:  { diesel: 18500, bet: 16500, fcet: 17600 },
+  B6:  { diesel: 9500,  bet: 7900,  fcet: 8600 },
+  B7:  { diesel: 14500, bet: 12500, fcet: 13600 },
+  B8:  { diesel: 20000, bet: 17600, fcet: 19100 },
+  B9:  { diesel: 35000, bet: 32200, fcet: 33900 },
+  B10: { diesel: 39500, bet: 37100, fcet: 38400 },
+  B11: { diesel: 40000, bet: 37600, fcet: 38900 },
+  B12: { diesel: 18500, bet: 16500, fcet: 17600 },
+  B13: { diesel: 18500, bet: 16500, fcet: 17600 },
+  B14: { diesel: 20500, bet: 18100, fcet: 19600 },
+};
+
+// ===========================================================================
+// CHOICE MODEL SHARE ADJUSTMENTS (Excel Estimation sheets, per bucket)
+// Combined multiplier applied to the raw normalized PT shares, then the
+// shares are renormalized — exactly as the Estimation sheets do:
+//   2045: "Adjustment for delay in PT Start of Supply" × "Adjustment for Potential TIV"
+//   2050: Start-of-Supply × "Adjustment for delay in PT Maturity" × Potential TIV
+//   2055: "Adjustment for delay in Powertrain Maturity Year" (ZET-only sheet)
+// Extracted as ratio (final-adjusted row ÷ raw PT-share row) per bucket.
+// ===========================================================================
+export const CHOICE_SHARE_ADJUSTMENT: Record<number, Record<string, Partial<Record<Powertrain, number>>>> = {
+  2045: {
+    B1:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B2:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B3:  { Diesel: 1, CNG: 0.588669, LNG: 0.230586, BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B4:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B5:  { Diesel: 1, CNG: 0.591916, LNG: 0.256737, BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B6:  { Diesel: 1, CNG: 0.878329, LNG: 0.018059, BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B7:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B8:  { Diesel: 1, CNG: 0.631347, LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B9:  { Diesel: 1, CNG: 0.85,     LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B10: { Diesel: 1, CNG: 0,        LNG: 0.85,     BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B11: { Diesel: 1, CNG: 0.043948, LNG: 0.806052, BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B12: { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B13: { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+    B14: { Diesel: 1, CNG: 0.559505, LNG: 0.290495, BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
+  },
+  2050: {
+    B1:  { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.552, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B2:  { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B3:  { Diesel: 1, CNG: 0.487372, LNG: 0.167394, BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B4:  { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.552, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B5:  { Diesel: 1, CNG: 0.484041, LNG: 0.186231, BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B6:  { Diesel: 1, CNG: 0.718333, LNG: 0.013058, BET: 0.552, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B7:  { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B8:  { Diesel: 1, CNG: 0.522884, LNG: 0.139953, BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B9:  { Diesel: 1, CNG: 0.704,    LNG: 0,        BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B10: { Diesel: 1, CNG: 0,        LNG: 0.5984,   BET: 0.552, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B11: { Diesel: 1, CNG: 0.036333, LNG: 0.567517, BET: 0.552, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B12: { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B13: { Diesel: 1, CNG: 0.736,    LNG: 0,        BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+    B14: { Diesel: 1, CNG: 0.462884, LNG: 0.204949, BET: 0.528, 'H2-ICE': 0.2048, 'H2-FCET': 0.096 },
+  },
+  // 2055 ('Estimation 100% ZET 2055'): same maturity multiplier for all buckets
+  2055: Object.fromEntries(
+    ['B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11','B12','B13','B14'].map(b => [
+      b, { BET: 1, 'H2-ICE': 0.65, 'H2-FCET': 0.5 },
+    ]),
+  ),
 };
 
 // ===========================================================================
@@ -203,6 +304,41 @@ export const TANK_SIZES = {
 // Higher = OEM keeps more margin, less cost-passed-through to buyer in early years
 // Source: 'No change with year' row 34
 // ===========================================================================
+// ===========================================================================
+// PER-BUCKET OPEX CALIBRATION (Excel B1-B14 TCO sheets, label-matched rows)
+// maintBET/maintFCET are 4-point knots at [2025, 2045, 2050, 2055]
+// (₹/km incl. tyres + battery replacement); Excel's post-2045 growth is
+// steeper than the 2025-45 CAGR, hence the extra knots. The rest are
+// [value@2025, value@2045] pairs whose implied CAGR also extends past 2045:
+//   tollPerYear : ₹/vehicle/year (same for all powertrains)
+//   manpowerIce : ₹/vehicle/year, Diesel/CNG/LNG/H2-ICE crews
+//   manpowerZet : ₹/vehicle/year, BET/H2-FCET crews
+// ===========================================================================
+export const BUCKET_OPEX_CALIBRATION: Record<string, {
+  maintBET: [number, number, number, number];
+  maintFCET: [number, number, number, number];
+  tollPerYear: [number, number];
+  manpowerIce: [number, number];
+  manpowerZet: [number, number];
+  /** Excel quirk: B7's CNG block escalates manpower on B8's rate (row 87). */
+  manpowerCng?: [number, number];
+}> = {
+  B1:  { maintBET: [5.122, 6.640, 7.526, 8.828],    maintFCET: [5.765, 7.080, 7.944, 9.268],    tollPerYear: [572400, 698436.78],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
+  B2:  { maintBET: [7.178, 9.916, 11.362, 13.408],  maintFCET: [7.220, 9.945, 11.390, 13.437],  tollPerYear: [693000, 845591.70],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
+  B3:  { maintBET: [11.471, 17.887, 20.887, 24.893],maintFCET: [11.878, 18.166, 21.152, 25.172],tollPerYear: [972000, 1186024.72],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+  B4:  { maintBET: [5.322, 6.777, 7.656, 8.965],    maintFCET: [5.997, 7.239, 8.095, 9.426],    tollPerYear: [572400, 698436.78],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
+  B5:  { maintBET: [6.923, 9.741, 11.196, 13.234],  maintFCET: [7.037, 9.819, 11.270, 13.311],  tollPerYear: [756000, 922463.67],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
+  B6:  { maintBET: [5.198, 7.144, 8.180, 9.648],    maintFCET: [5.805, 7.560, 8.575, 10.063],   tollPerYear: [636000, 776040.87],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
+  B7:  { maintBET: [10.168, 15.579, 18.145, 21.596],maintFCET: [11.121, 16.231, 18.765, 22.248],tollPerYear: [666400, 813134.64],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000], manpowerCng: [450000, 1211000] },
+  B8:  { maintBET: [12.773, 20.586, 24.152, 28.855],maintFCET: [13.338, 20.973, 24.520, 29.242],tollPerYear: [571200, 696972.55],   manpowerIce: [500000, 1211000], manpowerZet: [560000, 1350000] },
+  B9:  { maintBET: [11.339, 17.796, 20.801, 24.803],maintFCET: [11.842, 18.141, 21.128, 25.147],tollPerYear: [1036800, 1265093.03], manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+  B10: { maintBET: [10.064, 15.477, 18.036, 21.473],maintFCET: [10.948, 16.082, 18.612, 22.078],tollPerYear: [972000, 1186024.72],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+  B11: { maintBET: [12.284, 19.709, 23.109, 27.599],maintFCET: [12.979, 20.184, 23.561, 28.074],tollPerYear: [864000, 1054244.20],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+  B12: { maintBET: [6.435, 8.473, 9.630, 11.313],   maintFCET: [7.270, 9.045, 10.173, 11.885],  tollPerYear: [525000, 640599.77],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
+  B13: { maintBET: [6.455, 8.487, 9.643, 11.327],   maintFCET: [6.870, 8.771, 9.913, 11.611],   tollPerYear: [630000, 768719.73],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
+  B14: { maintBET: [8.037, 10.896, 12.446, 14.661], maintFCET: [9.042, 11.584, 13.100, 15.349], tollPerYear: [540000, 658902.62],   manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+};
+
 export const BET_OEM_MARGIN_BY_YEAR: Record<number, number> = (() => {
   const m: Record<number, number> = {};
   for (let y = 2025; y <= 2027; y++) m[y] = 0.50;
@@ -214,11 +350,14 @@ export const BET_OEM_MARGIN_BY_YEAR: Record<number, number> = (() => {
   return m;
 })();
 
-// H2-FCET OEM margin — flat 0.40 until 2040, 0.35 thereafter
+// H2-FCET OEM margin — 'Changing with year' row 141:
+// 0.40 → 2040, 0.35 2041-45, 0.30 2046-50, 0.25 2051+
 export const FCET_OEM_MARGIN_BY_YEAR: Record<number, number> = (() => {
   const m: Record<number, number> = {};
   for (let y = 2025; y <= 2040; y++) m[y] = 0.40;
-  for (let y = 2041; y <= 2055; y++) m[y] = 0.35;
+  for (let y = 2041; y <= 2045; y++) m[y] = 0.35;
+  for (let y = 2046; y <= 2050; y++) m[y] = 0.30;
+  for (let y = 2051; y <= 2055; y++) m[y] = 0.25;
   return m;
 })();
 
@@ -237,7 +376,7 @@ export const HISTORICAL_SALES: Record<number, number> = {
 };
 
 export const TIV_PROJECTION: Record<number, number> = {
-  2025: 267370, 2026: 292810, 2027: 306590, 2028: 311550, 2029: 340650,
+  2025: 267370, 2026: 301120, 2027: 306590, 2028: 311550, 2029: 340650,
   2030: 349950, 2031: 357130, 2032: 393810, 2033: 419910, 2034: 435110,
   2035: 459480, 2036: 480610, 2037: 500010, 2038: 520490, 2039: 544970,
   2040: 570540, 2041: 599070, 2042: 627500, 2043: 654020, 2044: 679990,
@@ -403,7 +542,9 @@ export const BAU_POLICY = {
   h2ice_inflection_year: 2051,
   fcet_inflection_year: 2051,
   h2_source_mix: 'green_only' as const,
-  bet_resale_2046_plus: 0.40,
+  // 0 = no override; tier-2 resale comes from RESALE_VALUES per profile
+  // (Excel BAU: 0.40 general / 0.35 high-duty / 0.25 tipper)
+  bet_resale_2046_plus: 0,
   diesel_price_5pct_yoy_after_2045: false,
   // New fields
   bet_incentive_phase1_end_year: 2030,
