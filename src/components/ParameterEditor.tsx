@@ -80,7 +80,7 @@ function Sparkline({ series, ghost, pinnedYears = [] }: SparklineProps) {
   }, [series, ghost, pinnedYears]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="space-y-1">
       <svg width={W} height={H} className="overflow-visible">
         {ghostD && (
           <path d={ghostD} fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" opacity={0.5} />
@@ -91,10 +91,9 @@ function Sparkline({ series, ghost, pinnedYears = [] }: SparklineProps) {
         ))}
       </svg>
       <div className="text-[10px] text-muted-foreground font-mono leading-tight">
-        <div>2025: {series[0].toFixed(2)}</div>
-        <div>2055: {series[series.length - 1].toFixed(2)}</div>
-        <div className="opacity-60">min {min.toFixed(1)} · max {max.toFixed(1)}</div>
-        {ghostD && <div className="opacity-60">dashed = CAGR only</div>}
+        2025 {series[0].toFixed(2)} → 2055 {series[series.length - 1].toFixed(2)}
+        <span className="opacity-60"> · min {min.toFixed(1)} · max {max.toFixed(1)}</span>
+        {ghostD && <span className="opacity-60"> · dashed = CAGR only</span>}
       </div>
     </div>
   );
