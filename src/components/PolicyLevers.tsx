@@ -1,5 +1,5 @@
 import { useScenario } from '@/contexts/ScenarioContext';
-import { Input } from '@/components/ui/input';
+import { NumberField } from '@/components/ui/number-field';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -20,20 +20,18 @@ export default function PolicyLevers() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-sm">BET demand incentive (₹/kWh)</Label>
-            <Input
-              type="number"
+            <NumberField
               className="h-8 font-mono text-sm"
               value={p.bet_demand_incentive_per_kwh}
-              onChange={e => updatePolicy('bet_demand_incentive_per_kwh', Number(e.target.value))}
+              onValueChange={v => updatePolicy('bet_demand_incentive_per_kwh', v)}
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm">FCET demand incentive (₹/kWh)</Label>
-            <Input
-              type="number"
+            <NumberField
               className="h-8 font-mono text-sm"
               value={p.fcet_demand_incentive_per_kwh}
-              onChange={e => updatePolicy('fcet_demand_incentive_per_kwh', Number(e.target.value))}
+              onValueChange={v => updatePolicy('fcet_demand_incentive_per_kwh', v)}
             />
           </div>
         </div>
@@ -58,11 +56,10 @@ export default function PolicyLevers() {
         {/* Electricity subsidy */}
         <div className="space-y-1.5">
           <Label className="text-sm">Electricity subsidy (₹/kWh)</Label>
-          <Input
-            type="number"
+          <NumberField
             className="h-8 w-32 font-mono text-sm"
             value={p.electricity_subsidy_per_kwh}
-            onChange={e => updatePolicy('electricity_subsidy_per_kwh', Number(e.target.value))}
+            onValueChange={v => updatePolicy('electricity_subsidy_per_kwh', v)}
           />
         </div>
 
@@ -70,22 +67,20 @@ export default function PolicyLevers() {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-sm">Toll waiver — first 5 years (%)</Label>
-            <Input
-              type="number"
+            <NumberField
               className="h-8 font-mono text-sm"
               min={0} max={100} step={5}
               value={p.toll_waiver_pct_first_5y * 100}
-              onChange={e => updatePolicy('toll_waiver_pct_first_5y', Number(e.target.value) / 100)}
+              onValueChange={pct => updatePolicy('toll_waiver_pct_first_5y', pct / 100)}
             />
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm">Toll waiver — next 5 years (%)</Label>
-            <Input
-              type="number"
+            <NumberField
               className="h-8 font-mono text-sm"
               min={0} max={100} step={5}
               value={p.toll_waiver_pct_next_5y * 100}
-              onChange={e => updatePolicy('toll_waiver_pct_next_5y', Number(e.target.value) / 100)}
+              onValueChange={pct => updatePolicy('toll_waiver_pct_next_5y', pct / 100)}
             />
           </div>
         </div>

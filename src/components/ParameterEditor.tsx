@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import { NumberField } from '@/components/ui/number-field';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Pin, AlertTriangle } from 'lucide-react';
@@ -136,37 +137,36 @@ export default function ParameterEditor({
     setDraftVal('');
   };
 
-  const handleCagrInput = (dk: DeltaKey, raw: string) => {
+  const handleCagrInput = (dk: DeltaKey, pct: number) => {
     if (pinsInRange(dk).length > 0) {
-      setPendingCagr({ field: dk, raw });
+      setPendingCagr({ field: dk, raw: String(pct) });
     } else {
-      onCagrChange(dk, Number(raw) / 100);
+      onCagrChange(dk, pct / 100);
       if (pendingCagr?.field === dk) setPendingCagr(null);
     }
   };
 
-  const applyUniform = (raw: string) => {
-    const n = Number(raw);
-    if (!Number.isFinite(n)) return;
-    for (const dk of DELTA_KEYS) onCagrChange(dk, n / 100);
+  const applyUniform = (pct: number) => {
+    if (!Number.isFinite(pct)) return;
+    for (const dk of DELTA_KEYS) onCagrChange(dk, pct / 100);
   };
 
-  const handleUniformInput = (raw: string) => {
+  const handleUniformInput = (pct: number) => {
     if (hasPins) {
-      setPendingCagr({ field: 'all', raw });
+      setPendingCagr({ field: 'all', raw: String(pct) });
     } else {
-      applyUniform(raw);
+      applyUniform(pct);
       if (pendingCagr?.field === 'all') setPendingCagr(null);
     }
   };
 
   const applyPendingCagr = () => {
     if (!pendingCagr) return;
+    const n = Number(pendingCagr.raw);
     if (pendingCagr.field === 'all') {
-      applyUniform(pendingCagr.raw);
-    } else {
-      const n = Number(pendingCagr.raw);
-      if (Number.isFinite(n)) onCagrChange(pendingCagr.field, n / 100);
+      applyUniform(n);
+    } else if (Number.isFinite(n)) {
+      onCagrChange(pendingCagr.field, n / 100);
     }
     setPendingCagr(null);
   };
@@ -186,12 +186,11 @@ export default function ParameterEditor({
       {/* 2025 base value */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[11px] text-muted-foreground w-[100px]">2025 base value</span>
-        <Input
-          type="number"
+        <NumberField
           step={baseStep ?? (isGrowthRate ? 0.01 : 1)}
           className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${baseExceeded ? 'border-destructive ring-1 ring-destructive' : ''}`}
           value={config.baseValue}
-          onChange={e => onBaseChange(Number(e.target.value))}
+          onValueChange={onBaseChange}
         />
         <span className="text-xs text-muted-foreground">{unit}</span>
         {baseValueMax !== undefined && (
@@ -291,8 +290,9 @@ export default function ParameterEditor({
         {cagrMode === 'uniform' ? (
           (() => {
             const isPending = pendingCagr?.field === 'all';
-            const displayed = isPending ? pendingCagr.raw : (allEqual ? (config.d2530 * 100).toFixed(2) : '');
-            const over = Math.abs(Number(displayed)) > CAGR_MAX * 100;
+            const refVal = isPending ? Number(pendingCagr.raw) : config.d2530 * 100;
+            const over = (allEqual || isPending) && Math.abs(refVal) > CAGR_MAX * 100;
+            const displayOverride = isPending ? pendingCagr.raw : (!allEqual ? '' : undefined);
             return (
               <div className="flex items-end gap-2 flex-wrap">
                 <div className="flex flex-col">
@@ -307,13 +307,14 @@ export default function ParameterEditor({
                       </span>
                     )}
                   </span>
-                  <Input
-                    type="number"
+                  <NumberField
                     step={0.1}
                     placeholder={allEqual ? undefined : 'e.g. 5'}
                     className={`h-8 w-24 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${over ? 'border-destructive ring-1 ring-destructive' : ''} ${isPending ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
-                    value={displayed}
-                    onChange={e => handleUniformInput(e.target.value)}
+                    value={config.d2530 * 100}
+                    format={n => n.toFixed(2)}
+                    displayOverride={displayOverride}
+                    onValueChange={handleUniformInput}
                     title={over ? 'Exceeds ±10% cap' : undefined}
                   />
                 </div>
@@ -329,8 +330,8 @@ export default function ParameterEditor({
           <div className="flex items-end gap-2 flex-wrap">
             {DELTA_KEYS.map((dk, i) => {
               const isPending = pendingCagr?.field === dk;
-              const displayed = isPending ? pendingCagr.raw : (config[dk] * 100).toFixed(2);
-              const over = Math.abs(Number(displayed)) > CAGR_MAX * 100;
+              const refVal = isPending ? Number(pendingCagr.raw) : config[dk] * 100;
+              const over = Math.abs(refVal) > CAGR_MAX * 100;
               const rangePins = pinsInRange(dk);
               return (
                 <div key={dk} className="flex flex-col">
@@ -345,12 +346,13 @@ export default function ParameterEditor({
                       </span>
                     )}
                   </span>
-                  <Input
-                    type="number"
+                  <NumberField
                     step={0.1}
                     className={`h-8 w-20 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${over ? 'border-destructive ring-1 ring-destructive' : ''} ${isPending ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}
-                    value={displayed}
-                    onChange={e => handleCagrInput(dk, e.target.value)}
+                    value={config[dk] * 100}
+                    format={n => n.toFixed(2)}
+                    displayOverride={isPending ? pendingCagr.raw : undefined}
+                    onValueChange={pct => handleCagrInput(dk, pct)}
                     title={over ? 'Exceeds ±10% cap' : undefined}
                   />
                 </div>

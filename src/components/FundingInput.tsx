@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/input';
+import { NumberField } from '@/components/ui/number-field';
 import { useScenario } from '@/contexts/ScenarioContext';
 
 interface Props {
@@ -21,13 +21,13 @@ export default function FundingInput({ label, kind }: Props) {
       <div className="text-sm font-medium min-w-[180px]">{label}</div>
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-muted-foreground">Rate</span>
-        <Input
-          type="number"
+        <NumberField
           step={0.1}
           className="h-8 w-20 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          value={(rate * 100).toFixed(1)}
-          onChange={e => {
-            const v = Number(e.target.value) / 100;
+          value={rate * 100}
+          format={n => n.toFixed(1)}
+          onValueChange={pct => {
+            const v = pct / 100;
             if (kind === 'zet') updatePolicy('interest_rate_zet', v);
             else updateFixed('interest_rate_ice', v);
           }}
@@ -36,14 +36,12 @@ export default function FundingInput({ label, kind }: Props) {
       </div>
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-muted-foreground">Tenure</span>
-        <Input
-          type="number"
+        <NumberField
           step={1}
           min={1}
           className="h-8 w-16 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           value={tenure}
-          onChange={e => {
-            const v = Number(e.target.value);
+          onValueChange={v => {
             if (kind === 'zet') updatePolicy('loan_tenure_years', v);
             else updateFixed('loan_tenure_years_nonzet' as any, v);
           }}

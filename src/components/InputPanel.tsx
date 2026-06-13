@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { NumberField } from '@/components/ui/number-field';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
@@ -70,24 +70,22 @@ export default function InputPanel() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 py-2 flex-wrap">
                     <div className="text-sm font-medium min-w-[180px]">Battery Life</div>
-                    <Input
-                      type="number"
+                    <NumberField
                       step={1}
                       className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${batteryLifeBad ? 'border-destructive ring-1 ring-destructive' : ''}`}
                       value={batteryLife}
-                      onChange={e => updateFixed('battery_life_cycles', Number(e.target.value))}
+                      onValueChange={v => updateFixed('battery_life_cycles', v)}
                     />
                     <span className="text-xs text-muted-foreground">cycles (max 4 digits)</span>
                     {batteryLifeBad && <span className="text-[11px] text-destructive">Must be a 4-digit number</span>}
                   </div>
                   <div className="flex items-center gap-3 py-2 flex-wrap">
                     <div className="text-sm font-medium min-w-[180px]">Fuel Cell Life</div>
-                    <Input
-                      type="number"
+                    <NumberField
                       step={1}
                       className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${fcLifeBad ? 'border-destructive ring-1 ring-destructive' : ''}`}
                       value={fcLife}
-                      onChange={e => updateFixed('fuel_cell_life_hours', Number(e.target.value))}
+                      onValueChange={v => updateFixed('fuel_cell_life_hours', v)}
                     />
                     <span className="text-xs text-muted-foreground">hours (max 5 digits)</span>
                     {fcLifeBad && <span className="text-[11px] text-destructive">Must be a 5-digit number</span>}
