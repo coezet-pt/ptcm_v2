@@ -72,7 +72,7 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                 <thead>
                   <tr>
                     {Object.keys(csvData[0] || {}).map(k => (
-                      <th key={k} className="px-1 py-0.5 text-left font-medium text-muted-foreground">{k}</th>
+                      <th key={k} className="sticky top-0 z-10 bg-card px-1 py-0.5 text-left font-medium text-muted-foreground">{k}</th>
                     ))}
                   </tr>
                 </thead>
