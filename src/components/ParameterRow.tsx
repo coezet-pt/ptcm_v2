@@ -34,13 +34,13 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 text-left hover:bg-muted/40 rounded px-1 py-1.5 transition-colors"
+        className="w-full flex items-start gap-2 text-left hover:bg-muted/40 rounded px-1 py-1.5 transition-colors"
       >
         {open
           ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-        <span className="text-sm font-medium flex-1 flex items-center gap-1.5 min-w-0">
-          <span className="truncate">{label}</span>
+        <span className="text-sm font-medium flex-1 flex items-start gap-1.5 min-w-0">
+          <span className="whitespace-normal leading-snug break-words">{label}</span>
           {tooltip && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -74,6 +74,7 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
             onCagrChange={(field, v) => updateParameter(paramKey, field, v)}
             onSetOverride={(year, value) => setParameterOverride(paramKey, year, value)}
             onClearOverride={year => clearParameterOverride(paramKey, year)}
+            cagrMax={0.20}
           />
         </div>
       )}

@@ -7,7 +7,7 @@ import { X, Pin, AlertTriangle } from 'lucide-react';
 import type { ParameterConfig } from '@/lib/types';
 import { DELTA_LABELS, DELTA_KEYS, type DeltaKey } from './ParameterRow';
 
-const CAGR_MAX = 0.10;
+const DEFAULT_CAGR_MAX = 0.10;
 const YEARS = Array.from({ length: 30 }, (_, i) => 2026 + i); // 2026..2055
 
 /** Years covered by each CAGR range (mirrors RANGE_YEARS in ScenarioContext). */
@@ -29,6 +29,7 @@ interface Props {
   onCagrChange: (field: DeltaKey, value: number) => void;
   onSetOverride: (year: number, value: number) => void;
   onClearOverride: (year: number) => void;
+  cagrMax?: number;
 }
 
 /** Build a single-parameter 2025–2055 series mirroring buildTimeSeries logic. */
@@ -101,9 +102,10 @@ function Sparkline({ series, ghost, pinnedYears = [] }: SparklineProps) {
 }
 
 export default function ParameterEditor({
-  config, unit, baseValueMax, isGrowthRate, baseStep,
+  config, unit, baseValueMax, isGrowthRate, baseStep, cagrMax = DEFAULT_CAGR_MAX,
   onBaseChange, onCagrChange, onSetOverride, onClearOverride,
 }: Props) {
+  const cagrMaxPct = cagrMax * 100;
   const [year, setYear] = useState<number>(2030);
   const [draftVal, setDraftVal] = useState<string>('');
   // CAGR edit awaiting confirmation because it would delete pins. field 'all' = uniform edit.
@@ -267,7 +269,7 @@ export default function ParameterEditor({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            CAGR % <span className="normal-case opacity-70">(max ±10%)</span>
+            CAGR % <span className="normal-case opacity-70">(max ±{cagrMaxPct}%)</span>
           </div>
           <div className="inline-flex rounded-md border border-border overflow-hidden">
             <button
@@ -291,7 +293,7 @@ export default function ParameterEditor({
           (() => {
             const isPending = pendingCagr?.field === 'all';
             const refVal = isPending ? Number(pendingCagr.raw) : config.d2530 * 100;
-            const over = (allEqual || isPending) && Math.abs(refVal) > CAGR_MAX * 100;
+            const over = (allEqual || isPending) && Math.abs(refVal) > cagrMaxPct;
             const displayOverride = isPending ? pendingCagr.raw : (!allEqual ? '' : undefined);
             return (
               <div className="flex items-end gap-2 flex-wrap">
@@ -315,7 +317,7 @@ export default function ParameterEditor({
                     format={n => n.toFixed(2)}
                     displayOverride={displayOverride}
                     onValueChange={handleUniformInput}
-                    title={over ? 'Exceeds ±10% cap' : undefined}
+                    title={over ? `Exceeds ±${cagrMaxPct}% cap` : undefined}
                   />
                 </div>
                 {!allEqual && !isPending && (
@@ -331,7 +333,7 @@ export default function ParameterEditor({
             {DELTA_KEYS.map((dk, i) => {
               const isPending = pendingCagr?.field === dk;
               const refVal = isPending ? Number(pendingCagr.raw) : config[dk] * 100;
-              const over = Math.abs(refVal) > CAGR_MAX * 100;
+              const over = Math.abs(refVal) > cagrMaxPct;
               const rangePins = pinsInRange(dk);
               return (
                 <div key={dk} className="flex flex-col">
@@ -353,7 +355,7 @@ export default function ParameterEditor({
                     format={n => n.toFixed(2)}
                     displayOverride={isPending ? pendingCagr.raw : undefined}
                     onValueChange={pct => handleCagrInput(dk, pct)}
-                    title={over ? 'Exceeds ±10% cap' : undefined}
+                    title={over ? `Exceeds ±${cagrMaxPct}% cap` : undefined}
                   />
                 </div>
               );

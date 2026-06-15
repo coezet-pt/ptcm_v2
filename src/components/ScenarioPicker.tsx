@@ -17,8 +17,8 @@ const SCENARIO_LABELS: Record<ScenarioName | 'Custom', string> = {
 
 const SCENARIO_DIFFS: Record<ScenarioName | 'Custom', string[]> = {
   BAU: [],
-  'BWS-1': ['BET ₹5k/kWh till 2035', 'FCET ₹15k/kWh till 2035', 'H₂ blending allowed'],
-  'BWS-2': ['BWS-1 + cheaper H₂', '₹2/kWh elec subsidy', '50% toll 10yr', 'GVW relief'],
+  'BWS-1': ['BET ₹5k/kWh till 2035', 'FCET ₹15k/kWh till 2035', 'Hydrogen blending allowed'],
+  'BWS-2': ['BWS-1 + cheaper Hydrogen', '₹2/kWh elec subsidy', '50% toll 10yr', 'GVW relief'],
   BEST: ['₹10k→5k BET', '₹30k→15k FCET', '10% interest', '100% toll 5yr', 'Range concern gone'],
   Custom: [],
 };

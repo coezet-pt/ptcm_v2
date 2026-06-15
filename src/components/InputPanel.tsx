@@ -29,7 +29,7 @@ export default function InputPanel() {
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold uppercase tracking-[0.14em]">Primary Cost Trajectories</CardTitle>
           <p className="text-xs text-muted-foreground">
-            2025 base value + CAGR % for each of the six year-range buckets (max ±10%).
+            2025 base value + CAGR % for each of the six year-range buckets (max ±20%).
           </p>
         </CardHeader>
         <CardContent className="divide-y divide-border/50">
@@ -40,9 +40,10 @@ export default function InputPanel() {
             <ParameterRow paramKey="cng_price_per_kg"   />
           </div>
           <div className="pt-2">
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Energy Price (incl. CAAS)" />
-            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green H₂ Production Cost" />
-            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="H₂ Compression, Transport & Dispense" />
+            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Energy Prices</h4>
+            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity price (incl. CAAS)" />
+            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production Cost" />
+            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispense" />
             <ParameterRow paramKey="battery_cost_per_kwh"          labelOverride="Battery Price" />
             <ParameterRow paramKey="fuel_cell_cost_per_kw"         labelOverride="Fuel Cell Price" />
           </div>
@@ -54,7 +55,7 @@ export default function InputPanel() {
         <CardContent className="pt-4">
           <Accordion type="multiple" className="w-full">
             <AccordionItem value="maint">
-              <AccordionTrigger className="text-sm font-medium">
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
                 Maintenance (per bucket)
               </AccordionTrigger>
               <AccordionContent>
@@ -63,8 +64,8 @@ export default function InputPanel() {
             </AccordionItem>
 
             <AccordionItem value="constants">
-              <AccordionTrigger className="text-sm font-medium">
-                Constants (battery / fuel-cell life, funding)
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Factor values taken as constant
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
@@ -97,8 +98,8 @@ export default function InputPanel() {
             </AccordionItem>
 
             <AccordionItem value="policy">
-              <AccordionTrigger className="text-sm font-medium">
-                Policy Levers (incentives, toll waivers, inflection years)
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Policy levers
               </AccordionTrigger>
               <AccordionContent>
                 <PolicyLevers />

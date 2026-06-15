@@ -64,9 +64,9 @@ function DashboardContent() {
       context: `${(simResult.dieselStockPeakValue / 1e6).toFixed(1)}M vehicles`,
     },
     {
-      label: 'CO₂ Avoided',
-      value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} Mt`,
-      context: 'Cumulative vs diesel counterfactual',
+      label: 'CO₂ emission savings',
+      value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} MMT`,
+      context: 'For the period 2025–55 over diesel-only scenario',
     },
     {
       label: 'ZET Fleet 2055',
@@ -80,8 +80,8 @@ function DashboardContent() {
     },
     {
       label: 'Emissions 2055',
-      value: `${yFinal ? yFinal.totalEmissions.toFixed(0) : '—'} Mt`,
-      context: `${emissionsDeltaPct >= 0 ? '+' : ''}${emissionsDeltaPct.toFixed(0)}% vs 2025 · WTW per year`,
+      value: `${yFinal ? yFinal.totalEmissions.toFixed(0) : '—'} MMT`,
+      context: `${emissionsDeltaPct >= 0 ? '+' : ''}${emissionsDeltaPct.toFixed(0)}% vs 2025 · Well To Wheel (WTW) per year`,
     },
     {
       label: 'Market Size 2055',
@@ -99,10 +99,10 @@ function DashboardContent() {
               <Truck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-bold leading-tight tracking-tight truncate">
+              <h1 className="text-sm font-bold leading-tight tracking-tight">
                 PTCM Dashboard · India M&HDT Trucks
               </h1>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground truncate">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground leading-snug">
                 2025 — 2055 · Interactive cost &amp; fleet model
               </p>
             </div>
@@ -133,7 +133,7 @@ function DashboardContent() {
         <main className="flex-1 min-w-0 px-4 lg:px-8 py-6">
           <div className="mb-6">
             <h2 className="font-serif text-3xl lg:text-[2.5rem] leading-tight tracking-tight">
-              Powertrain transition — <em className="text-accent">heavy trucks</em>, 2025–2055
+              Powertrain transition projections - M&HD trucks (2025-55)
             </h2>
             <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
               {scenarioLabel} scenario · PTCM interactive engine

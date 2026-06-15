@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TCO_PARITY_YEARS, BUCKETS } from '@/lib/constants/extracted';
+import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
 import ChartCard from '@/components/ChartCard';
 
@@ -47,7 +48,7 @@ export default function TCOParityChart({ scenarioName }: Props) {
           <Tooltip labelFormatter={l => `Bucket ${l}`} />
           <Legend wrapperStyle={{ fontSize: 10 }} />
           {ZET_PTS.map(pt => (
-            <Bar key={pt} dataKey={pt} fill={PT_COLORS[pt]} barSize={6} />
+            <Bar key={pt} dataKey={pt} name={POWERTRAIN_LABELS[pt]} fill={PT_COLORS[pt]} barSize={6} />
           ))}
         </BarChart>
       </ResponsiveContainer>

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { POWERTRAINS } from '@/lib/constants/extracted';
+import { POWERTRAIN_LABELS, EMISSIONS_UNIT, WTW_BASIS } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
 import type { AnnualResult } from '@/lib/types';
@@ -22,7 +23,7 @@ export default function EmissionsChart({ years, scenarioLabel }: Props) {
   return (
     <ChartCard
       title="Emissions by Powertrain"
-      subtitle={`Mt CO₂e per year · well-to-wheel basis${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      subtitle={`${EMISSIONS_UNIT} CO₂e per year · ${WTW_BASIS}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={csvData}
       csvFilename="emissions"
     >
@@ -34,7 +35,7 @@ export default function EmissionsChart({ years, scenarioLabel }: Props) {
           <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} labelFormatter={l => `Year ${l}`} />
           <Legend {...LEGEND_PROPS} />
           {[...POWERTRAINS].reverse().map(pt => (
-            <Area key={pt} type="monotone" dataKey={pt} stackId="1"
+            <Area key={pt} type="monotone" dataKey={pt} name={POWERTRAIN_LABELS[pt]} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
           ))}
           <Line type="monotone" dataKey="Diesel Counterfactual"

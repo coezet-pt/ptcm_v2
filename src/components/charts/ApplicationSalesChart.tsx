@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { APPLICATIONS, APPLICATION_COLORS } from '@/lib/constants/segments';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
+import { SALE_VOLUME_SUBTITLE } from '@/lib/constants/displayLabels';
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
@@ -17,7 +18,7 @@ export default function ApplicationSalesChart({ years, scenarioLabel }: Props) {
   return (
     <ChartCard
       title="Annual Sales by Application"
-      subtitle={`Units sold per year, grouped by use-case${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      subtitle={`${SALE_VOLUME_SUBTITLE}, grouped by use-case${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
       csvFilename="annual_sales_by_application"
     >

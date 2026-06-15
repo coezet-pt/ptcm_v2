@@ -18,12 +18,12 @@ export const POWERTRAINS: Powertrain[] = [
 ];
 
 export const POWERTRAIN_COLORS: Record<Powertrain, string> = {
-  'Diesel':  '#6b7280',
-  'CNG':     '#f59e0b',
-  'LNG':     '#f97316',
-  'BET':     '#10b981',
-  'H2-ICE':  '#3b82f6',
-  'H2-FCET': '#8b5cf6',
+  'Diesel':  '#4a4a4a',
+  'CNG':     '#b0b0b0',
+  'LNG':     '#1a1a1a',
+  'BET':     '#166534',
+  'H2-ICE':  '#7c3aed',
+  'H2-FCET': '#4ade80',
 };
 
 // ===========================================================================

@@ -1,17 +1,18 @@
 import { useMemo } from 'react';
 import { Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart, CartesianGrid, Legend } from 'recharts';
-import type { AnnualResult } from '@/lib/types';
+import { CUMULATIVE_EMISSIONS_SUBTITLE, EMISSIONS_UNIT_SHORT } from '@/lib/constants/displayLabels';
 import ChartCard from '@/components/ChartCard';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
+import type { AnnualResult } from '@/lib/types';
 
 interface Props { years: AnnualResult[]; scenarioLabel?: string; }
 
 export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) {
-  const { data, totalAvoided } = useMemo(() => {
+  const data = useMemo(() => {
     let cumAvoided = 0;
     let cumActual = 0;
     let cumCounter = 0;
-    const rows = years.map(y => {
+    return years.map(y => {
       const annualAvoided = Math.max(0, y.dieselCounterfactualEmissions - y.totalEmissions);
       cumAvoided += annualAvoided;
       cumActual  += y.totalEmissions;
@@ -23,13 +24,12 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
         'Cumulative Diesel-only':     +cumCounter.toFixed(3),
       };
     });
-    return { data: rows, totalAvoided: cumAvoided };
   }, [years]);
 
   return (
     <ChartCard
-      title="Cumulative CO₂ Avoided"
-      subtitle={`Mt CO₂e, running total 2025\u2013${years[years.length - 1]?.year ?? 2055} · vs diesel-only counterfactual · ${totalAvoided.toLocaleString(undefined, { maximumFractionDigits: 1 })} Mt avoided by ${years[years.length - 1]?.year ?? 2055}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      title="Cumulative CO₂ emission savings"
+      subtitle={`${CUMULATIVE_EMISSIONS_SUBTITLE}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
       csvFilename="cumulative_co2_avoided"
     >
@@ -48,7 +48,7 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
             contentStyle={TOOLTIP_CONTENT_STYLE}
             labelStyle={TOOLTIP_LABEL_STYLE}
             labelFormatter={l => `Year ${l}`}
-            formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} Mt`}
+            formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${EMISSIONS_UNIT_SHORT}`}
           />
           <Legend {...LEGEND_PROPS} />
           <Area type="monotone" dataKey="Cumulative Avoided"

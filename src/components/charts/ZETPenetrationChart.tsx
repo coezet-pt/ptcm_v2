@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
 import type { AnnualResult, PolicyConfig } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, REF_LINE_COLOR } from '@/lib/chartTheme';
@@ -23,14 +24,14 @@ export default function ZETPenetrationChart({ years, policy, scenarioLabel }: Pr
 
   const inflections = [
     { year: policy.bet_inflection_year, label: 'BET' },
-    { year: policy.h2ice_inflection_year, label: 'H2-ICE' },
+    { year: policy.h2ice_inflection_year, label: POWERTRAIN_LABELS['H2-ICE'] },
     { year: policy.fcet_inflection_year, label: 'FCET' },
   ];
 
   return (
     <ChartCard
       title="ZET Penetration"
-      subtitle={`BET + H₂-ICE + H₂-FCET share of new sales${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      subtitle={`BET + ${POWERTRAIN_LABELS['H2-ICE']} + ${POWERTRAIN_LABELS['H2-FCET']} share of new sales${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={csvData}
       csvFilename="zet_penetration"
     >

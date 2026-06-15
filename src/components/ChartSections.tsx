@@ -64,7 +64,7 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
         </section>
 
         <section id="emissions" className="scroll-mt-28 space-y-4">
-          <SectionHeader title="Emissions & ZET penetration" kicker="Well-to-wheel CO₂e" />
+          <SectionHeader title="Emissions & ZET penetration" kicker="Well To Wheel (WTW) CO₂e" />
           <EmissionsChart years={result.years} scenarioLabel={scenarioLabel} />
           <CumulativeAvoidedChart years={result.years} scenarioLabel={scenarioLabel} />
           <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
