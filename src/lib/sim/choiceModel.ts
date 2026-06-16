@@ -14,9 +14,24 @@ import {
   START_OF_SUPPLY,
   CHOICE_SHARE_ADJUSTMENT,
   BUCKET_CHOICE_ELASTICITIES,
-  BUCKET_PAYLOADS,
 } from '@/lib/constants/extracted';
 import type { BucketTCOMap } from './tco';
+
+// Excel 'No change with year' payload model (cols AX/AY/AZ): diesel payload is
+// GVW − ULW; BET/FCET subtract battery (density × kWh) and fuel-cell
+// (power-density × kW) weight, round to the nearest 100 kg, then add the
+// regulator's GVW increase for ZETs (policy.gvw_payload_compensation_t).
+function computeBucketPayload(bucket: Bucket, fixed?: FixedParameters, policy?: PolicyConfig) {
+  const density = fixed?.battery_energy_density_kg_per_kwh ?? 8;
+  const fcPowerDensity = fixed?.fuel_cell_power_density_kg_per_kw ?? 4;
+  const gvwCompKg = (policy?.gvw_payload_compensation_t ?? 0) * 1000;
+  const diesel = bucket.gvw - bucket.ulw;
+  const bet = Math.round((diesel - density * bucket.betBatteryKWh) / 100) * 100 + gvwCompKg;
+  const fcet = Math.round(
+    (diesel - density * bucket.fcetBatteryKWh - fcPowerDensity * bucket.fcetFuelCellKW) / 100,
+  ) * 100 + gvwCompKg;
+  return { diesel, bet, fcet };
+}
 
 // Per-bucket, per-powertrain share
 export type BucketShares = Record<string, Record<Powertrain, number>>;
@@ -27,9 +42,9 @@ function clamp(v: number, lo: number, hi: number): number {
 
 // Excel B-sheets: Diesel/CNG/LNG/H2-ICE share the diesel payload; only BET
 // and FCET carry a payload penalty (rows 17-19 per sheet).
-function payloadRatio(bucket: Bucket, pt: Powertrain): number {
-  const pl = BUCKET_PAYLOADS[bucket.id];
-  if (!pl) return 1;
+function payloadRatio(bucket: Bucket, pt: Powertrain, fixed?: FixedParameters, policy?: PolicyConfig): number {
+  const pl = computeBucketPayload(bucket, fixed, policy);
+  if (pl.diesel <= 0) return 1;
   if (pt === 'BET') return pl.bet / pl.diesel;
   if (pt === 'H2-FCET') return pl.fcet / pl.diesel;
   return 1;
@@ -89,7 +104,7 @@ export function computeShares(
       const priceArg = el.price * (dieselPrice / tco[pt].vehiclePrice - 1);
 
       // Factor 3: Rated Payload — pt/diesel (higher payload better)
-      const payloadArg = el.payload * (payloadRatio(bucket, pt) - 1);
+      const payloadArg = el.payload * (payloadRatio(bucket, pt, fixed, policy) - 1);
 
       // Factor 4: TAT/Gradeability — pt/diesel (higher rating better)
       const tatRating = tatRatings[pt];

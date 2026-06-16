@@ -515,8 +515,6 @@ export const BAU_FIXED = {
   loan_tenure_years_nonzet: 7,
   insurance_rate_per_year: 0.02,
   adblue_consumption_l_per_l_diesel: 0.05,
-  battery_life_cycles: 3000,
-  fuel_cell_life_hours: 25000,
   battery_energy_density_kg_per_kwh: 8,
   fuel_cell_power_density_kg_per_kw: 4,
   tat_gradeability: {

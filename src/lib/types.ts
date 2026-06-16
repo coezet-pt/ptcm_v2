@@ -50,8 +50,6 @@ export interface FixedParameters {
   interest_rate_ice: number;
   insurance_rate_per_year: number;
   adblue_consumption_l_per_l_diesel: number;
-  battery_life_cycles: number;
-  fuel_cell_life_hours: number;
   battery_energy_density_kg_per_kwh: number;
   fuel_cell_power_density_kg_per_kw: number;
   tat_gradeability: Record<Powertrain, number>;

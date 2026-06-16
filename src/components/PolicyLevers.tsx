@@ -208,6 +208,30 @@ export default function PolicyLevers() {
 
 
 
+      {/* ZET GVW payload compensation */}
+
+      <div className="space-y-1.5">
+
+        <Label className="text-sm">ZET GVW payload compensation (tonnes)</Label>
+
+        <NumberField
+
+          className="h-8 w-32 font-mono text-sm"
+
+          min={0} step={0.5}
+
+          value={p.gvw_payload_compensation_t}
+
+          onValueChange={v => updatePolicy('gvw_payload_compensation_t', v)}
+
+        />
+
+        <p className="text-xs text-muted-foreground">Extra GVW allowed for BET/FCET; raises their rated payload.</p>
+
+      </div>
+
+
+
       {/* Inflexion year */}
 
       <div className="space-y-3 pt-2 border-t border-border/50">

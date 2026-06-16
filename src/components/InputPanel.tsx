@@ -8,8 +8,10 @@ import { Play, Undo2, RotateCcw } from 'lucide-react';
 import ParameterRow from './ParameterRow';
 import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
-import { RatingMatrix } from './FixedParamGroup';
+import { RatingMatrix } from './RatingMatrix';
 import PolicyLevers from './PolicyLevers';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useScenario } from '@/contexts/ScenarioContext';
 
 
@@ -88,6 +90,35 @@ export default function InputPanel() {
                     values={f.range_filling_time}
                     onChange={(pt, v) => updateFixed('range_filling_time', { ...f.range_filling_time, [pt]: v })}
                   />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="weights">
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Component weights (battery &amp; fuel cell)
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Used to compute BET/FCET rated payload (battery and fuel-cell weight).</p>
+                  <div className="flex items-center justify-between gap-3 p-2 rounded border border-border/50">
+                    <Label className="text-sm flex-1">Battery energy density <span className="text-xs text-muted-foreground">(kg/kWh)</span></Label>
+                    <Input
+                      type="number" step={0.5}
+                      className="h-8 w-28 text-right font-mono text-sm"
+                      value={f.battery_energy_density_kg_per_kwh}
+                      onChange={e => updateFixed('battery_energy_density_kg_per_kwh', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 p-2 rounded border border-border/50">
+                    <Label className="text-sm flex-1">Fuel cell power density <span className="text-xs text-muted-foreground">(kg/kW)</span></Label>
+                    <Input
+                      type="number" step={0.5}
+                      className="h-8 w-28 text-right font-mono text-sm"
+                      value={f.fuel_cell_power_density_kg_per_kw}
+                      onChange={e => updateFixed('fuel_cell_power_density_kg_per_kw', Number(e.target.value))}
+                    />
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>

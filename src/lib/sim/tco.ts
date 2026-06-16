@@ -278,8 +278,6 @@ export function computeTCO(
     interest_rate_ice: FINANCE.diesel_cng_lng_h2ice_interest_pa_default,
     insurance_rate_per_year: FINANCE.insurance_rate_per_year,
     adblue_consumption_l_per_l_diesel: 0.05,
-    battery_life_cycles: 3000,
-    fuel_cell_life_hours: 25000,
     battery_energy_density_kg_per_kwh: 8,
     fuel_cell_power_density_kg_per_kw: 4,
     tat_gradeability: { Diesel: 1, CNG: 0.95, LNG: 0.95, BET: 1.15, 'H2-ICE': 0.95, 'H2-FCET': 1.15 },
