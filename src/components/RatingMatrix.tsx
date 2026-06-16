@@ -14,7 +14,7 @@ export function RatingMatrix({
   return (
     <div className="rounded border border-border/50 p-3">
       <div className="text-sm font-medium mb-2">{label}</div>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {POWERTRAINS.map(pt => (
           <div key={pt} className="space-y-1">
             <Label className="text-xs text-muted-foreground">{pt}</Label>

@@ -54,7 +54,7 @@ export default function InputPanel() {
           <Accordion type="multiple" className="w-full">
             <AccordionItem value="maint">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Maintenance (per bucket)
+                Maintenance including tyres (per bucket)
               </AccordionTrigger>
               <AccordionContent>
                 <BucketMaintenanceInput />
