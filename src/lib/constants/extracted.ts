@@ -491,16 +491,9 @@ export const BAU_PARAMETERS = {
   fuel_cell_cost_per_kw:         { baseValue: 36000,   d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155:  0.0100 },
   adblue_per_l:                  { baseValue: 55,      d2530:  0.0250, d3135:  0.0250, d3640:  0.0250, d4145:  0.0250, d4650:  0.0250, d5155:  0.0250 },
   grey_h2_production_per_kg:     { baseValue: 250,     d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
-  discom_electricity_per_kwh:    { baseValue: 7.50,    d2530:  0.0200, d3135: -0.0200, d3640: -0.0200, d4145: -0.0100, d4650: -0.0100, d5155:  0.0250 },
-  fixed_demand_charges_per_kwh:  { baseValue: 2.3964,  d2530: -0.0882, d3135: -0.1005, d3640:  0.0000, d4145:  0.0032, d4650:  0.0000, d5155: -0.0032 },
-  charging_infra_per_kwh:        { baseValue: 2.0334,  d2530:  0.0273, d3135: -0.1971, d3640:  0.0645, d4145:  0.0709, d4650:  0.0669, d5155:  0.0620 },
-  green_h2_electricity_per_kg:   { baseValue: 291.50,  d2530:  0.0269, d3135: -0.0380, d3640: -0.0277, d4145: -0.0349, d4650: -0.0146, d5155:  0.0221 },
-  green_h2_capex_per_kg:         { baseValue: 115,     d2530: -0.0300, d3135: -0.0400, d3640: -0.0400, d4145: -0.0500, d4650: -0.0500, d5155: -0.0500 },
-  green_h2_opex_margin_per_kg:   { baseValue: 140,     d2530: -0.0300, d3135: -0.0500, d3640: -0.0500, d4145: -0.0500, d4650: -0.0500, d5155: -0.0500 },
   grey_h2_blend_fraction:        { baseValue: 0,       d2530:  0,      d3135:  0,      d3640:  0,      d4145:  0,      d4650:  0,      d5155:  0      },
 
   // Category B — FLAG: v3 fallback; re-extract from v4 'Changing with year' in a later round.
-  electricity_per_kwh:           { baseValue: 18,      d2530:  0,      d3135:  0,      d3640: -0.02,   d4145: -0.02,   d4650: -0.02,   d5155: -0.01   }, // FLAG: v3 fallback (superseded by electricity_incl_caas_per_kwh in v4)
   lng_tank_cost_per_kg:          { baseValue: 3050,    d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 LNG tank row
   lng_valves_piping_per_vehicle: { baseValue: 100000,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback
   h2_tank_cost_per_kg:           { baseValue: 56000,   d2530: -0.0500, d3135: -0.0400, d3640: -0.0400, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 H2 tank row

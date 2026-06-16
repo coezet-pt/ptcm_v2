@@ -26,7 +26,6 @@ export type ParameterKey =
   | 'grey_h2_production_per_kg'
   // Existing other trajectories
   | 'h2_compression_storage_per_kg'
-  | 'electricity_per_kwh'
   | 'battery_cost_per_kwh'
   | 'fuel_cell_cost_per_kw'
   | 'lng_tank_cost_per_kg'
@@ -35,13 +34,6 @@ export type ParameterKey =
   | 'diesel_vehicle_growth'
   | 'engine_trans_growth'
   | 'e_powertrain_growth'
-  // New v9 trajectories
-  | 'discom_electricity_per_kwh'
-  | 'fixed_demand_charges_per_kwh'
-  | 'charging_infra_per_kwh'
-  | 'green_h2_electricity_per_kg'
-  | 'green_h2_capex_per_kg'
-  | 'green_h2_opex_margin_per_kg'
   | 'grey_h2_blend_fraction'
   | 'lng_valves_piping_per_vehicle';
 
