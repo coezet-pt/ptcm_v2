@@ -583,15 +583,27 @@ export const BEST_OVERRIDES = {
 
 // ===========================================================================
 // EMISSION FACTORS (Well-to-Wheel kgCO2e) — source: 'Emissions' sheet rows 2-7
+// Each is WTT + TTW (Excel col D = SUM(WTT, TTW)):
+//   Diesel 0.53 + 2.6 = 3.13 | CNG 0.4505 + 2.21 = 2.66 | LNG 0.4876 + 2.392 = 2.88
+// BET uses a year-varying grid factor (Excel 'Emissions' R49): 0.7455 in 2025
+// declining 3%/yr (grid decarbonisation) to 0.299 in 2055 — see betGridFactor().
 // ===========================================================================
 export const EMISSION_FACTORS = {
-  diesel_kgCO2e_per_l:        2.60,  // 0.53 WTT + 2.07 TTW
-  cng_kgCO2e_per_kg:          2.21,  // = 0.85 × diesel total
-  lng_kgCO2e_per_kg:          2.39,  // = 0.92 × diesel total
-  bet_kgCO2e_per_kwh:         0.972, // grid factor
+  diesel_kgCO2e_per_l:        3.13,  // 0.53 WTT + 2.6 TTW
+  cng_kgCO2e_per_kg:          2.66,  // 0.4505 WTT + 2.21 TTW
+  lng_kgCO2e_per_kg:          2.88,  // 0.4876 WTT + 2.392 TTW
+  bet_grid_kgCO2e_per_kwh_2025: 0.7455,
+  grid_decarb_rate_per_year:    0.03,
   h2ice_green_kgCO2e_per_km:  0.07,
   h2fcet_green_kgCO2e_per_km: 0.07,
 };
+
+/** BET grid CO2 factor (kgCO2e/kWh) for a year — Excel 'Emissions' R49. */
+export function betGridFactor(year: number): number {
+  const dy = Math.max(0, year - 2025);
+  return EMISSION_FACTORS.bet_grid_kgCO2e_per_kwh_2025
+    * Math.pow(1 - EMISSION_FACTORS.grid_decarb_rate_per_year, dy);
+}
 
 // ===========================================================================
 // TCO PARITY YEARS (precomputed in Excel 'Buckets' sheet cols O-T)

@@ -12,6 +12,7 @@ import {
   PRE_2001_DIESEL_SCRAPPAGE_PER_YEAR,
   PRE_2001_SCRAPPAGE_END_YEAR,
   EMISSION_FACTORS,
+  betGridFactor,
 } from '@/lib/constants/extracted';
 import {
   SEGMENTS,
@@ -35,7 +36,10 @@ function computeWeightedDieselEmissionRate(): number {
   return totalWeight > 0 ? weightedRate / totalWeight : 0;
 }
 
-function computeWeightedEmissionRate(): Record<Powertrain, number> {
+// Bucket-weighted per-vehicle annual emission rate (kgCO2e/yr) by powertrain.
+// BET uses the year's grid factor (Excel 'Emissions' R49 declines ~3%/yr).
+function computeWeightedEmissionRate(year: number): Record<Powertrain, number> {
+  const betGrid = betGridFactor(year);
   const rates: Record<Powertrain, number> = {
     Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0,
   };
@@ -44,7 +48,7 @@ function computeWeightedEmissionRate(): Record<Powertrain, number> {
     rates.Diesel += (b.annualKm / b.dieselKMPL * EMISSION_FACTORS.diesel_kgCO2e_per_l) * b.tivShare2045;
     rates.CNG += (b.annualKm / b.cngKmPerKg * EMISSION_FACTORS.cng_kgCO2e_per_kg) * b.tivShare2045;
     rates.LNG += (b.annualKm / b.lngKmPerKg * EMISSION_FACTORS.lng_kgCO2e_per_kg) * b.tivShare2045;
-    rates.BET += (b.annualKm * b.betKwhPerKm * EMISSION_FACTORS.bet_kgCO2e_per_kwh) * b.tivShare2045;
+    rates.BET += (b.annualKm * b.betKwhPerKm * betGrid) * b.tivShare2045;
     rates['H2-ICE'] += (b.annualKm * EMISSION_FACTORS.h2ice_green_kgCO2e_per_km) * b.tivShare2045;
     rates['H2-FCET'] += (b.annualKm * EMISSION_FACTORS.h2fcet_green_kgCO2e_per_km) * b.tivShare2045;
     totalWeight += b.tivShare2045;
@@ -71,7 +75,6 @@ function getSalesAtYear(year: number, annualSales: AnnualPTSales[]): Record<Powe
 }
 
 export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationResult {
-  const emissionRates = computeWeightedEmissionRate();
   const dieselCounterfactualRate = computeWeightedDieselEmissionRate();
 
   // Stock arrays
@@ -79,6 +82,42 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
   const prevStock: Record<Powertrain, number> = {
     Diesel: DIESEL_STOCK_END_2024,
     CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0,
+  };
+
+  // Per-bucket powertrain stock so segment/application stock reflects the real
+  // per-bucket transition (not a static tivShare distribution). Bucket TIV
+  // shares sum to ~1, so per-bucket sales reconcile with the aggregate.
+  const totalShare = BUCKETS.reduce((s, b) => s + b.tivShare2045, 0);
+  const bucketWeight = (b: typeof BUCKETS[number]) => b.tivShare2045 / totalShare;
+  const emptyPT = (): Record<Powertrain, number> =>
+    ({ Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 });
+
+  const prevStockByBucket: Record<string, Record<Powertrain, number>> = {};
+  for (const b of BUCKETS) {
+    prevStockByBucket[b.id] = emptyPT();
+    prevStockByBucket[b.id].Diesel = DIESEL_STOCK_END_2024 * bucketWeight(b);
+  }
+
+  // Per-bucket sales for any year: post-2025 from PTTM bucket shares × bucket
+  // TIV; pre-2025 the historical (all-diesel) sales split by bucket weight.
+  const bucketSalesAt = (yr: number): Record<string, Record<Powertrain, number>> => {
+    const out: Record<string, Record<Powertrain, number>> = {};
+    for (const b of BUCKETS) out[b.id] = emptyPT();
+    if (yr >= START_YEAR) {
+      const idx = yr - START_YEAR;
+      if (idx >= 0 && idx < annualSales.length) {
+        const tivY = TIV_PROJECTION[yr] ?? 0;
+        for (const b of BUCKETS) {
+          const sb = annualSales[idx].sharesByBucket[b.id];
+          const tb = tivY * bucketWeight(b);
+          for (const pt of POWERTRAINS) out[b.id][pt] = sb[pt] * tb;
+        }
+      }
+      return out;
+    }
+    const hist = HISTORICAL_SALES[yr];
+    if (hist !== undefined) for (const b of BUCKETS) out[b.id].Diesel = hist * bucketWeight(b);
+    return out;
   };
 
   const years: AnnualResult[] = [];
@@ -109,7 +148,8 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
       currentStock[pt] = Math.max(0, s);
     }
 
-    // Emissions
+    // Emissions (BET rate falls each year as the grid decarbonises)
+    const emissionRates = computeWeightedEmissionRate(year);
     const emissionsByPT: Record<Powertrain, number> = {} as any;
     let totalEmissions = 0;
     for (const pt of POWERTRAINS) {
@@ -124,8 +164,8 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
 
     cumulativeCO2Avoided += dieselCounterfactualEmissions - totalEmissions;
 
-    // ZET metrics
-    const zetSales = sales.BET + sales['H2-FCET'];
+    // ZET metrics — Excel 'PTTM' Total ZET = BET + H2-ICE + H2-FCET (cols C+E+G).
+    const zetSales = sales.BET + sales['H2-ICE'] + sales['H2-FCET'];
     totalZetSales += zetSales;
     const zetShare = tiv > 0 ? (sales.BET + sales['H2-ICE'] + sales['H2-FCET']) / tiv : 0;
     if (zetShare >= 0.5 && year50PctZet === null) {
@@ -139,43 +179,37 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
     }
 
     // ── Segment / Application breakdowns ──
-    // Sales by bucket = per-bucket share × bucket TIV (proportional to tivShare2045).
-    const tivByBucket: Record<string, number> = {};
-    const totalShare = BUCKETS.reduce((s, b) => s + b.tivShare2045, 0);
-    for (const b of BUCKETS) {
-      tivByBucket[b.id] = tiv * (b.tivShare2045 / totalShare);
-    }
+    const curBucketSales = bucketSalesAt(year);
+    const retireBucketSales = bucketSalesAt(retireYear);
 
     const salesBySegment: Record<string, number> = {};
     const salesByApplication: Record<string, number> = {};
-    for (const seg of SEGMENTS) salesBySegment[seg] = 0;
-    for (const app of APPLICATIONS) salesByApplication[app] = 0;
-
-    const bucketShares = annualSales[i].sharesByBucket;
-    for (const b of BUCKETS) {
-      const sb = bucketShares[b.id];
-      let bucketSales = 0;
-      for (const pt of POWERTRAINS) bucketSales += sb[pt] * tivByBucket[b.id];
-      const seg = SEGMENT_OF_BUCKET[b.id];
-      const app = APPLICATION_OF_BUCKET[b.id];
-      salesBySegment[seg] = (salesBySegment[seg] ?? 0) + bucketSales;
-      salesByApplication[app] = (salesByApplication[app] ?? 0) + bucketSales;
-    }
-
-    // Stock by segment / application: distribute total stock across buckets by
-    // bucket tivShare (steady-state weight). A reasonable approximation until
-    // per-bucket stock history is tracked.
-    const totalStockAll = totalStock;
     const stockBySegment: Record<string, number> = {};
     const stockByApplication: Record<string, number> = {};
-    for (const seg of SEGMENTS) stockBySegment[seg] = 0;
-    for (const app of APPLICATIONS) stockByApplication[app] = 0;
+    for (const seg of SEGMENTS) { salesBySegment[seg] = 0; stockBySegment[seg] = 0; }
+    for (const app of APPLICATIONS) { salesByApplication[app] = 0; stockByApplication[app] = 0; }
+
     for (const b of BUCKETS) {
-      const share = b.tivShare2045 / totalShare;
       const seg = SEGMENT_OF_BUCKET[b.id];
       const app = APPLICATION_OF_BUCKET[b.id];
-      stockBySegment[seg] = (stockBySegment[seg] ?? 0) + totalStockAll * share;
-      stockByApplication[app] = (stockByApplication[app] ?? 0) + totalStockAll * share;
+
+      // Roll per-bucket stock forward with this bucket's sales and retirements.
+      const curStockB = emptyPT();
+      let bucketSales = 0;
+      let bucketStock = 0;
+      for (const pt of POWERTRAINS) {
+        bucketSales += curBucketSales[b.id][pt];
+        let s = prevStockByBucket[b.id][pt] + curBucketSales[b.id][pt] - retireBucketSales[b.id][pt];
+        if (pt === 'Diesel') s -= pre2001Scrappage * bucketWeight(b);
+        curStockB[pt] = Math.max(0, s);
+        bucketStock += curStockB[pt];
+      }
+      prevStockByBucket[b.id] = curStockB;
+
+      salesBySegment[seg] += bucketSales;
+      salesByApplication[app] += bucketSales;
+      stockBySegment[seg] += bucketStock;
+      stockByApplication[app] += bucketStock;
     }
 
     years.push({
