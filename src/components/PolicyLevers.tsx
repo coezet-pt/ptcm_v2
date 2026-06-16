@@ -232,41 +232,47 @@ export default function PolicyLevers() {
 
 
 
-      {/* Inflexion year */}
+      {/* Inflexion year — one slider per ZET powertrain (feeds the PTTM diffusion curves) */}
 
-      <div className="space-y-3 pt-2 border-t border-border/50">
+      <div className="space-y-4 pt-2 border-t border-border/50">
 
         <h4 className="text-sm font-semibold">Inflexion year</h4>
 
-        <div className="space-y-2">
+        {([
+          ['BET', 'bet_inflection_year'],
+          ['H2-ICE', 'h2ice_inflection_year'],
+          ['H2-FCET', 'fcet_inflection_year'],
+        ] as const).map(([label, key]) => (
+          <div key={key} className="space-y-2">
 
-          <Label className="text-sm">
+            <Label className="text-sm">
 
-            BET: <span className="font-mono font-semibold">{p.bet_inflection_year}</span>
+              {label}: <span className="font-mono font-semibold">{p[key]}</span>
 
-          </Label>
+            </Label>
 
-          <Slider
+            <Slider
 
-            min={2030}
+              min={2030}
 
-            max={2042}
+              max={2042}
 
-            step={1}
+              step={1}
 
-            value={[p.bet_inflection_year]}
+              value={[p[key]]}
 
-            onValueChange={([v]) => updatePolicy('bet_inflection_year', v)}
+              onValueChange={([v]) => updatePolicy(key, v)}
 
-          />
+            />
 
-          <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-xs text-muted-foreground">
 
-            <span>2030</span><span>2042</span>
+              <span>2030</span><span>2042</span>
+
+            </div>
 
           </div>
-
-        </div>
+        ))}
 
       </div>
 

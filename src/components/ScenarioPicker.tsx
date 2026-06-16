@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import type { ScenarioName } from '@/lib/constants/extracted';
 import { RotateCcw } from 'lucide-react';
 
-const SCENARIOS: (ScenarioName | 'Custom')[] = ['BAU', 'BWS-1', 'BWS-2', 'BEST', 'Custom'];
+const SCENARIOS: (ScenarioName | 'Custom')[] = ['BAU', 'Custom'];
 
 const SCENARIO_LABELS: Record<ScenarioName | 'Custom', string> = {
   BAU: 'Basic',

@@ -10,6 +10,7 @@ import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
 import { RatingMatrix } from './RatingMatrix';
 import PolicyLevers from './PolicyLevers';
+import SegmentBasePricesTable from './SegmentBasePricesTable';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useScenario } from '@/contexts/ScenarioContext';
@@ -91,6 +92,15 @@ export default function InputPanel() {
                     onChange={(pt, v) => updateFixed('range_filling_time', { ...f.range_filling_time, [pt]: v })}
                   />
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="segment-prices">
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Segment base prices (2025)
+              </AccordionTrigger>
+              <AccordionContent>
+                <SegmentBasePricesTable />
               </AccordionContent>
             </AccordionItem>
 

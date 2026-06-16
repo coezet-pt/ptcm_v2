@@ -50,7 +50,8 @@ export interface FixedParameters {
   // Held in state for the input UI; engine still reads policy.loan_tenure_years for ZET.
   loan_tenure_years_nonzet?: number;
   // v4 Dashboard bucket-level maintenance trajectories (Pattern A per B1–B14).
-  // In state only this round; not yet consumed by the sim engine.
+  // Consumed by the sim engine via tco.ts getMaintenancePerKm (diesel/bet/fcet);
+  // unedited buckets fall back to defaultMaintConfig (== Excel baseline).
   bucket_maintenance?: {
     diesel: Record<string, ParameterConfig>;
     bet: Record<string, ParameterConfig>;
