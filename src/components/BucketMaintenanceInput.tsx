@@ -2,18 +2,9 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useScenario } from '@/contexts/ScenarioContext';
 import { BUCKETS } from '@/lib/constants/extracted';
+import { MAINT_METRICS, defaultMaintConfig } from '@/lib/sim/maintenance';
 import type { ParameterConfig } from '@/lib/types';
 import ParameterEditor from './ParameterEditor';
-
-const METRICS: { key: 'diesel' | 'bet' | 'fcet'; label: string; defaultFn: (b: typeof BUCKETS[number]) => number }[] = [
-  { key: 'diesel', label: 'Diesel Maintenance',      defaultFn: b => b.maintDieselPerKm },
-  { key: 'bet',    label: 'BET Aggregates (incl. battery repl.)',     defaultFn: b => +(b.maintDieselPerKm * 0.6).toFixed(2) },
-  { key: 'fcet',   label: 'FCET Aggregates (incl. battery+FC repl.)', defaultFn: b => +(b.maintDieselPerKm * 0.7).toFixed(2) },
-];
-
-function emptyConfigFor(defaultBase: number): ParameterConfig {
-  return { baseValue: defaultBase, d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0 };
-}
 
 export default function BucketMaintenanceInput() {
   const {
@@ -41,8 +32,8 @@ export default function BucketMaintenanceInput() {
         </Select>
       </div>
 
-      {METRICS.map(m => {
-        const cfg: ParameterConfig = bm?.[m.key]?.[bucketId] ?? emptyConfigFor(m.defaultFn(bucket));
+      {MAINT_METRICS.map(m => {
+        const cfg: ParameterConfig = bm?.[m.key]?.[bucketId] ?? defaultMaintConfig(m.key, bucket);
         return (
           <div key={m.key} className="py-3 border-b border-border/50 last:border-b-0">
             <div className="text-sm font-medium mb-1">{m.label} <span className="text-[11px] text-muted-foreground font-normal">— ₹/km</span></div>
@@ -58,9 +49,6 @@ export default function BucketMaintenanceInput() {
           </div>
         );
       })}
-      <p className="text-[11px] text-muted-foreground italic">
-        Per-bucket maintenance values are held in state only; they are not yet consumed by the simulation engine in this round.
-      </p>
     </div>
   );
 }

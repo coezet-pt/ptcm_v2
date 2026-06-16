@@ -74,11 +74,11 @@ export default function FixedParamGroup() {
   );
 }
 
-function RatingMatrix({
+export function RatingMatrix({
   label, values, onChange,
 }: {
   label: string;
-  field: string;
+  field?: string;
   values: Record<Powertrain, number>;
   onChange: (pt: Powertrain, v: number) => void;
 }) {

@@ -15,7 +15,8 @@ import {
   FINANCE,
   POWERTRAINS,
 } from '@/lib/constants/extracted';
-import { getValueAtYear } from './timeSeries';
+import { buildSeriesFromConfig, getValueAtYear } from './timeSeries';
+import { defaultMaintConfig, type MaintMetric } from './maintenance';
 
 // ── Types ──
 export interface TCOResult {
@@ -43,10 +44,9 @@ const CNG_TANK_BASE_LARGE = 250000;
 const ZET_BSVII_RELIEF_2030 = 200000;
 const ZET_BSVII_RELIEF_2031_PLUS = 206000; // 200000 × 1.03
 
-// Diesel & CNG/LNG/H2-ICE maintenance growth (uniform 4%/yr across all
-// bucket sheets); BET/FCET maintenance, toll, and manpower use per-bucket
-// [2025, 2045] pairs from BUCKET_OPEX_CALIBRATION.
-const MAINT_DIESEL_CAGR     = 0.04;
+// CNG/LNG/H2-ICE maintenance grows at a uniform 4%/yr (Excel bucket sheets).
+// Diesel/BET/FCET maintenance is config-driven (see getMaintenancePerKm);
+// toll and manpower use per-bucket [2025, 2045] pairs from BUCKET_OPEX_CALIBRATION.
 const MAINT_OTHER_ICE_CAGR  = 0.04;
 
 /** Interpolate/extrapolate a [2025, 2045] pair with its implied CAGR. */
@@ -54,14 +54,6 @@ function growFromPair(pair: [number, number], year: number): number {
   const [v25, v45] = pair;
   if (v25 <= 0) return v25;
   return v25 * Math.pow(v45 / v25, (year - 2025) / 20);
-}
-
-/** Piecewise-CAGR interpolation across [2025, 2045, 2050, 2055] knots. */
-function growFromKnots(knots: [number, number, number, number], year: number): number {
-  const [v25, v45, v50, v55] = knots;
-  if (year <= 2045) return growFromPair([v25, v45], year);
-  if (year <= 2050) return v45 * Math.pow(v50 / v45, (year - 2045) / 5);
-  return v50 * Math.pow(v55 / v50, (year - 2050) / 5);
 }
 
 // CNG tank: 150k applies to 15T only ('Changing with year' rows 92-100:
@@ -244,12 +236,28 @@ function computeFuelCostPerKm(
   }
 }
 
-function getMaintenancePerKm(pt: Powertrain, bucket: Bucket, year: number): number {
+// Diesel/BET/FCET maintenance is user-editable per bucket; when an edited
+// config exists it drives the engine, else the baseline (== Excel) is used.
+const MAINT_METRIC_BY_PT: Partial<Record<Powertrain, MaintMetric>> = {
+  Diesel: 'diesel',
+  BET: 'bet',
+  'H2-FCET': 'fcet',
+};
+
+function getMaintenancePerKm(
+  pt: Powertrain,
+  bucket: Bucket,
+  year: number,
+  fixed?: FixedParameters,
+): number {
+  const metric = MAINT_METRIC_BY_PT[pt];
+  if (metric) {
+    const cfg = fixed?.bucket_maintenance?.[metric]?.[bucket.id]
+      ?? defaultMaintConfig(metric, bucket);
+    return getValueAtYear(buildSeriesFromConfig(cfg), year);
+  }
+  // CNG/LNG/H2-ICE: uniform 4%/yr, not user-editable.
   const dy = year - 2025;
-  const cal = BUCKET_OPEX_CALIBRATION[bucket.id];
-  if (pt === 'Diesel') return bucket.maintDieselPerKm * Math.pow(1 + MAINT_DIESEL_CAGR, dy);
-  if (pt === 'BET')    return growFromKnots(cal.maintBET, year);
-  if (pt === 'H2-FCET') return growFromKnots(cal.maintFCET, year);
   return bucket.maintCngLngH2icePerKm * Math.pow(1 + MAINT_OTHER_ICE_CAGR, dy);
 }
 
@@ -299,7 +307,9 @@ export function computeTCO(
       const resale = price * resalePct;
 
       const rate = isZET(pt) ? policy.interest_rate_zet : fp.interest_rate_ice;
-      const tenure = policy.loan_tenure_years;
+      const tenure = isZET(pt)
+        ? policy.loan_tenure_years
+        : (fp.loan_tenure_years_nonzet ?? policy.loan_tenure_years);
       // Excel CAPEX/annum is a full-price annuity: price·r/(1−(1+r)^−n)
       const financedTotal = rate > 0
         ? price * rate * tenure / (1 - Math.pow(1 + rate, -tenure))
@@ -309,7 +319,7 @@ export function computeTCO(
       const capex = financedTotal - resale + insurance;
 
       const fuelPerKm = computeFuelCostPerKm(pt, bucket, targetYear, ts, policy, fp);
-      const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear);
+      const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear, fp);
 
       let effectiveToll = tollPerKm;
       if (isZET(pt)) {

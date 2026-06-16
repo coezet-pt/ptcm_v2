@@ -2,7 +2,7 @@
  * Time-series projection — builds year-by-year arrays (2025–2055)
  * for all 15 cost parameters using compound growth per period.
  */
-import type { ParameterKey, PolicyConfig, ScenarioConfig } from '@/lib/types';
+import type { ParameterConfig, ParameterKey, PolicyConfig, ScenarioConfig } from '@/lib/types';
 
 export const START_YEAR = 2025;
 export const END_YEAR = 2055;
@@ -13,6 +13,39 @@ const GROWTH_RATE_KEYS: ParameterKey[] = [
   'engine_trans_growth',
   'e_powertrain_growth',
 ];
+
+/**
+ * Build a year-by-year array (2025–2055) for a single parameter config:
+ * compound-grow from baseValue through the six CAGR periods. Growth-rate
+ * configs start at 1.0 (cumulative multiplier). A spot-year override pins the
+ * absolute value for that year; subsequent years compound from the pinned value.
+ */
+export function buildSeriesFromConfig(
+  p: ParameterConfig,
+  isGrowthRate = false,
+): number[] {
+  const arr: number[] = new Array(YEAR_COUNT);
+  arr[0] = isGrowthRate ? 1.0 : p.baseValue;
+
+  for (let i = 1; i < YEAR_COUNT; i++) {
+    const year = START_YEAR + i;
+    let delta: number;
+    if (year <= 2030)      delta = p.d2530;
+    else if (year <= 2035) delta = p.d3135;
+    else if (year <= 2040) delta = p.d3640;
+    else if (year <= 2045) delta = p.d4145;
+    else if (year <= 2050) delta = p.d4650;
+    else                   delta = p.d5155;
+
+    arr[i] = arr[i - 1] * (1 + delta);
+
+    if (!isGrowthRate && p.overrides && p.overrides[year] !== undefined) {
+      arr[i] = p.overrides[year];
+    }
+  }
+
+  return arr;
+}
 
 /**
  * For each parameter, compound-grow from baseValue through 4 delta periods.
@@ -29,37 +62,15 @@ export function buildTimeSeries(
   const result = {} as Record<ParameterKey, number[]>;
 
   for (const key of Object.keys(params) as ParameterKey[]) {
-    const p = params[key];
+    let p = params[key];
     const isGrowthRate = GROWTH_RATE_KEYS.includes(key);
-    const arr: number[] = new Array(YEAR_COUNT);
 
-    arr[0] = isGrowthRate ? 1.0 : p.baseValue;
-
-    for (let i = 1; i < YEAR_COUNT; i++) {
-      const year = START_YEAR + i;
-      let delta: number;
-      if (year <= 2030)      delta = p.d2530;
-      else if (year <= 2035) delta = p.d3135;
-      else if (year <= 2040) delta = p.d3640;
-      else if (year <= 2045) delta = p.d4145;
-      else if (year <= 2050) delta = p.d4650;
-      else                   delta = p.d5155;
-
-      // Override diesel price growth post-2045 when policy flag is set
-      if (policy?.diesel_price_5pct_yoy_after_2045 && key === 'diesel_price_per_l' && year > 2045) {
-        delta = 0.05;
-      }
-
-      arr[i] = arr[i - 1] * (1 + delta);
-
-      // v4 Dashboard: spot-year override pins absolute value for this year.
-      // Subsequent years compound from the pinned value.
-      if (!isGrowthRate && p.overrides && p.overrides[year] !== undefined) {
-        arr[i] = p.overrides[year];
-      }
+    // Override diesel price growth to 5%/yr for both post-2045 periods when set.
+    if (policy?.diesel_price_5pct_yoy_after_2045 && key === 'diesel_price_per_l') {
+      p = { ...p, d4650: 0.05, d5155: 0.05 };
     }
 
-    result[key] = arr;
+    result[key] = buildSeriesFromConfig(p, isGrowthRate);
   }
 
   return result;

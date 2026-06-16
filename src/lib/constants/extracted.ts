@@ -512,6 +512,7 @@ export const BAU_PARAMETERS = {
 // BAU fixed (non-trajectory) parameters
 export const BAU_FIXED = {
   interest_rate_ice: 0.12,
+  loan_tenure_years_nonzet: 7,
   insurance_rate_per_year: 0.02,
   adblue_consumption_l_per_l_diesel: 0.05,
   battery_life_cycles: 3000,

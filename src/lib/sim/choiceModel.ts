@@ -7,7 +7,7 @@
  * Ratio direction varies by factor (see below).
  */
 import type { Powertrain, Bucket, VehicleSize } from '@/lib/constants/extracted';
-import type { PolicyConfig } from '@/lib/types';
+import type { FixedParameters, PolicyConfig } from '@/lib/types';
 import {
   POWERTRAINS,
   POWERTRAIN_RATINGS,
@@ -43,8 +43,13 @@ export function computeShares(
   // Excel 'Estimation 100% ZET 2055': diesel/CNG/LNG are excluded from the
   // 2055 choice set, shares renormalize among BET / H2-ICE / H2-FCET only.
   zetOnly = false,
+  fixed?: FixedParameters,
 ): BucketShares {
   const result: BucketShares = {};
+
+  // Editable powertrain ratings; default to the Excel constants when unset.
+  const tatRatings = fixed?.tat_gradeability ?? POWERTRAIN_RATINGS.tatGradeability;
+  const rangeRatings = fixed?.range_filling_time ?? POWERTRAIN_RATINGS.rangeFillingTime;
 
   for (const bucket of buckets) {
     const tco = tcoResults[bucket.id];
@@ -57,8 +62,8 @@ export function computeShares(
       ? tco['LNG'].tcoPerKm
       : tco['Diesel'].tcoPerKm;
     const dieselPrice = tco['Diesel'].vehiclePrice;
-    const dieselTAT = POWERTRAIN_RATINGS.tatGradeability['Diesel'];
-    const dieselRange = POWERTRAIN_RATINGS.rangeFillingTime['Diesel'];
+    const dieselTAT = tatRatings['Diesel'];
+    const dieselRange = rangeRatings['Diesel'];
 
     const rawScores: Record<Powertrain, number> = {} as any;
     const el = BUCKET_CHOICE_ELASTICITIES[bucket.id];
@@ -87,13 +92,13 @@ export function computeShares(
       const payloadArg = el.payload * (payloadRatio(bucket, pt) - 1);
 
       // Factor 4: TAT/Gradeability — pt/diesel (higher rating better)
-      const tatRating = POWERTRAIN_RATINGS.tatGradeability[pt];
+      const tatRating = tatRatings[pt];
       const tatArg = el.tat * (tatRating / dieselTAT - 1);
 
       // Factor 5: Range/Filling — diesel/pt (lower penalty better)
       const rangeRating = (policy?.range_filling_concern_after_2035 === false && targetYear >= 2035)
         ? 1.0
-        : POWERTRAIN_RATINGS.rangeFillingTime[pt];
+        : rangeRatings[pt];
       const rangeArg = el.range * (dieselRange / rangeRating - 1);
 
       tcoFactors[pt] = Math.exp(clamp(tcoArg, -50, 50));

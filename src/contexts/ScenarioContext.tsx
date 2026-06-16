@@ -2,8 +2,9 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice, ParameterConfig } from '@/lib/types';
 import type { ScenarioName, VehicleSize } from '@/lib/constants/extracted';
-import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES } from '@/lib/constants/extracted';
+import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES, BUCKETS } from '@/lib/constants/extracted';
 import { SCENARIO_CONFIGS } from '@/lib/constants/scenarios';
+import { defaultMaintConfig } from '@/lib/sim/maintenance';
 
 // v4 Dashboard CAGR-range → years map. Editing one CAGR clears overrides in its range.
 const RANGE_YEARS: Record<string, number[]> = {
@@ -197,9 +198,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       setDraftConfig(prev => {
         const bm = prev.fixed.bucket_maintenance ?? { diesel: {}, bet: {}, fcet: {} };
         const group = { ...(bm[metric] ?? {}) };
-        const current = group[bucketId] ?? {
-          baseValue: 0, d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0,
-        };
+        const current = group[bucketId] ?? baselineMaintConfig(metric, bucketId);
         group[bucketId] = clearOverridesInRangeIfCagr(
           { ...current, [field]: value },
           field as string,
@@ -223,9 +222,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       setDraftConfig(prev => {
         const bm = prev.fixed.bucket_maintenance ?? { diesel: {}, bet: {}, fcet: {} };
         const group = { ...(bm[metric] ?? {}) };
-        const current = group[bucketId] ?? {
-          baseValue: 0, d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0,
-        };
+        const current = group[bucketId] ?? baselineMaintConfig(metric, bucketId);
         group[bucketId] = { ...current, overrides: { ...(current.overrides ?? {}), [year]: value } };
         return {
           ...prev,
@@ -280,6 +277,13 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       {children}
     </ScenarioContext.Provider>
   );
+}
+
+/** Baseline (== Excel/engine) maintenance config so partial edits start from the right curve. */
+function baselineMaintConfig(metric: 'diesel' | 'bet' | 'fcet', bucketId: string): ParameterConfig {
+  const bucket = BUCKETS.find(b => b.id === bucketId);
+  if (bucket) return defaultMaintConfig(metric, bucket);
+  return { baseValue: 0, d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0 };
 }
 
 /** If `field` is one of the six CAGR keys, drop any overrides whose year falls in that range. */

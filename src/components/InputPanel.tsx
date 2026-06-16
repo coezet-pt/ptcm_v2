@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { NumberField } from '@/components/ui/number-field';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
@@ -9,6 +8,7 @@ import { Play, Undo2, RotateCcw } from 'lucide-react';
 import ParameterRow from './ParameterRow';
 import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
+import { RatingMatrix } from './FixedParamGroup';
 import PolicyLevers from './PolicyLevers';
 import { useScenario } from '@/contexts/ScenarioContext';
 
@@ -16,11 +16,7 @@ import { useScenario } from '@/contexts/ScenarioContext';
 
 export default function InputPanel() {
   const { draftConfig, updateFixed } = useScenario();
-
-  const batteryLife = draftConfig.fixed.battery_life_cycles;
-  const fcLife = draftConfig.fixed.fuel_cell_life_hours;
-  const batteryLifeBad = !/^\d{1,4}$/.test(String(batteryLife));
-  const fcLifeBad = !/^\d{1,5}$/.test(String(fcLife));
+  const f = draftConfig.fixed;
 
   return (
     <div className="space-y-6">
@@ -63,36 +59,35 @@ export default function InputPanel() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="constants">
+            <AccordionItem value="financing">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Factor values taken as constant
+                Financing
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 py-2 flex-wrap">
-                    <div className="text-sm font-medium min-w-[180px]">Battery Life</div>
-                    <NumberField
-                      step={1}
-                      className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${batteryLifeBad ? 'border-destructive ring-1 ring-destructive' : ''}`}
-                      value={batteryLife}
-                      onValueChange={v => updateFixed('battery_life_cycles', v)}
-                    />
-                    <span className="text-xs text-muted-foreground">cycles (max 4 digits)</span>
-                    {batteryLifeBad && <span className="text-[11px] text-destructive">Must be a 4-digit number</span>}
-                  </div>
-                  <div className="flex items-center gap-3 py-2 flex-wrap">
-                    <div className="text-sm font-medium min-w-[180px]">Fuel Cell Life</div>
-                    <NumberField
-                      step={1}
-                      className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${fcLifeBad ? 'border-destructive ring-1 ring-destructive' : ''}`}
-                      value={fcLife}
-                      onValueChange={v => updateFixed('fuel_cell_life_hours', v)}
-                    />
-                    <span className="text-xs text-muted-foreground">hours (max 5 digits)</span>
-                    {fcLifeBad && <span className="text-[11px] text-destructive">Must be a 5-digit number</span>}
-                  </div>
                   <FundingInput label="Funding (non-ZETs)" kind="nonzet" />
                   <FundingInput label="Funding (ZETs)"     kind="zet" />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="ratings">
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Powertrain ratings (TAT, range)
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Relative to Diesel = 1.0; feeds the powertrain choice model.</p>
+                  <RatingMatrix
+                    label="TAT / gradeability / productivity"
+                    values={f.tat_gradeability}
+                    onChange={(pt, v) => updateFixed('tat_gradeability', { ...f.tat_gradeability, [pt]: v })}
+                  />
+                  <RatingMatrix
+                    label="Range & filling time"
+                    values={f.range_filling_time}
+                    onChange={(pt, v) => updateFixed('range_filling_time', { ...f.range_filling_time, [pt]: v })}
+                  />
                 </div>
               </AccordionContent>
             </AccordionItem>
