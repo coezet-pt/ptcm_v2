@@ -9,9 +9,9 @@ export interface ParameterMeta {
 }
 
 export const PARAMETER_META: Record<ParameterKey, ParameterMeta> = {
-  diesel_price_per_l:             { label: 'Diesel price',            unit: '₹/L',   tooltip: 'Retail diesel price at pump (2025 base)', maxValue: 500 },
-  cng_price_per_kg:               { label: 'CNG price',              unit: '₹/kg',  tooltip: 'Compressed natural gas retail price', maxValue: 500 },
-  lng_price_per_kg:               { label: 'LNG price',              unit: '₹/kg',  tooltip: 'Liquefied natural gas retail price', maxValue: 500 },
+  diesel_price_per_l:             { label: 'Diesel cost',            unit: '₹/L',   tooltip: 'Retail diesel cost at pump (2025 base)', maxValue: 500 },
+  cng_price_per_kg:               { label: 'CNG cost',              unit: '₹/kg',  tooltip: 'Compressed natural gas retail cost', maxValue: 500 },
+  lng_price_per_kg:               { label: 'LNG cost',              unit: '₹/kg',  tooltip: 'Liquefied natural gas retail cost', maxValue: 500 },
   green_h2_production_per_kg:     { label: 'Green Hydrogen production',    unit: '₹/kg',  tooltip: 'Green hydrogen production cost at plant gate', maxValue: 1500 },
   grey_h2_production_per_kg:      { label: 'Grey Hydrogen production',     unit: '₹/kg',  tooltip: 'Grey hydrogen (SMR) production cost' },
   h2_compression_storage_per_kg:  { label: 'Hydrogen compression & storage', unit: '₹/kg', tooltip: 'Hydrogen compression, storage & dispensing cost', maxValue: 500 },
@@ -19,8 +19,8 @@ export const PARAMETER_META: Record<ParameterKey, ParameterMeta> = {
   fuel_cell_cost_per_kw:          { label: 'Fuel cell cost',         unit: '₹/kW',  tooltip: 'PEM fuel cell stack cost per kW rated output', maxValue: 100000 },
   lng_tank_cost_per_kg:           { label: 'LNG tank cost',          unit: '₹/kg',  tooltip: 'Cryogenic LNG tank cost per kg capacity' },
   h2_tank_cost_per_kg:            { label: 'Hydrogen tank cost',           unit: '₹/kg',  tooltip: 'Type IV composite hydrogen tank cost per kg storage' },
-  adblue_per_l:                   { label: 'AdBlue (DEF) price',     unit: '₹/L',   tooltip: 'Diesel exhaust fluid price (consumed ~5% of diesel volume)' },
-  diesel_vehicle_growth:          { label: 'Diesel vehicle price growth', unit: '%/yr', tooltip: 'Annual YoY price growth for diesel vehicle platform' },
+  adblue_per_l:                   { label: 'AdBlue (DEF) cost',     unit: '₹/L',   tooltip: 'Diesel exhaust fluid cost (consumed ~5% of diesel volume)' },
+  diesel_vehicle_growth:          { label: 'Diesel vehicle cost growth', unit: '%/yr', tooltip: 'Annual YoY cost growth for diesel vehicle platform' },
   engine_trans_growth:            { label: 'Engine+trans growth',    unit: '%/yr',  tooltip: 'Annual YoY cost growth for engine + transmission (ZET glider)' },
   e_powertrain_growth:            { label: 'E-powertrain growth',    unit: '%/yr',  tooltip: 'Annual YoY cost change for electric motor + electronics' },
   // v9 additions

@@ -26,7 +26,7 @@ export default function KpiRail({ items, open, onToggle }: Props) {
           <PanelRightOpen className="h-4 w-4" />
         </Button>
         <span className="[writing-mode:vertical-rl] text-[10px] uppercase tracking-[0.22em] text-muted-foreground select-none">
-          National impact
+          Key Insights
         </span>
       </div>
     );
@@ -35,7 +35,7 @@ export default function KpiRail({ items, open, onToggle }: Props) {
   return (
     <div className="sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto border-l border-border px-4 py-4">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">National impact</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Key Insights</p>
         <Button
           variant="ghost" size="icon" className="h-6 w-6 -mr-1"
           onClick={onToggle}

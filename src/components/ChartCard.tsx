@@ -30,11 +30,12 @@ export default function ChartCard({ title, description, subtitle, children, csvD
           {csvData && (
             <>
               <Button
-                variant="ghost" size="icon" className="h-7 w-7"
+                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
                 onClick={() => setShowTable(t => !t)}
-                title="Toggle data table"
+                title="Data Table"
               >
                 <Table2 className="h-3.5 w-3.5" />
+                Data Table
               </Button>
               <Button
                 variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-mono tracking-wide"
@@ -65,6 +66,11 @@ export default function ChartCard({ title, description, subtitle, children, csvD
         <div ref={chartRef} className="h-[320px]">
           {children}
         </div>
+        {!showTable && csvData && (
+          <p className="mt-3 border-t pt-2 text-[10px] text-muted-foreground">
+            Download as CSV or XLSX
+          </p>
+        )}
         {showTable && csvData && (
           <div className="mt-3 border-t pt-2">
             <div className="max-h-48 overflow-auto text-[10px]">

@@ -10,7 +10,7 @@ import { Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const SCENARIO_LABEL: Record<string, string> = {
-  BAU: 'Basic',
+  BAU: 'Default',
   'BWS-1': 'BWS-1',
   'BWS-2': 'BWS-2',
   BEST: 'BEST',
@@ -64,7 +64,7 @@ function DashboardContent() {
       context: `${(simResult.dieselStockPeakValue / 1e6).toFixed(1)}M vehicles`,
     },
     {
-      label: 'CO₂ emission savings',
+      label: 'CO₂ emission reduction',
       value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} MMT`,
       context: 'For the period 2025–55 over diesel-only scenario',
     },

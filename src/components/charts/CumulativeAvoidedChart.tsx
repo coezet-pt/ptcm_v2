@@ -28,7 +28,7 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
 
   return (
     <ChartCard
-      title="Cumulative CO₂ emission savings"
+      title="Cumulative CO₂ emission reduction"
       subtitle={`${CUMULATIVE_EMISSIONS_SUBTITLE}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
       csvFilename="cumulative_co2_avoided"

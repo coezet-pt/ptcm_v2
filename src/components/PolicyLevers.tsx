@@ -4,8 +4,6 @@ import { NumberField } from '@/components/ui/number-field';
 
 import { Label } from '@/components/ui/label';
 
-import { Slider } from '@/components/ui/slider';
-
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import type { H2SourceMix } from '@/lib/types';
@@ -24,80 +22,6 @@ export default function PolicyLevers() {
 
     <div className="space-y-5">
 
-      {/* BET demand incentive */}
-
-      <div className="grid grid-cols-2 gap-4">
-
-        <div className="space-y-1.5">
-
-          <Label className="text-sm">BET demand incentive (₹/kWh)</Label>
-
-          <NumberField
-
-            className="h-8 font-mono text-sm"
-
-            value={p.bet_demand_incentive_per_kwh}
-
-            onValueChange={v => updatePolicy('bet_demand_incentive_per_kwh', v)}
-
-          />
-
-        </div>
-
-        <div className="space-y-1.5">
-
-          <Label className="text-sm">FCET demand incentive (₹/kWh)</Label>
-
-          <NumberField
-
-            className="h-8 font-mono text-sm"
-
-            value={p.fcet_demand_incentive_per_kwh}
-
-            onValueChange={v => updatePolicy('fcet_demand_incentive_per_kwh', v)}
-
-          />
-
-        </div>
-
-      </div>
-
-
-
-      {/* ZET interest rate slider */}
-
-      <div className="space-y-2">
-
-        <Label className="text-sm">
-
-          ZET interest rate: <span className="font-mono font-semibold">{(p.interest_rate_zet * 100).toFixed(1)}%</span>
-
-        </Label>
-
-        <Slider
-
-          min={8}
-
-          max={15}
-
-          step={0.5}
-
-          value={[p.interest_rate_zet * 100]}
-
-          onValueChange={([v]) => updatePolicy('interest_rate_zet', v / 100)}
-
-        />
-
-        <div className="flex justify-between text-xs text-muted-foreground">
-
-          <span>8%</span><span>15%</span>
-
-        </div>
-
-      </div>
-
-
-
       {/* Electricity subsidy */}
 
       <div className="space-y-1.5">
@@ -113,50 +37,6 @@ export default function PolicyLevers() {
           onValueChange={v => updatePolicy('electricity_subsidy_per_kwh', v)}
 
         />
-
-      </div>
-
-
-
-      {/* Toll waiver */}
-
-      <div className="grid grid-cols-2 gap-4">
-
-        <div className="space-y-1.5">
-
-          <Label className="text-sm">Toll waiver — first 5 years (%)</Label>
-
-          <NumberField
-
-            className="h-8 font-mono text-sm"
-
-            min={0} max={100} step={5}
-
-            value={p.toll_waiver_pct_first_5y * 100}
-
-            onValueChange={pct => updatePolicy('toll_waiver_pct_first_5y', pct / 100)}
-
-          />
-
-        </div>
-
-        <div className="space-y-1.5">
-
-          <Label className="text-sm">Toll waiver — next 5 years (%)</Label>
-
-          <NumberField
-
-            className="h-8 font-mono text-sm"
-
-            min={0} max={100} step={5}
-
-            value={p.toll_waiver_pct_next_5y * 100}
-
-            onValueChange={pct => updatePolicy('toll_waiver_pct_next_5y', pct / 100)}
-
-          />
-
-        </div>
 
       </div>
 
@@ -198,7 +78,7 @@ export default function PolicyLevers() {
 
             <RadioGroupItem value="cheapest" id="h2-cheap" />
 
-            <Label htmlFor="h2-cheap" className="text-sm cursor-pointer">Lowest priced option</Label>
+            <Label htmlFor="h2-cheap" className="text-sm cursor-pointer">Lowest cost option</Label>
 
           </div>
 
@@ -227,52 +107,6 @@ export default function PolicyLevers() {
         />
 
         <p className="text-xs text-muted-foreground">Extra GVW allowed for BET/FCET; raises their rated payload.</p>
-
-      </div>
-
-
-
-      {/* Inflexion year — one slider per ZET powertrain (feeds the PTTM diffusion curves) */}
-
-      <div className="space-y-4 pt-2 border-t border-border/50">
-
-        <h4 className="text-sm font-semibold">Inflexion year</h4>
-
-        {([
-          ['BET', 'bet_inflection_year'],
-          ['H2-ICE', 'h2ice_inflection_year'],
-          ['H2-FCET', 'fcet_inflection_year'],
-        ] as const).map(([label, key]) => (
-          <div key={key} className="space-y-2">
-
-            <Label className="text-sm">
-
-              {label}: <span className="font-mono font-semibold">{p[key]}</span>
-
-            </Label>
-
-            <Slider
-
-              min={2030}
-
-              max={2042}
-
-              step={1}
-
-              value={[p[key]]}
-
-              onValueChange={([v]) => updatePolicy(key, v)}
-
-            />
-
-            <div className="flex justify-between text-xs text-muted-foreground">
-
-              <span>2030</span><span>2042</span>
-
-            </div>
-
-          </div>
-        ))}
 
       </div>
 

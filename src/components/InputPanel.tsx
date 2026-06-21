@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Play, Undo2, RotateCcw } from 'lucide-react';
+import { Play, Undo2, RotateCcw, ChevronRight } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import type { ReactNode } from 'react';
 import ParameterRow from './ParameterRow';
 import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
@@ -16,6 +18,35 @@ import { Label } from '@/components/ui/label';
 import { useScenario } from '@/contexts/ScenarioContext';
 
 
+
+/**
+ * Collapsed cost section — renders as a single clickable row that opens its
+ * parameter rows in a floating pop-up panel beside the sidebar.
+ */
+function CostSectionPopover({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="w-full flex items-center justify-between gap-2 rounded px-1 py-2.5 text-left hover:bg-muted/40 transition-colors"
+        >
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={12}
+        className="w-[380px] max-h-[78vh] overflow-y-auto p-3"
+      >
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{title}</h4>
+        {children}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function InputPanel() {
   const { draftConfig, updateFixed } = useScenario();
@@ -32,20 +63,18 @@ export default function InputPanel() {
           </p>
         </CardHeader>
         <CardContent className="divide-y divide-border/50">
-          <div className="pb-2">
-            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Fuel Prices</h4>
+          <CostSectionPopover title="Fuel Costs">
             <ParameterRow paramKey="diesel_price_per_l" />
             <ParameterRow paramKey="lng_price_per_kg"   />
             <ParameterRow paramKey="cng_price_per_kg"   />
-          </div>
-          <div className="pt-2">
-            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Energy Prices</h4>
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity price (incl. CAAS)" />
+          </CostSectionPopover>
+          <CostSectionPopover title="Energy Costs">
+            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity Cost at Charging Point (incl. CAAS)" />
             <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production Cost" />
             <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispense" />
-            <ParameterRow paramKey="battery_cost_per_kwh"          labelOverride="Battery Price" />
-            <ParameterRow paramKey="fuel_cell_cost_per_kw"         labelOverride="Fuel Cell Price" />
-          </div>
+            <ParameterRow paramKey="battery_cost_per_kwh"          labelOverride="Battery Cost" />
+            <ParameterRow paramKey="fuel_cell_cost_per_kw"         labelOverride="Fuel Cell Cost" />
+          </CostSectionPopover>
         </CardContent>
       </Card>
 
@@ -53,18 +82,9 @@ export default function InputPanel() {
       <Card>
         <CardContent className="pt-4">
           <Accordion type="multiple" className="w-full">
-            <AccordionItem value="maint">
-              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Maintenance including tyres (per bucket)
-              </AccordionTrigger>
-              <AccordionContent>
-                <BucketMaintenanceInput />
-              </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="financing">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Financing
+                Funding
               </AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-4">
@@ -97,7 +117,7 @@ export default function InputPanel() {
 
             <AccordionItem value="segment-prices">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Segment base prices (2025)
+                Segment base costs (2025)
               </AccordionTrigger>
               <AccordionContent>
                 <SegmentBasePricesTable />
@@ -139,6 +159,15 @@ export default function InputPanel() {
               </AccordionTrigger>
               <AccordionContent>
                 <PolicyLevers />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="maint">
+              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
+                Maintenance including tyres
+              </AccordionTrigger>
+              <AccordionContent>
+                <BucketMaintenanceInput />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

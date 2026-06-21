@@ -14,7 +14,7 @@ export default function SegmentBasePricesTable() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        2025 base prices per vehicle segment. Engine+Trans and E-Powertrain feed BET/FCET vehicle cost build-up;
+        2025 base costs per vehicle segment. Engine+Trans and E-Powertrain feed BET/FCET vehicle cost build-up;
         Diesel Total is the on-road diesel reference. Per-segment battery, fuel cell, and tank costs are derived
         from the component trajectories in section B (battery cost/kWh, fuel cell cost/kW, etc.).
       </p>

@@ -8,7 +8,7 @@ import { RotateCcw } from 'lucide-react';
 const SCENARIOS: (ScenarioName | 'Custom')[] = ['BAU', 'Custom'];
 
 const SCENARIO_LABELS: Record<ScenarioName | 'Custom', string> = {
-  BAU: 'Basic',
+  BAU: 'Default',
   'BWS-1': 'BWS-1',
   'BWS-2': 'BWS-2',
   BEST: 'BEST',
@@ -51,7 +51,7 @@ export default function ScenarioPicker() {
 
         <Button variant="ghost" size="sm" onClick={resetToBAU} className="gap-1.5">
           <RotateCcw className="h-3.5 w-3.5" />
-          Reset to Basic
+          Reset to Default
         </Button>
       </div>
 
