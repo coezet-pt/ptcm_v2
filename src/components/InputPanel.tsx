@@ -11,6 +11,7 @@ import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
 import { RatingMatrix } from './RatingMatrix';
 import PolicyLevers from './PolicyLevers';
+import HydrogenSourceMix from './HydrogenSourceMix';
 import SegmentBasePricesTable from './SegmentBasePricesTable';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,22 @@ function CostSection({ title, children }: { title: string; children: ReactNode }
   );
 }
 
+/**
+ * Placeholder for a section that isn't configurable yet — rendered as a
+ * non-interactive row with a "coming soon" badge so it holds its place in
+ * the ordering.
+ */
+function ComingSoonSection({ title }: { title: string }) {
+  return (
+    <div className="py-1">
+      <div className="w-full flex items-center justify-between gap-2 rounded px-1 py-2.5 opacity-60 cursor-not-allowed">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
+        <span className="text-[10px] rounded-full bg-muted text-muted-foreground px-1.5 py-0.5">Coming soon</span>
+      </div>
+    </div>
+  );
+}
+
 export default function InputPanel() {
   const { draftConfig, updateFixed } = useScenario();
   const f = draftConfig.fixed;
@@ -56,17 +73,36 @@ export default function InputPanel() {
           </p>
         </CardHeader>
         <CardContent className="divide-y divide-border/50">
-          <CostSection title="Fuel Costs">
+          {/* 1 — Fuel/Energy Cost (including Grey Hydrogen Cost) */}
+          <CostSection title="Fuel/Energy Cost">
             <ParameterRow paramKey="diesel_price_per_l" />
             <ParameterRow paramKey="lng_price_per_kg"   />
             <ParameterRow paramKey="cng_price_per_kg"   />
-          </CostSection>
-          <CostSection title="Energy Costs">
             <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity Cost at Charging Point (incl. CAAS)" />
             <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production Cost" />
+            <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production Cost" />
             <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispense" />
-            <ParameterRow paramKey="battery_cost_per_kwh"          labelOverride="Battery Cost" />
-            <ParameterRow paramKey="fuel_cell_cost_per_kw"         labelOverride="Fuel Cell Cost" />
+          </CostSection>
+
+          {/* 2 — Key Aggregate Cost */}
+          <CostSection title="Key Aggregate Cost">
+            <ParameterRow paramKey="battery_cost_per_kwh"  labelOverride="Battery Cost" />
+            <ParameterRow paramKey="fuel_cell_cost_per_kw" labelOverride="Fuel Cell Cost" />
+            <ParameterRow paramKey="h2_tank_cost_per_kg"   labelOverride="Hydrogen Tank Cost" />
+            <ParameterRow paramKey="lng_tank_cost_per_kg"  labelOverride="LNG Tank Cost" />
+          </CostSection>
+
+          {/* 3 — Key Aggregate Life (not configurable yet) */}
+          <ComingSoonSection title="Key Aggregate Life" />
+
+          {/* 4 — Hydrogen Source Mix */}
+          <CostSection title="Hydrogen Source Mix">
+            <HydrogenSourceMix />
+          </CostSection>
+
+          {/* 5 — Maintenance */}
+          <CostSection title="Maintenance">
+            <BucketMaintenanceInput />
           </CostSection>
         </CardContent>
       </Card>
@@ -152,15 +188,6 @@ export default function InputPanel() {
               </AccordionTrigger>
               <AccordionContent>
                 <PolicyLevers />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="maint">
-              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Maintenance including tyres
-              </AccordionTrigger>
-              <AccordionContent>
-                <BucketMaintenanceInput />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
