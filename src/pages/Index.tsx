@@ -6,6 +6,7 @@ import KpiCard from '@/components/KpiCard';
 import KpiRail, { type KpiItem } from '@/components/KpiRail';
 import ChartSections from '@/components/ChartSections';
 import { useSimulation } from '@/hooks/useSimulation';
+import { POWERTRAINS } from '@/lib/constants/extracted';
 import { Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -29,65 +30,34 @@ function DashboardContent() {
   }, [simResult]);
 
   const scenarioLabel = SCENARIO_LABEL[activeScenario] ?? activeScenario;
-  const y2045 = simResult?.years.find(y => y.year === 2045);
-  const y2025 = simResult?.years[0];
   const yFinal = simResult?.years[simResult.years.length - 1];
 
-  // Derived end-state metrics for the rail
-  const finalStockTotal = yFinal ? Object.values(yFinal.stockByPT).reduce((a, b) => a + b, 0) : 0;
-  const finalZetStock = yFinal ? yFinal.stockByPT.BET + yFinal.stockByPT['H2-ICE'] + yFinal.stockByPT['H2-FCET'] : 0;
-  const finalZetStockShare = finalStockTotal > 0 ? (finalZetStock / finalStockTotal) * 100 : 0;
-  const finalDieselSalesShare = yFinal ? (yFinal.shareByPT.Diesel ?? 0) * 100 : 0;
-  const emissionsDeltaPct = y2025 && yFinal && y2025.totalEmissions > 0
-    ? ((yFinal.totalEmissions - y2025.totalEmissions) / y2025.totalEmissions) * 100
-    : 0;
+  const peakSalesByPT: KpiItem[] = simResult
+    ? POWERTRAINS.map(pt => {
+        const peak = simResult.years.reduce(
+          (best, y) => (y.salesByPT[pt] > best.salesByPT[pt] ? y : best),
+          simResult.years[0],
+        );
+        return {
+          label: `${pt} Peak Sales`,
+          value: peak.year,
+          context: `${Math.round(peak.salesByPT[pt]).toLocaleString()} trucks/yr`,
+        };
+      })
+    : [];
 
   const kpis: KpiItem[] = simResult ? [
     {
-      label: 'Year of 50% ZET',
+      label: '50% ZET Adoption',
       value: simResult.year50PctZet ?? '—',
       context: 'ZET share of new sales crosses 50%',
     },
     {
-      label: 'ZET Share 2045',
-      value: y2045 ? `${(y2045.zetShare * 100).toFixed(1)}%` : '—',
-      context: 'Of annual sales',
-    },
-    {
-      label: 'Total ZET Sales',
-      value: `${(simResult.totalZetSales / 1e6).toFixed(1)}M`,
-      context: 'Cumulative trucks 2025–2055',
-    },
-    {
-      label: 'Diesel Stock Peak',
-      value: simResult.dieselStockPeakYear,
-      context: `${(simResult.dieselStockPeakValue / 1e6).toFixed(1)}M vehicles`,
-    },
-    {
-      label: 'CO₂ emission reduction',
-      value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} MMT`,
-      context: 'For the period 2025–55 over diesel-only scenario',
-    },
-    {
-      label: 'ZET Fleet 2055',
-      value: `${finalZetStockShare.toFixed(0)}%`,
-      context: `${(finalZetStock / 1e6).toFixed(1)}M of ${(finalStockTotal / 1e6).toFixed(1)}M trucks on road`,
-    },
-    {
-      label: 'Diesel Sales 2055',
-      value: `${finalDieselSalesShare.toFixed(1)}%`,
-      context: 'Diesel share of new sales in final year',
-    },
-    {
-      label: 'Emissions 2055',
-      value: `${yFinal ? yFinal.totalEmissions.toFixed(0) : '—'} MMT`,
-      context: `${emissionsDeltaPct >= 0 ? '+' : ''}${emissionsDeltaPct.toFixed(0)}% vs 2025 · Well To Wheel (WTW) per year`,
-    },
-    {
       label: 'Market Size 2055',
-      value: `${yFinal ? (yFinal.tiv / 1000).toFixed(0) : '—'}k`,
-      context: 'Total industry volume, trucks per year',
+      value: yFinal ? `${(yFinal.tiv / 1e5).toFixed(1)} lakh` : '—',
+      context: 'Total industry volume, trucks/yr (2055)',
     },
+    ...peakSalesByPT,
   ] : [];
 
   return (
