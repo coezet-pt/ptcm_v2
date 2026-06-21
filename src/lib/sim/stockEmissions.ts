@@ -189,6 +189,11 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
     for (const seg of SEGMENTS) { salesBySegment[seg] = 0; stockBySegment[seg] = 0; }
     for (const app of APPLICATIONS) { salesByApplication[app] = 0; stockByApplication[app] = 0; }
 
+    // Per-bucket annual energy use (raw, pre-scaling). Diesel/CNG/LNG/H2 in their
+    // fuel units (litres/kg), BET in kWh. Counterfactual = whole bucket as diesel.
+    const energyRaw: Record<Powertrain, number> = emptyPT();
+    let dieselCounterfactualLitresRaw = 0;
+
     for (const b of BUCKETS) {
       const seg = SEGMENT_OF_BUCKET[b.id];
       const app = APPLICATION_OF_BUCKET[b.id];
@@ -206,11 +211,31 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
       }
       prevStockByBucket[b.id] = curStockB;
 
+      // Energy = stock × annual km / efficiency (BET: × kWh-per-km).
+      energyRaw.Diesel    += curStockB.Diesel    * b.annualKm / b.dieselKMPL;
+      energyRaw.CNG       += curStockB.CNG        * b.annualKm / b.cngKmPerKg;
+      energyRaw.LNG       += curStockB.LNG        * b.annualKm / b.lngKmPerKg;
+      energyRaw.BET       += curStockB.BET        * b.annualKm * b.betKwhPerKm;
+      energyRaw['H2-ICE'] += curStockB['H2-ICE']  * b.annualKm / b.h2iceKmPerKg;
+      energyRaw['H2-FCET']+= curStockB['H2-FCET'] * b.annualKm / b.fcetKmPerKg;
+      dieselCounterfactualLitresRaw += bucketStock * b.annualKm / b.dieselKMPL;
+
       salesBySegment[seg] += bucketSales;
       salesByApplication[app] += bucketSales;
       stockBySegment[seg] += bucketStock;
       stockByApplication[app] += bucketStock;
     }
+
+    // Scale to display units: litres→million litres, kg→million kg, kWh→TWh.
+    const energyByPT: Record<Powertrain, number> = {
+      Diesel:    energyRaw.Diesel / 1e6,
+      CNG:       energyRaw.CNG / 1e6,
+      LNG:       energyRaw.LNG / 1e6,
+      BET:       energyRaw.BET / 1e9,
+      'H2-ICE':  energyRaw['H2-ICE'] / 1e6,
+      'H2-FCET': energyRaw['H2-FCET'] / 1e6,
+    };
+    const dieselCounterfactualLitres = dieselCounterfactualLitresRaw / 1e6;
 
     years.push({
       year,
@@ -222,6 +247,8 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
       totalEmissions,
       dieselCounterfactualEmissions,
       zetShare,
+      energyByPT,
+      dieselCounterfactualLitres,
       salesBySegment,
       stockBySegment,
       salesByApplication,

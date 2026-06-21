@@ -122,6 +122,11 @@ export interface AnnualResult {
   totalEmissions: number;
   dieselCounterfactualEmissions: number;
   zetShare: number;
+  // Annual energy requirement by powertrain in native units:
+  // Diesel = million litres, BET = TWh, CNG/LNG/H2-ICE/H2-FCET = million kg.
+  energyByPT: Record<Powertrain, number>;
+  // Diesel (million litres) the whole fleet would burn if it had stayed all-diesel.
+  dieselCounterfactualLitres: number;
   // Segment / Application breakdowns (aggregated across powertrains)
   salesBySegment: Record<string, number>;
   stockBySegment: Record<string, number>;

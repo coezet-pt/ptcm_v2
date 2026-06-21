@@ -10,6 +10,8 @@ import SegmentSalesChart from '@/components/charts/SegmentSalesChart';
 import SegmentStockChart from '@/components/charts/SegmentStockChart';
 import ApplicationSalesChart from '@/components/charts/ApplicationSalesChart';
 import ApplicationStockChart from '@/components/charts/ApplicationStockChart';
+import DieselSavingsChart from '@/components/charts/DieselSavingsChart';
+import EnergyRequirementsChart from '@/components/charts/EnergyRequirementsChart';
 
 interface Props {
   result: SimulationResult;
@@ -21,6 +23,7 @@ interface Props {
 const NAV = [
   { id: 'powertrain', label: 'Powertrain mix' },
   { id: 'emissions', label: 'Emissions & ZET' },
+  { id: 'energy', label: 'Energy requirements' },
   { id: 'segments', label: 'Segments & applications' },
 ];
 
@@ -68,6 +71,12 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
           <EmissionsChart years={result.years} scenarioLabel={scenarioLabel} />
           <CumulativeAvoidedChart years={result.years} scenarioLabel={scenarioLabel} />
           <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
+        </section>
+
+        <section id="energy" className="scroll-mt-28 space-y-4">
+          <SectionHeader title="Energy requirements & savings" kicker="Annual energy demand · diesel displaced" />
+          <DieselSavingsChart years={result.years} scenarioLabel={scenarioLabel} />
+          <EnergyRequirementsChart years={result.years} scenarioLabel={scenarioLabel} />
         </section>
 
         <section id="segments" className="scroll-mt-28 space-y-4">
