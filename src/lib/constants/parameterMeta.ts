@@ -9,7 +9,7 @@ export interface ParameterMeta {
 }
 
 export const PARAMETER_META: Record<ParameterKey, ParameterMeta> = {
-  diesel_price_per_l:             { label: 'Diesel cost',            unit: '₹/L',   tooltip: 'Retail diesel cost at pump (2025 base)', maxValue: 500 },
+  diesel_price_per_l:             { label: 'Diesel cost',            unit: '₹/L',   tooltip: 'Retail diesel cost at pump (2026 base)', maxValue: 500 },
   cng_price_per_kg:               { label: 'CNG cost',              unit: '₹/kg',  tooltip: 'Compressed natural gas retail cost', maxValue: 500 },
   lng_price_per_kg:               { label: 'LNG cost',              unit: '₹/kg',  tooltip: 'Liquefied natural gas retail cost', maxValue: 500 },
   green_h2_production_per_kg:     { label: 'Green Hydrogen production',    unit: '₹/kg',  tooltip: 'Green hydrogen production cost at plant gate', maxValue: 1500 },

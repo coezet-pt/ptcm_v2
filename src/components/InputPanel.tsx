@@ -69,7 +69,7 @@ export default function InputPanel() {
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-semibold uppercase tracking-[0.14em]">Primary Cost Trajectories</CardTitle>
           <p className="text-xs text-muted-foreground">
-            2025 base value + CAGR % for each of the six year-range buckets (max ±20%).
+            2026 base value + CAGR % for each of the six year-range buckets (max ±20%).
           </p>
         </CardHeader>
         <CardContent className="divide-y divide-border/50">
@@ -146,7 +146,7 @@ export default function InputPanel() {
 
             <AccordionItem value="segment-prices">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Segment base costs (2025)
+                Segment base costs (2026)
               </AccordionTrigger>
               <AccordionContent>
                 <SegmentBasePricesTable />

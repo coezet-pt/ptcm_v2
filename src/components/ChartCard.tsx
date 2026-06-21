@@ -83,8 +83,8 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                 <tbody className="font-mono">
                   {csvData.slice(0, 31).map((row, i) => (
                     <tr key={i} className="odd:bg-muted/40">
-                      {Object.values(row).map((v, j) => (
-                        <td key={j} className="px-1 py-0.5">{typeof v === 'number' ? v.toLocaleString() : String(v)}</td>
+                      {Object.entries(row).map(([k, v], j) => (
+                        <td key={j} className="px-1 py-0.5">{typeof v === 'number' && k !== 'year' ? v.toLocaleString() : String(v)}</td>
                       ))}
                     </tr>
                   ))}

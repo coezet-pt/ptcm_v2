@@ -52,55 +52,6 @@ function buildSeries(cfg: ParameterConfig, isGrowthRate: boolean, ignoreOverride
   return arr;
 }
 
-interface SparklineProps {
-  series: number[];
-  /** CAGR-only trajectory (no pins); rendered as a dashed ghost when it differs. */
-  ghost?: number[];
-  /** Pinned years to mark with dots. */
-  pinnedYears?: number[];
-}
-
-function Sparkline({ series, ghost, pinnedYears = [] }: SparklineProps) {
-  const W = 240, H = 48;
-  const { d, ghostD, dots, min, max } = useMemo(() => {
-    const all = ghost ? [...series, ...ghost] : series;
-    const mn = Math.min(...all);
-    const mx = Math.max(...all);
-    const range = mx - mn || 1;
-    const step = W / (series.length - 1);
-    const toPath = (s: number[]) => s
-      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(1)} ${(H - ((v - mn) / range) * H).toFixed(1)}`)
-      .join(' ');
-    const dotPts = pinnedYears
-      .map(y => y - 2025)
-      .filter(i => i >= 0 && i < series.length)
-      .map(i => ({
-        x: i * step,
-        y: H - ((series[i] - mn) / range) * H,
-      }));
-    return { d: toPath(series), ghostD: ghost ? toPath(ghost) : null, dots: dotPts, min: mn, max: mx };
-  }, [series, ghost, pinnedYears]);
-
-  return (
-    <div className="space-y-1">
-      <svg width={W} height={H} className="overflow-visible">
-        {ghostD && (
-          <path d={ghostD} fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="3 3" opacity={0.5} />
-        )}
-        <path d={d} fill="none" stroke="hsl(var(--primary))" strokeWidth={1.5} />
-        {dots.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={1} />
-        ))}
-      </svg>
-      <div className="text-[10px] text-muted-foreground font-mono leading-tight">
-        2025 {series[0].toFixed(2)} → 2055 {series[series.length - 1].toFixed(2)}
-        <span className="opacity-60"> · min {min.toFixed(1)} · max {max.toFixed(1)}</span>
-        {ghostD && <span className="opacity-60"> · dashed = CAGR only</span>}
-      </div>
-    </div>
-  );
-}
-
 export default function ParameterEditor({
   config, unit, baseValueMax, isGrowthRate, baseStep, cagrMax = DEFAULT_CAGR_MAX,
   onBaseChange, onCagrChange, onSetOverride, onClearOverride,
@@ -185,9 +136,9 @@ export default function ParameterEditor({
 
   return (
     <div className="space-y-4 pt-3 pl-1">
-      {/* 2025 base value */}
+      {/* 2026 base value */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] text-muted-foreground w-[100px]">2025 base value</span>
+        <span className="text-[11px] text-muted-foreground w-[100px]">2026 base value</span>
         <NumberField
           step={baseStep ?? (isGrowthRate ? 0.01 : 1)}
           className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${baseExceeded ? 'border-destructive ring-1 ring-destructive' : ''}`}
@@ -381,16 +332,6 @@ export default function ParameterEditor({
             </Button>
           </div>
         )}
-      </div>
-
-      {/* Sparkline preview */}
-      <div className="pt-1">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Trajectory preview</div>
-        <Sparkline
-          series={series}
-          ghost={hasPins ? trendSeries : undefined}
-          pinnedYears={pinnedYears}
-        />
       </div>
     </div>
   );
