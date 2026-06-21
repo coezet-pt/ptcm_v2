@@ -24,7 +24,6 @@ const NAV = [
   { id: 'powertrain', label: 'Powertrain mix' },
   { id: 'emissions', label: 'Emissions & ZET' },
   { id: 'energy', label: 'Energy requirements' },
-  { id: 'segments', label: 'Segments & applications' },
 ];
 
 const PRELIM_NOTE =
@@ -60,10 +59,15 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
         style={{ opacity: isComputing ? 0.6 : 1, transition: 'opacity 0.2s' }}
       >
         <section id="powertrain" className="scroll-mt-28 space-y-4">
-          <SectionHeader title="Powertrain mix" kicker="Sales · share · stock" />
+          <SectionHeader title="Powertrain mix" kicker="Sales · share · stock · segments" />
           <AnnualSalesChart years={result.years} scenarioLabel={scenarioLabel} />
           <ShareChart years={result.years} scenarioLabel={scenarioLabel} />
           <StockChart years={result.years} scenarioLabel={scenarioLabel} />
+          <p className="text-xs text-muted-foreground pt-2">{PRELIM_NOTE}</p>
+          <SegmentSalesChart years={result.years} scenarioLabel={scenarioLabel} />
+          <SegmentStockChart years={result.years} scenarioLabel={scenarioLabel} />
+          <ApplicationSalesChart years={result.years} scenarioLabel={scenarioLabel} />
+          <ApplicationStockChart years={result.years} scenarioLabel={scenarioLabel} />
         </section>
 
         <section id="emissions" className="scroll-mt-28 space-y-4">
@@ -77,15 +81,6 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
           <SectionHeader title="Energy requirements & savings" kicker="Annual energy demand · diesel displaced" />
           <DieselSavingsChart years={result.years} scenarioLabel={scenarioLabel} />
           <EnergyRequirementsChart years={result.years} scenarioLabel={scenarioLabel} />
-        </section>
-
-        <section id="segments" className="scroll-mt-28 space-y-4">
-          <SectionHeader title="Segments & applications" kicker="Preliminary taxonomy" />
-          <p className="text-xs text-muted-foreground -mt-2">{PRELIM_NOTE}</p>
-          <SegmentSalesChart years={result.years} scenarioLabel={scenarioLabel} />
-          <SegmentStockChart years={result.years} scenarioLabel={scenarioLabel} />
-          <ApplicationSalesChart years={result.years} scenarioLabel={scenarioLabel} />
-          <ApplicationStockChart years={result.years} scenarioLabel={scenarioLabel} />
         </section>
       </div>
     </div>
