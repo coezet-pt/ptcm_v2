@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Table2 } from 'lucide-react';
+import { Download, Table2, ImageDown } from 'lucide-react';
 import { exportPNG, exportCSV, exportXLSX } from '@/lib/exporters';
 
 interface Props {
@@ -26,39 +26,42 @@ export default function ChartCard({ title, description, subtitle, children, csvD
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
           {description && <CardDescription className="text-xs">{description}</CardDescription>}
         </div>
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-0.5 shrink-0">
           {csvData && (
             <>
               <Button
                 variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
                 onClick={() => setShowTable(t => !t)}
-                title="Data Table"
+                title="Show data table"
               >
                 <Table2 className="h-3.5 w-3.5" />
                 Data Table
               </Button>
               <Button
-                variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-mono tracking-wide"
+                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
                 onClick={() => exportCSV(csvData, fname)}
-                title="Download CSV"
+                title="Download as CSV"
               >
+                <Download className="h-3.5 w-3.5" />
                 CSV
               </Button>
               <Button
-                variant="ghost" size="sm" className="h-7 px-1.5 text-[10px] font-mono tracking-wide"
+                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
                 onClick={() => exportXLSX(csvData, fname)}
-                title="Download Excel"
+                title="Download as Excel"
               >
-                XLSX
+                <Download className="h-3.5 w-3.5" />
+                Excel
               </Button>
             </>
           )}
           <Button
-            variant="ghost" size="icon" className="h-7 w-7"
+            variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
             onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
-            title="Download PNG"
+            title="Download chart as PNG"
           >
-            <Download className="h-3.5 w-3.5" />
+            <ImageDown className="h-3.5 w-3.5" />
+            Download Chart
           </Button>
         </div>
       </CardHeader>
@@ -66,11 +69,6 @@ export default function ChartCard({ title, description, subtitle, children, csvD
         <div ref={chartRef} className="h-[320px]">
           {children}
         </div>
-        {!showTable && csvData && (
-          <p className="mt-3 border-t pt-2 text-[10px] text-muted-foreground">
-            Download as CSV or XLSX
-          </p>
-        )}
         {showTable && csvData && (
           <div className="mt-3 border-t pt-2">
             <div className="max-h-48 overflow-auto text-[10px]">
