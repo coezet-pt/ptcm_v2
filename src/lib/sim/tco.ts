@@ -80,6 +80,20 @@ function resaleTier(year: number): 0 | 1 | 2 {
   return 2;
 }
 
+/** Grey-hydrogen blend fraction (0–1) for a given year, from the per-5-year-band
+ *  policy setting (keys d2530…d5155). Falls back to 0 (green-only) if unset. */
+function greyBlendForYear(policy: PolicyConfig, year: number): number {
+  const bands = policy.grey_h2_blend_bands ?? {};
+  const key =
+    year <= 2030 ? 'd2530' :
+    year <= 2035 ? 'd3135' :
+    year <= 2040 ? 'd3640' :
+    year <= 2045 ? 'd4145' :
+    year <= 2050 ? 'd4650' : 'd5155';
+  const v = bands[key];
+  return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+}
+
 function getH2PricePerKg(
   ts: Record<ParameterKey, number[]>,
   policy: PolicyConfig,
@@ -92,16 +106,19 @@ function getH2PricePerKg(
 
   let productionCost: number;
   if (blend > 0) {
-    // Explicit blend override
+    // Explicit blend override (parameter trajectory)
     productionCost = (1 - blend) * green + blend * grey;
   } else {
     switch (policy.h2_source_mix) {
       case 'green_only':
         productionCost = green;
         break;
-      case 'blend_2046_green':
-        productionCost = year < 2046 ? (green + grey) / 2 : green;
+      case 'blend_2046_green': {
+        // Grey/green blend driven by the per-5-year-band grey fraction.
+        const bandBlend = greyBlendForYear(policy, year);
+        productionCost = (1 - bandBlend) * green + bandBlend * grey;
         break;
+      }
       case 'cheapest':
         productionCost = Math.min(green, grey);
         break;

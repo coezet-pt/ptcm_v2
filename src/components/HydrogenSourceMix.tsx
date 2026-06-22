@@ -1,14 +1,22 @@
 import { useScenario } from '@/contexts/ScenarioContext';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { NumberField } from '@/components/ui/number-field';
+import { DELTA_LABELS, DELTA_KEYS } from '@/components/ParameterRow';
 import type { H2SourceMix } from '@/lib/types';
 
 export default function HydrogenSourceMix() {
   const { draftConfig, updatePolicy } = useScenario();
   const p = draftConfig.policy;
+  const bands = p.grey_h2_blend_bands ?? {};
+
+  const setBand = (key: string, pct: number) => {
+    const frac = Math.max(0, Math.min(1, (Number.isFinite(pct) ? pct : 0) / 100));
+    updatePolicy('grey_h2_blend_bands', { ...bands, [key]: frac });
+  };
 
   return (
-    <div className="space-y-2 px-1 py-2">
+    <div className="space-y-3 px-1 py-2">
       <RadioGroup
         value={p.h2_source_mix}
         onValueChange={(v) => updatePolicy('h2_source_mix', v as H2SourceMix)}
@@ -20,13 +28,42 @@ export default function HydrogenSourceMix() {
         </div>
         <div className="flex items-center gap-1.5">
           <RadioGroupItem value="blend_2046_green" id="h2-blend" />
-          <Label htmlFor="h2-blend" className="text-sm cursor-pointer">Grey/green blend till 2046</Label>
+          <Label htmlFor="h2-blend" className="text-sm cursor-pointer">Grey/green blend</Label>
         </div>
         <div className="flex items-center gap-1.5">
           <RadioGroupItem value="cheapest" id="h2-cheap" />
           <Label htmlFor="h2-cheap" className="text-sm cursor-pointer">Lowest cost option</Label>
         </div>
       </RadioGroup>
+
+      {/* Per-5-year-band grey share — only relevant for the blend option */}
+      {p.h2_source_mix === 'blend_2046_green' && (
+        <div className="space-y-2 rounded-md border border-border/60 bg-muted/30 p-2">
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            Grey hydrogen share by 5-year band
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            {DELTA_KEYS.map((key, i) => (
+              <div key={key} className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground mb-0.5">{DELTA_LABELS[i]}</span>
+                <div className="flex items-center gap-1">
+                  <NumberField
+                    step={5}
+                    className="h-8 w-16 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    value={Math.round((bands[key] ?? 0) * 100)}
+                    onValueChange={(pct) => setBand(key, pct)}
+                  />
+                  <span className="text-[10px] text-muted-foreground">%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Share of grey hydrogen in the supply blend per band (0% = fully green). The rest is green;
+            production cost is blended pro-rata.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

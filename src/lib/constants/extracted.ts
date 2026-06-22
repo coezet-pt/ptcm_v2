@@ -568,6 +568,11 @@ export const BAU_POLICY = {
   h2ice_inflection_year: 2051,
   fcet_inflection_year: 2051,
   h2_source_mix: 'green_only' as const,
+  // Grey-hydrogen blend fraction per 5-year band (0–1). Default mirrors the
+  // legacy "blend till 2046" behaviour: 50% grey through 2045, then green-only.
+  grey_h2_blend_bands: {
+    d2530: 0.5, d3135: 0.5, d3640: 0.5, d4145: 0.5, d4650: 0, d5155: 0,
+  } as Record<string, number>,
   // 0 = no override; tier-2 resale comes from RESALE_VALUES per profile
   // (Excel BAU: 0.40 general / 0.35 high-duty / 0.25 tipper)
   bet_resale_2046_plus: 0,

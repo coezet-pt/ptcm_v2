@@ -50,10 +50,10 @@ export default function InputPanel() {
             <ParameterRow paramKey="diesel_price_per_l" labelOverride="Diesel" />
             <ParameterRow paramKey="lng_price_per_kg"   labelOverride="LNG" />
             <ParameterRow paramKey="cng_price_per_kg"   labelOverride="CNG" />
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity at Charging Point (incl. CAAS)" />
+            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity at Charging Point" />
             <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production" />
             <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production" />
-            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispense" />
+            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispensing" />
           </CostSection>
 
           {/* 2 — Key Aggregate Cost */}
