@@ -20,27 +20,27 @@ export default function ChartCard({ title, description, subtitle, children, csvD
 
   return (
     <Card className="overflow-hidden border-border/80 shadow-sm">
-      <CardHeader className="pb-2 space-y-0.5">
-        <CardTitle className="text-sm font-semibold tracking-tight">{title}</CardTitle>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
-        {description && <CardDescription className="text-xs">{description}</CardDescription>}
+      <CardHeader className="pb-2 flex-row items-start justify-between gap-2 space-y-0">
+        <div className="space-y-0.5 min-w-0">
+          <CardTitle className="text-sm font-semibold tracking-tight">{title}</CardTitle>
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          {description && <CardDescription className="text-xs">{description}</CardDescription>}
+        </div>
+        {/* PNG download — top-right of the card header, in line with the title,
+            independent of the data buttons below. */}
+        <Button
+          variant="ghost" size="sm"
+          className="h-7 shrink-0 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
+          onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
+          title="Download chart as PNG"
+        >
+          <ImageDown className="h-3.5 w-3.5" />
+          PNG
+        </Button>
       </CardHeader>
       <CardContent className="pb-3">
-        <div className="relative">
-          {/* PNG download — top-right corner of the chart box, independent of
-              the data buttons below. Sits outside chartRef so it isn't captured
-              in the exported image. */}
-          <Button
-            variant="ghost" size="icon"
-            className="absolute right-1 top-1 z-10 h-7 w-7 bg-card/70 backdrop-blur-sm hover:bg-secondary"
-            onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
-            title="Download chart as PNG"
-          >
-            <ImageDown className="h-3.5 w-3.5" />
-          </Button>
-          <div ref={chartRef} className="h-[320px]">
-            {children}
-          </div>
+        <div ref={chartRef} className="h-[320px]">
+          {children}
         </div>
 
         {/* Data table — shown above the action buttons */}
