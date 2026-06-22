@@ -48,8 +48,8 @@ export default function InputPanel() {
           {/* 1 — Fuel/Energy Cost (including Grey Hydrogen Cost) */}
           <CostSection title="Fuel/Energy Cost">
             <ParameterRow paramKey="diesel_price_per_l" labelOverride="Diesel" />
-            <ParameterRow paramKey="lng_price_per_kg"   labelOverride="LNG" />
             <ParameterRow paramKey="cng_price_per_kg"   labelOverride="CNG" />
+            <ParameterRow paramKey="lng_price_per_kg"   labelOverride="LNG" />
             <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity at Charging Point" />
             <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production" />
             <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production" />
