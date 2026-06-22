@@ -43,7 +43,7 @@ export default function TCOParityChart({ scenarioName }: Props) {
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 30, bottom: 0 }}>
-          <XAxis type="number" domain={[2025, 2055]} tick={{ fontSize: 10 }} />
+          <XAxis type="number" domain={[2026, 2055]} tick={{ fontSize: 10 }} />
           <YAxis dataKey="bucket" type="category" tick={{ fontSize: 10 }} width={30} />
           <Tooltip labelFormatter={l => `Bucket ${l}`} />
           <Legend wrapperStyle={{ fontSize: 10 }} />

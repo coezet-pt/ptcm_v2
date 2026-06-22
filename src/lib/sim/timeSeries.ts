@@ -1,12 +1,12 @@
 /**
- * Time-series projection — builds year-by-year arrays (2025–2055)
+ * Time-series projection — builds year-by-year arrays (2026–2055)
  * for all 15 cost parameters using compound growth per period.
  */
 import type { ParameterConfig, ParameterKey, PolicyConfig, ScenarioConfig } from '@/lib/types';
 
-export const START_YEAR = 2025;
+export const START_YEAR = 2026;
 export const END_YEAR = 2055;
-export const YEAR_COUNT = END_YEAR - START_YEAR + 1; // 31
+export const YEAR_COUNT = END_YEAR - START_YEAR + 1; // 30
 
 const GROWTH_RATE_KEYS: ParameterKey[] = [
   'diesel_vehicle_growth',
@@ -15,8 +15,9 @@ const GROWTH_RATE_KEYS: ParameterKey[] = [
 ];
 
 /**
- * Build a year-by-year array (2025–2055) for a single parameter config:
- * compound-grow from baseValue through the six CAGR periods. Growth-rate
+ * Build a year-by-year array (2026–2055) for a single parameter config:
+ * compound-grow from baseValue through the six CAGR periods. The first period
+ * (d2530) spans 2027–2030 — four steps from the 2026 base. Growth-rate
  * configs start at 1.0 (cumulative multiplier). A spot-year override pins the
  * absolute value for that year; subsequent years compound from the pinned value.
  */

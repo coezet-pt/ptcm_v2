@@ -91,7 +91,7 @@ export function computeShares(
         rawScores[pt] = 0;
         continue;
       }
-      const supplyYear = START_OF_SUPPLY[bucket.size as VehicleSize]?.[pt] ?? 2025;
+      const supplyYear = START_OF_SUPPLY[bucket.size as VehicleSize]?.[pt] ?? 2026;
       if (targetYear < supplyYear) {
         rawScores[pt] = 0;
         continue;

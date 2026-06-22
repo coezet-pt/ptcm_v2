@@ -11,7 +11,7 @@
  *    (BET only) a iteratively normalized so the Gompertz passes Z2055 at 2055.
  *  - CNG / LNG (Weibull family):
  *      year < pilot                     → 0
- *      pilot ≤ year ≤ 2045              → share2025 + (Z2045−share2025)·wbl(year)/wbl(2045)
+ *      pilot ≤ year ≤ 2045              → share2026 + (Z2045−share2026)·wbl(year)/wbl(2045)
  *      2045 < year ≤ 2050               → linear Z2045 → Z2050
  *      2050 < year ≤ 2055               → cosine decay Z2050 → 0
  *
@@ -26,8 +26,8 @@ import {
   GOMPERTZ_PARAMS_BY_PT,
   WEIBULL_SHAPE_ALPHA,
   WEIBULL_PEAK_YEAR,
-  CNG_UNITS_2025,
-  LNG_UNITS_2025,
+  CNG_UNITS_2026,
+  LNG_UNITS_2026,
 } from '@/lib/constants/extracted';
 import type { PolicyConfig } from '@/lib/types';
 import type { BucketShares } from './choiceModel';
@@ -103,11 +103,11 @@ function weibullShare(args: {
   pilotYear: number;
   peakYear: number;
   alpha: number;
-  share2025: number;
+  share2026: number;
   z2045: number;
   z2050: number;
 }): number {
-  const { year, pilotYear, peakYear, alpha, share2025, z2045, z2050 } = args;
+  const { year, pilotYear, peakYear, alpha, share2026, z2045, z2050 } = args;
   if (year < pilotYear) return 0;
   if (year <= 2045) {
     const peakDelta = Math.max(peakYear - pilotYear, 1);
@@ -117,7 +117,7 @@ function weibullShare(args: {
       return Math.pow(t, alpha - 1) * Math.exp(((alpha - 1) / alpha) * (1 - Math.pow(t, alpha)));
     };
     const w45 = wbl(2045);
-    return share2025 + (z2045 - share2025) * (w45 > 0 ? wbl(year) / w45 : 0);
+    return share2026 + (z2045 - share2026) * (w45 > 0 ? wbl(year) / w45 : 0);
   }
   if (year <= 2050) return z2045 + (z2050 - z2045) * (year - 2045) / 5;
   return Math.max(0, z2050 * (1 + Math.cos(Math.PI * (year - 2050) / 5)) / 2);
@@ -177,10 +177,10 @@ export function computePTTM(
     );
   }
 
-  const tiv2025 = TIV_PROJECTION[2025] ?? 267370;
-  const share2025Map: Record<string, number> = {
-    'CNG': CNG_UNITS_2025 / tiv2025,
-    'LNG': LNG_UNITS_2025 / tiv2025,
+  const tiv2026 = TIV_PROJECTION[2026] ?? 301120;
+  const share2026Map: Record<string, number> = {
+    'CNG': CNG_UNITS_2026 / tiv2026,
+    'LNG': LNG_UNITS_2026 / tiv2026,
   };
 
   // Run per bucket, accumulate weighted shares
@@ -221,10 +221,10 @@ export function computePTTM(
         const year = START_YEAR + i;
         const val = weibullShare({
           year,
-          pilotYear: 2025, // Excel PTTM S7/S8 — CNG/LNG are mature, pilot is 2025 globally
+          pilotYear: 2026, // CNG/LNG are mature; pilot is the projection base year (2026)
           peakYear: WEIBULL_PEAK_YEAR,
           alpha: WEIBULL_SHAPE_ALPHA,
-          share2025: share2025Map[pt] ?? 0,
+          share2026: share2026Map[pt] ?? 0,
           z2045,
           z2050,
         });

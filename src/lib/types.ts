@@ -1,7 +1,7 @@
 import type { Powertrain, ScenarioName, VehicleSize } from './constants/extracted';
 
 // ── Parameter config (cost trajectories) ──
-// 6 CAGR ranges (v4 Dashboard spec): 2025-30, 2031-35, 2036-40, 2041-45, 2046-50, 2051-55
+// 6 CAGR ranges (v4 Dashboard spec): 2026-30, 2031-35, 2036-40, 2041-45, 2046-50, 2051-55
 export interface ParameterConfig {
   baseValue: number;
   d2530: number;
@@ -59,7 +59,7 @@ export interface FixedParameters {
   };
 }
 
-// ── Per-segment vehicle base prices (2025 INR) ──
+// ── Per-segment vehicle base prices (2026 INR) ──
 export interface SegmentBasePrice {
   engine_trans: number;
   e_powertrain: number;

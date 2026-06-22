@@ -5,7 +5,7 @@
 import type { ParameterKey, PolicyConfig, FixedParameters, SegmentBasePrices } from '@/lib/types';
 import type { Powertrain, Bucket } from '@/lib/constants/extracted';
 import {
-  VEHICLE_BASE_PRICES_2025,
+  VEHICLE_BASE_PRICES_2026,
   BS_VII_PRICE_BUMP_2030,
   BET_OEM_MARGIN_BY_YEAR,
   FCET_OEM_MARGIN_BY_YEAR,
@@ -34,10 +34,11 @@ export interface TCOResult {
 
 export type BucketTCOMap = Record<string, Record<Powertrain, TCOResult>>;
 
-// ── CNG tank cost — per-vehicle at 2025; folded into the base price which
-// grows with the diesel growth rate (Excel 'Changing with year' rows 92-100) ──
-const CNG_TANK_BASE_SMALL = 150000;
-const CNG_TANK_BASE_LARGE = 250000;
+// ── CNG tank cost — per-vehicle at 2026; folded into the base price which
+// grows with the diesel growth rate (Excel 'Changing with year' rows 92-100:
+// CNG price − diesel price = 154,500 for the 15T small tank, 257,500 otherwise) ──
+const CNG_TANK_BASE_SMALL = 154500;
+const CNG_TANK_BASE_LARGE = 257500;
 
 // ZETs bear only half the BS-VII bump: Excel subtracts (400k−200k)·(1+3%)
 // from BET/FCET prices from 2030 onward ('Changing with year' rows 130/143).
@@ -46,14 +47,14 @@ const ZET_BSVII_RELIEF_2031_PLUS = 206000; // 200000 × 1.03
 
 // CNG/LNG/H2-ICE maintenance grows at a uniform 4%/yr (Excel bucket sheets).
 // Diesel/BET/FCET maintenance is config-driven (see getMaintenancePerKm);
-// toll and manpower use per-bucket [2025, 2045] pairs from BUCKET_OPEX_CALIBRATION.
+// toll and manpower use per-bucket [2026, 2045] pairs from BUCKET_OPEX_CALIBRATION.
 const MAINT_OTHER_ICE_CAGR  = 0.04;
 
-/** Interpolate/extrapolate a [2025, 2045] pair with its implied CAGR. */
+/** Interpolate/extrapolate a [2026, 2045] pair with its implied CAGR. */
 function growFromPair(pair: [number, number], year: number): number {
-  const [v25, v45] = pair;
-  if (v25 <= 0) return v25;
-  return v25 * Math.pow(v45 / v25, (year - 2025) / 20);
+  const [v26, v45] = pair;
+  if (v26 <= 0) return v26;
+  return v26 * Math.pow(v45 / v26, (year - 2026) / 19);
 }
 
 // CNG tank: 150k applies to 15T only ('Changing with year' rows 92-100:
@@ -111,14 +112,14 @@ function getH2PricePerKg(
  * the BS-VII bump lands in 2030 and compounds with the same rate thereafter.
  */
 function dieselFamilyPrice(
-  base2025: number,
+  base2026: number,
   year: number,
   ts: Record<ParameterKey, number[]>,
 ): number {
   const g = getValueAtYear(ts.diesel_vehicle_growth, year);
   const g2030 = getValueAtYear(ts.diesel_vehicle_growth, 2030);
   const bump = year >= 2030 && g2030 > 0 ? BS_VII_PRICE_BUMP_2030 * (g / g2030) : 0;
-  return base2025 * g + bump;
+  return base2026 * g + bump;
 }
 
 /** BET/FCET BS-VII relief — Excel subtracts (400k−200k)·(1+3%) from 2030 on. */
@@ -135,13 +136,13 @@ function computeVehiclePrice(
   policy: PolicyConfig,
   segmentBasePrices: SegmentBasePrices,
 ): number {
-  const base = segmentBasePrices[bucket.size] ?? VEHICLE_BASE_PRICES_2025[bucket.size];
+  const base = segmentBasePrices[bucket.size] ?? VEHICLE_BASE_PRICES_2026[bucket.size];
 
   switch (pt) {
     case 'Diesel':
       return dieselFamilyPrice(base.diesel_total, year, ts);
     case 'CNG': {
-      // CNG = diesel 2025 base + tank, all growing with the diesel rate
+      // CNG = diesel 2026 base + tank, all growing with the diesel rate
       const tankBase = hasSmallCngTank(bucket.size) ? CNG_TANK_BASE_SMALL : CNG_TANK_BASE_LARGE;
       return dieselFamilyPrice(base.diesel_total + tankBase, year, ts);
     }
@@ -256,8 +257,8 @@ function getMaintenancePerKm(
       ?? defaultMaintConfig(metric, bucket);
     return getValueAtYear(buildSeriesFromConfig(cfg), year);
   }
-  // CNG/LNG/H2-ICE: uniform 4%/yr, not user-editable.
-  const dy = year - 2025;
+  // CNG/LNG/H2-ICE: uniform 4%/yr, not user-editable. Base is the 2026 value.
+  const dy = year - 2026;
   return bucket.maintCngLngH2icePerKm * Math.pow(1 + MAINT_OTHER_ICE_CAGR, dy);
 }
 
@@ -283,7 +284,7 @@ export function computeTCO(
     tat_gradeability: { Diesel: 1, CNG: 0.95, LNG: 0.95, BET: 1.15, 'H2-ICE': 0.95, 'H2-FCET': 1.15 },
     range_filling_time: { Diesel: 1, CNG: 1.05, LNG: 1.10, BET: 1.20, 'H2-ICE': 1, 'H2-FCET': 1 },
   };
-  const sbp: SegmentBasePrices = segmentBasePrices ?? (VEHICLE_BASE_PRICES_2025 as SegmentBasePrices);
+  const sbp: SegmentBasePrices = segmentBasePrices ?? (VEHICLE_BASE_PRICES_2026 as SegmentBasePrices);
 
   const result: BucketTCOMap = {};
 

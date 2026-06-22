@@ -32,12 +32,12 @@ interface Props {
   cagrMax?: number;
 }
 
-/** Build a single-parameter 2025–2055 series mirroring buildTimeSeries logic. */
+/** Build a single-parameter 2026–2055 series mirroring buildTimeSeries logic. */
 function buildSeries(cfg: ParameterConfig, isGrowthRate: boolean, ignoreOverrides = false): number[] {
-  const arr: number[] = new Array(31);
+  const arr: number[] = new Array(30);
   arr[0] = isGrowthRate ? 1 : cfg.baseValue;
-  for (let i = 1; i < 31; i++) {
-    const y = 2025 + i;
+  for (let i = 1; i < 30; i++) {
+    const y = 2026 + i;
     const d =
       y <= 2030 ? cfg.d2530 :
       y <= 2035 ? cfg.d3135 :
@@ -173,7 +173,7 @@ export default function ParameterEditor({
               <Input
                 type="number"
                 step={baseStep ?? 0.1}
-                placeholder={series[year - 2025].toFixed(2)}
+                placeholder={series[year - 2026].toFixed(2)}
                 className="h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 value={draftVal}
                 onChange={e => setDraftVal(e.target.value)}
@@ -187,7 +187,7 @@ export default function ParameterEditor({
           {hasPins && (
             <div className="flex flex-wrap gap-1.5">
               {pinnedYears.map(y => {
-                const trend = trendSeries[y - 2025];
+                const trend = trendSeries[y - 2026];
                 const pct = trend !== 0 ? ((overrides[y] / trend) - 1) * 100 : null;
                 return (
                   <span key={y} className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-[11px] font-mono">
@@ -250,7 +250,7 @@ export default function ParameterEditor({
               <div className="flex items-end gap-2 flex-wrap">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-muted-foreground mb-0.5 inline-flex items-center gap-1">
-                    All years 2025–2055
+                    All years 2026–2055
                     {hasPins && (
                       <span
                         className="inline-flex items-center gap-0.5 text-primary"

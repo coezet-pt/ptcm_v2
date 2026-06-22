@@ -22,9 +22,9 @@ export function runSanityChecks(result: SimulationResult): SanityCheckResult[] {
   const checks: SanityCheckResult[] = [];
   const bc = BAU_BASELINE_CHECKS;
 
-  // Total sales checks at 2025, 2045, 2055
+  // Total sales checks at 2026, 2045, 2055
   for (const [key, { value, tolerance }] of Object.entries({
-    total_sales_2025: bc.total_sales_2025,
+    total_sales_2026: bc.total_sales_2026,
     total_sales_2045: bc.total_sales_2045,
     total_sales_2055: bc.total_sales_2055,
   })) {
@@ -66,16 +66,16 @@ export function runSanityChecks(result: SimulationResult): SanityCheckResult[] {
     ));
   }
 
-  // Diesel 2025
-  const y2025 = yearData(result, 2025);
-  if (y2025) {
-    const d = y2025.salesByPT.Diesel;
+  // Diesel 2026
+  const y2026 = yearData(result, 2026);
+  if (y2026) {
+    const d = y2026.salesByPT.Diesel;
     checks.push(check(
-      'diesel_2025_units',
+      'diesel_2026_units',
       Math.round(d),
-      `${bc.diesel_2025_units_min.toLocaleString()}–${bc.diesel_2025_units_max.toLocaleString()}`,
-      d >= bc.diesel_2025_units_min && d <= bc.diesel_2025_units_max,
-      `Diesel sales 2025: ${Math.round(d).toLocaleString()}`,
+      `${bc.diesel_2026_units_min.toLocaleString()}–${bc.diesel_2026_units_max.toLocaleString()}`,
+      d >= bc.diesel_2026_units_min && d <= bc.diesel_2026_units_max,
+      `Diesel sales 2026: ${Math.round(d).toLocaleString()}`,
     ));
   }
 

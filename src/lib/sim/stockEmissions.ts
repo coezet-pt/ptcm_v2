@@ -7,7 +7,7 @@ import {
   BUCKETS,
   HISTORICAL_SALES,
   TIV_PROJECTION,
-  DIESEL_STOCK_END_2024,
+  DIESEL_STOCK_END_2025,
   SCRAPPAGE_AGE_YEARS,
   PRE_2001_DIESEL_SCRAPPAGE_PER_YEAR,
   PRE_2001_SCRAPPAGE_END_YEAR,
@@ -66,7 +66,7 @@ function getSalesAtYear(year: number, annualSales: AnnualPTSales[]): Record<Powe
     const idx = year - START_YEAR;
     if (idx < annualSales.length) return annualSales[idx].sales;
   }
-  // Pre-2025: all diesel
+  // Pre-2026: all diesel
   const hist = HISTORICAL_SALES[year];
   if (hist !== undefined) {
     return { Diesel: hist, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 };
@@ -80,7 +80,7 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
   // Stock arrays
   const stock: Record<Powertrain, number>[] = [];
   const prevStock: Record<Powertrain, number> = {
-    Diesel: DIESEL_STOCK_END_2024,
+    Diesel: DIESEL_STOCK_END_2025,
     CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0,
   };
 
@@ -95,11 +95,11 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
   const prevStockByBucket: Record<string, Record<Powertrain, number>> = {};
   for (const b of BUCKETS) {
     prevStockByBucket[b.id] = emptyPT();
-    prevStockByBucket[b.id].Diesel = DIESEL_STOCK_END_2024 * bucketWeight(b);
+    prevStockByBucket[b.id].Diesel = DIESEL_STOCK_END_2025 * bucketWeight(b);
   }
 
   // Per-bucket sales for any year: post-2025 from PTTM bucket shares × bucket
-  // TIV; pre-2025 the historical (all-diesel) sales split by bucket weight.
+  // TIV; pre-2026 the historical (all-diesel) sales split by bucket weight.
   const bucketSalesAt = (yr: number): Record<string, Record<Powertrain, number>> => {
     const out: Record<string, Record<Powertrain, number>> = {};
     for (const b of BUCKETS) out[b.id] = emptyPT();
@@ -124,7 +124,7 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
   let totalZetSales = 0;
   let year50PctZet: number | null = null;
   let cumulativeCO2Avoided = 0;
-  let dieselStockPeakYear = 2025;
+  let dieselStockPeakYear = 2026;
   let dieselStockPeakValue = 0;
 
   for (let i = 0; i < YEAR_COUNT; i++) {

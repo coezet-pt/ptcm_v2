@@ -6,7 +6,7 @@ import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { useScenario } from '@/contexts/ScenarioContext';
 import ParameterEditor from './ParameterEditor';
 
-export const DELTA_LABELS = ['2025-30', '2031-35', '2036-40', '2041-45', '2046-50', '2051-55'] as const;
+export const DELTA_LABELS = ['2026-30', '2031-35', '2036-40', '2041-45', '2046-50', '2051-55'] as const;
 export const DELTA_KEYS = ['d2530', 'd3135', 'd3640', 'd4145', 'd4650', 'd5155'] as const;
 export type DeltaKey = typeof DELTA_KEYS[number];
 

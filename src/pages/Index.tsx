@@ -73,7 +73,7 @@ function DashboardContent() {
                 PTCM Dashboard · India M&HDT Trucks
               </h1>
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground leading-snug">
-                2025 — 2055 · Interactive cost &amp; fleet model
+                2026 — 2055 · Interactive cost &amp; fleet model
               </p>
             </div>
           </div>
@@ -100,7 +100,7 @@ function DashboardContent() {
         <main className="flex-1 min-w-0 px-4 lg:px-8 py-6">
           <div className="mb-6">
             <h2 className="font-serif text-3xl lg:text-[2.5rem] leading-tight tracking-tight">
-              Powertrain transition projections - M&HD trucks (2025-55)
+              Powertrain transition projections - M&HD trucks (2026-55)
             </h2>
             <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
               {scenarioLabel} scenario · PTCM interactive engine

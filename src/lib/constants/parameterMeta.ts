@@ -4,7 +4,7 @@ export interface ParameterMeta {
   label: string;
   unit: string;
   tooltip: string;
-  /** Absolute max on the 2025 base value. Undefined = no cap. */
+  /** Absolute max on the 2026 base value. Undefined = no cap. */
   maxValue?: number;
 }
 

@@ -27,29 +27,30 @@ export const POWERTRAIN_COLORS: Record<Powertrain, string> = {
 };
 
 // ===========================================================================
-// VEHICLE-SIZE BASE PRICES (2025 INR) — source: 'Changing with year' rows 19-27, 30-38, 74-82
+// VEHICLE-SIZE BASE PRICES (2026 INR) — source: 'Changing with year' col D (2026)
+// rows 26-34 (engine/trans), 37-45 (e-powertrain), 81-89 (diesel total)
 // engine_trans = engine + transmission cost (used for ZET = base_glider component)
 // epowertrain  = E-powertrain cost (motor + electronics for BET/FCET)
-// diesel_total = total diesel vehicle on-road price 2025
+// diesel_total = total diesel vehicle on-road price 2026
 // ===========================================================================
 export type VehicleSize =
   | '15T Rigid' | '19T Rigid' | '28T Rigid' | '35T Rigid' | '48T Rigid'
   | '28T Tipper' | '35T Tipper' | '40T Tractor' | '55T Tractor';
 
-export const VEHICLE_BASE_PRICES_2025: Record<VehicleSize, {
+export const VEHICLE_BASE_PRICES_2026: Record<VehicleSize, {
   engine_trans: number;
   e_powertrain: number;
   diesel_total: number;
 }> = {
-  '15T Rigid':   { engine_trans: 525000,  e_powertrain: 1400000, diesel_total: 2000000 },
-  '19T Rigid':   { engine_trans: 625000,  e_powertrain: 1400000, diesel_total: 2750000 },
-  '28T Rigid':   { engine_trans: 650000,  e_powertrain: 1400000, diesel_total: 3600000 },
-  '35T Rigid':   { engine_trans: 650000,  e_powertrain: 1700000, diesel_total: 4000000 },
-  '48T Rigid':   { engine_trans: 750000,  e_powertrain: 1700000, diesel_total: 4700000 },
-  '28T Tipper':  { engine_trans: 650000,  e_powertrain: 1700000, diesel_total: 4200000 },
-  '35T Tipper':  { engine_trans: 750000,  e_powertrain: 1700000, diesel_total: 4800000 },
-  '40T Tractor': { engine_trans: 650000,  e_powertrain: 1400000, diesel_total: 4300000 },
-  '55T Tractor': { engine_trans: 750000,  e_powertrain: 1700000, diesel_total: 5000000 },
+  '15T Rigid':   { engine_trans: 535500,  e_powertrain: 1344000, diesel_total: 2060000 },
+  '19T Rigid':   { engine_trans: 637500,  e_powertrain: 1344000, diesel_total: 2832500 },
+  '28T Rigid':   { engine_trans: 663000,  e_powertrain: 1344000, diesel_total: 3708000 },
+  '35T Rigid':   { engine_trans: 663000,  e_powertrain: 1632000, diesel_total: 4120000 },
+  '48T Rigid':   { engine_trans: 765000,  e_powertrain: 1632000, diesel_total: 4841000 },
+  '28T Tipper':  { engine_trans: 663000,  e_powertrain: 1632000, diesel_total: 4326000 },
+  '35T Tipper':  { engine_trans: 765000,  e_powertrain: 1632000, diesel_total: 4944000 },
+  '40T Tractor': { engine_trans: 663000,  e_powertrain: 1344000, diesel_total: 4429000 },
+  '55T Tractor': { engine_trans: 765000,  e_powertrain: 1632000, diesel_total: 5150000 },
 };
 
 // BS-VII regulatory bump applied to all diesel prices in 2030 (one-time +₹4 lakh)
@@ -95,20 +96,20 @@ export interface Bucket {
 }
 
 export const BUCKETS: Bucket[] = [
-  { id: 'B1',  useCase: 'Market Load',                 size: '19T Rigid',   tivShare2045: 0.0657, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 8000,  gvw: 18500, dieselKMPL: 5.2, cngKmPerKg: 5.4, lngKmPerKg: 5.3,  h2iceKmPerKg: 15.6, betKwhPerKm: 0.95, fcetKmPerKg: 20.8, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 2.8,  maintCngLngH2icePerKm: 3.3 },
-  { id: 'B2',  useCase: 'Market Load',                 size: '28T Rigid',   tivShare2045: 0.0621, annualKm: 99000,  workingDays: 275, kmPerDay: 360, ulw: 9000,  gvw: 28000, dieselKMPL: 4.5, cngKmPerKg: 4.8, lngKmPerKg: 4.65, h2iceKmPerKg: 13.5, betKwhPerKm: 1.20, fcetKmPerKg: 18.0, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 4.2,  maintCngLngH2icePerKm: 4.7 },
-  { id: 'B3',  useCase: 'Market Load',                 size: '48T Rigid',   tivShare2045: 0.0533, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 12500, gvw: 47500, dieselKMPL: 2.9, cngKmPerKg: 3.1, lngKmPerKg: 3.0,  h2iceKmPerKg: 8.7,  betKwhPerKm: 1.35, fcetKmPerKg: 11.6, betBatteryKWh: 350, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 4, tyreLug: 12, maintDieselPerKm: 7.7,  maintCngLngH2icePerKm: 8.2 },
-  { id: 'B4',  useCase: 'Parcel Load and FMCG',        size: '19T Rigid',   tivShare2045: 0.0504, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 8000,  gvw: 18500, dieselKMPL: 5.0, cngKmPerKg: 5.4, lngKmPerKg: 5.2,  h2iceKmPerKg: 15.0, betKwhPerKm: 0.90, fcetKmPerKg: 20.0, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 2.8,  maintCngLngH2icePerKm: 3.3 },
-  { id: 'B5',  useCase: 'Parcel Load and FMCG',        size: '28T Rigid',   tivShare2045: 0.1149, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 9500,  gvw: 28000, dieselKMPL: 4.5, cngKmPerKg: 4.8, lngKmPerKg: 4.65, h2iceKmPerKg: 13.5, betKwhPerKm: 1.15, fcetKmPerKg: 18.0, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 4.2,  maintCngLngH2icePerKm: 4.7 },
-  { id: 'B6',  useCase: 'Perishables',                 size: '15T Rigid',   tivShare2045: 0.0699, annualKm: 120000, workingDays: 300, kmPerDay: 400, ulw: 6500,  gvw: 16000, dieselKMPL: 6.0, cngKmPerKg: 6.3, lngKmPerKg: 6.15, h2iceKmPerKg: 18.0, betKwhPerKm: 0.85, fcetKmPerKg: 24.0, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 3.1,  maintCngLngH2icePerKm: 3.6 },
-  { id: 'B7',  useCase: 'Construction & Mining',       size: '28T Tipper',  tivShare2045: 0.1213, annualKm: 67200,  workingDays: 280, kmPerDay: 240, ulw: 13500, gvw: 28000, dieselKMPL: 3.8, cngKmPerKg: 4.0, lngKmPerKg: 3.9,  h2iceKmPerKg: 11.4, betKwhPerKm: 1.30, fcetKmPerKg: 15.2, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 8.6,  maintCngLngH2icePerKm: 9.1 },
-  { id: 'B8',  useCase: 'Construction & Mining',       size: '35T Tipper',  tivShare2045: 0.1758, annualKm: 67200,  workingDays: 280, kmPerDay: 240, ulw: 15000, gvw: 35000, dieselKMPL: 3.0, cngKmPerKg: 3.2, lngKmPerKg: 3.1,  h2iceKmPerKg: 9.0,  betKwhPerKm: 1.40, fcetKmPerKg: 12.0, betBatteryKWh: 300, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 4, tyreLug: 8,  maintDieselPerKm: 10.9, maintCngLngH2icePerKm: 11.4 },
-  { id: 'B9',  useCase: 'Cement (Bulkers & Bagged)',   size: '48T Rigid',   tivShare2045: 0.0627, annualKm: 115200, workingDays: 320, kmPerDay: 360, ulw: 12500, gvw: 47500, dieselKMPL: 2.9, cngKmPerKg: 3.1, lngKmPerKg: 3.0,  h2iceKmPerKg: 8.7,  betKwhPerKm: 1.40, fcetKmPerKg: 11.6, betBatteryKWh: 350, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 4, tyreLug: 12, maintDieselPerKm: 7.7,  maintCngLngH2icePerKm: 8.2 },
-  { id: 'B10', useCase: 'Cement (Bulkers & Bagged)',   size: '55T Tractor', tivShare2045: 0.0470, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 15500, gvw: 55000, dieselKMPL: 2.6, cngKmPerKg: 2.8, lngKmPerKg: 2.7,  h2iceKmPerKg: 7.8,  betKwhPerKm: 1.45, fcetKmPerKg: 10.4, betBatteryKWh: 300, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 2, tyreLug: 16, maintDieselPerKm: 6.5,  maintCngLngH2icePerKm: 7.0 },
-  { id: 'B11', useCase: 'Steel & metal products',      size: '55T Tractor', tivShare2045: 0.0971, annualKm: 96000,  workingDays: 320, kmPerDay: 300, ulw: 15000, gvw: 55000, dieselKMPL: 2.6, cngKmPerKg: 2.7, lngKmPerKg: 2.65, h2iceKmPerKg: 7.8,  betKwhPerKm: 1.40, fcetKmPerKg: 10.4, betBatteryKWh: 300, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 2, tyreLug: 16, maintDieselPerKm: 8.3,  maintCngLngH2icePerKm: 8.8 },
-  { id: 'B12', useCase: 'Tankers - POL & CNG cascades', size: '28T Rigid',  tivShare2045: 0.0304, annualKm: 75000,  workingDays: 300, kmPerDay: 250, ulw: 9500,  gvw: 28000, dieselKMPL: 4.7, cngKmPerKg: 4.9, lngKmPerKg: 4.8,  h2iceKmPerKg: 14.1, betKwhPerKm: 1.05, fcetKmPerKg: 18.8, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 3.5,  maintCngLngH2icePerKm: 4.0 },
-  { id: 'B13', useCase: 'Tankers - Non POL',           size: '28T Rigid',   tivShare2045: 0.0364, annualKm: 90000,  workingDays: 300, kmPerDay: 300, ulw: 9500,  gvw: 28000, dieselKMPL: 4.7, cngKmPerKg: 4.9, lngKmPerKg: 4.8,  h2iceKmPerKg: 14.1, betKwhPerKm: 1.05, fcetKmPerKg: 18.8, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 3.5,  maintCngLngH2icePerKm: 4.0 },
-  { id: 'B14', useCase: 'LPG bullet tankers',          size: '40T Tractor', tivShare2045: 0.0129, annualKm: 60000,  workingDays: 240, kmPerDay: 250, ulw: 19000, gvw: 39500, dieselKMPL: 3.6, cngKmPerKg: 3.8, lngKmPerKg: 3.7,  h2iceKmPerKg: 10.8, betKwhPerKm: 1.25, fcetKmPerKg: 14.4, betBatteryKWh: 300, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 12, maintDieselPerKm: 4.3,  maintCngLngH2icePerKm: 4.8 },
+  { id: 'B1',  useCase: 'Market Load',                 size: '19T Rigid',   tivShare2045: 0.0657, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 8000,  gvw: 18500, dieselKMPL: 5.2, cngKmPerKg: 5.4, lngKmPerKg: 5.3,  h2iceKmPerKg: 15.6, betKwhPerKm: 0.95, fcetKmPerKg: 20.8, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 2.912,  maintCngLngH2icePerKm: 3.432 },
+  { id: 'B2',  useCase: 'Market Load',                 size: '28T Rigid',   tivShare2045: 0.0621, annualKm: 99000,  workingDays: 275, kmPerDay: 360, ulw: 9000,  gvw: 28000, dieselKMPL: 4.5, cngKmPerKg: 4.8, lngKmPerKg: 4.65, h2iceKmPerKg: 13.5, betKwhPerKm: 1.20, fcetKmPerKg: 18.0, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 4.368,  maintCngLngH2icePerKm: 4.888 },
+  { id: 'B3',  useCase: 'Market Load',                 size: '48T Rigid',   tivShare2045: 0.0533, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 12500, gvw: 47500, dieselKMPL: 2.9, cngKmPerKg: 3.1, lngKmPerKg: 3.0,  h2iceKmPerKg: 8.7,  betKwhPerKm: 1.35, fcetKmPerKg: 11.6, betBatteryKWh: 350, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 4, tyreLug: 12, maintDieselPerKm: 8.008,  maintCngLngH2icePerKm: 8.528 },
+  { id: 'B4',  useCase: 'Parcel Load and FMCG',        size: '19T Rigid',   tivShare2045: 0.0504, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 8000,  gvw: 18500, dieselKMPL: 5.0, cngKmPerKg: 5.4, lngKmPerKg: 5.2,  h2iceKmPerKg: 15.0, betKwhPerKm: 0.90, fcetKmPerKg: 20.0, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 2.912,  maintCngLngH2icePerKm: 3.432 },
+  { id: 'B5',  useCase: 'Parcel Load and FMCG',        size: '28T Rigid',   tivShare2045: 0.1149, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 9500,  gvw: 28000, dieselKMPL: 4.5, cngKmPerKg: 4.8, lngKmPerKg: 4.65, h2iceKmPerKg: 13.5, betKwhPerKm: 1.15, fcetKmPerKg: 18.0, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 4.368,  maintCngLngH2icePerKm: 4.888 },
+  { id: 'B6',  useCase: 'Perishables',                 size: '15T Rigid',   tivShare2045: 0.0699, annualKm: 120000, workingDays: 300, kmPerDay: 400, ulw: 6500,  gvw: 16000, dieselKMPL: 6.0, cngKmPerKg: 6.3, lngKmPerKg: 6.15, h2iceKmPerKg: 18.0, betKwhPerKm: 0.85, fcetKmPerKg: 24.0, betBatteryKWh: 200, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 4,  maintDieselPerKm: 3.224,  maintCngLngH2icePerKm: 3.744 },
+  { id: 'B7',  useCase: 'Construction & Mining',       size: '28T Tipper',  tivShare2045: 0.1213, annualKm: 67200,  workingDays: 280, kmPerDay: 240, ulw: 13500, gvw: 28000, dieselKMPL: 3.8, cngKmPerKg: 4.0, lngKmPerKg: 3.9,  h2iceKmPerKg: 11.4, betKwhPerKm: 1.30, fcetKmPerKg: 15.2, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 8.944,  maintCngLngH2icePerKm: 9.464 },
+  { id: 'B8',  useCase: 'Construction & Mining',       size: '35T Tipper',  tivShare2045: 0.1758, annualKm: 67200,  workingDays: 280, kmPerDay: 240, ulw: 15000, gvw: 35000, dieselKMPL: 3.0, cngKmPerKg: 3.2, lngKmPerKg: 3.1,  h2iceKmPerKg: 9.0,  betKwhPerKm: 1.40, fcetKmPerKg: 12.0, betBatteryKWh: 300, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 4, tyreLug: 8,  maintDieselPerKm: 11.336, maintCngLngH2icePerKm: 11.856 },
+  { id: 'B9',  useCase: 'Cement (Bulkers & Bagged)',   size: '48T Rigid',   tivShare2045: 0.0627, annualKm: 115200, workingDays: 320, kmPerDay: 360, ulw: 12500, gvw: 47500, dieselKMPL: 2.9, cngKmPerKg: 3.1, lngKmPerKg: 3.0,  h2iceKmPerKg: 8.7,  betKwhPerKm: 1.40, fcetKmPerKg: 11.6, betBatteryKWh: 350, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 4, tyreLug: 12, maintDieselPerKm: 8.008,  maintCngLngH2icePerKm: 8.528 },
+  { id: 'B10', useCase: 'Cement (Bulkers & Bagged)',   size: '55T Tractor', tivShare2045: 0.0470, annualKm: 108000, workingDays: 300, kmPerDay: 360, ulw: 15500, gvw: 55000, dieselKMPL: 2.6, cngKmPerKg: 2.8, lngKmPerKg: 2.7,  h2iceKmPerKg: 7.8,  betKwhPerKm: 1.45, fcetKmPerKg: 10.4, betBatteryKWh: 300, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 2, tyreLug: 16, maintDieselPerKm: 6.76,  maintCngLngH2icePerKm: 7.28 },
+  { id: 'B11', useCase: 'Steel & metal products',      size: '55T Tractor', tivShare2045: 0.0971, annualKm: 96000,  workingDays: 320, kmPerDay: 300, ulw: 15000, gvw: 55000, dieselKMPL: 2.6, cngKmPerKg: 2.7, lngKmPerKg: 2.65, h2iceKmPerKg: 7.8,  betKwhPerKm: 1.40, fcetKmPerKg: 10.4, betBatteryKWh: 300, fcetBatteryKWh: 80, fcetFuelCellKW: 120, h2TankKg: 28.2, tyreRib: 2, tyreLug: 16, maintDieselPerKm: 8.632,  maintCngLngH2icePerKm: 9.152 },
+  { id: 'B12', useCase: 'Tankers - POL & CNG cascades', size: '28T Rigid',  tivShare2045: 0.0304, annualKm: 75000,  workingDays: 300, kmPerDay: 250, ulw: 9500,  gvw: 28000, dieselKMPL: 4.7, cngKmPerKg: 4.9, lngKmPerKg: 4.8,  h2iceKmPerKg: 14.1, betKwhPerKm: 1.05, fcetKmPerKg: 18.8, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 3.64,  maintCngLngH2icePerKm: 4.16 },
+  { id: 'B13', useCase: 'Tankers - Non POL',           size: '28T Rigid',   tivShare2045: 0.0364, annualKm: 90000,  workingDays: 300, kmPerDay: 300, ulw: 9500,  gvw: 28000, dieselKMPL: 4.7, cngKmPerKg: 4.9, lngKmPerKg: 4.8,  h2iceKmPerKg: 14.1, betKwhPerKm: 1.05, fcetKmPerKg: 18.8, betBatteryKWh: 250, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 8,  maintDieselPerKm: 3.64,  maintCngLngH2icePerKm: 4.16 },
+  { id: 'B14', useCase: 'LPG bullet tankers',          size: '40T Tractor', tivShare2045: 0.0129, annualKm: 60000,  workingDays: 240, kmPerDay: 250, ulw: 19000, gvw: 39500, dieselKMPL: 3.6, cngKmPerKg: 3.8, lngKmPerKg: 3.7,  h2iceKmPerKg: 10.8, betKwhPerKm: 1.25, fcetKmPerKg: 14.4, betBatteryKWh: 300, fcetBatteryKWh: 70, fcetFuelCellKW: 80,  h2TankKg: 28.2, tyreRib: 2, tyreLug: 12, maintDieselPerKm: 4.472,  maintCngLngH2icePerKm: 4.992 },
 ];
 
 // Sum of all bucket shares = ~0.9099. Residual ~9% is modelled as Diesel-only "Other".
@@ -306,10 +307,10 @@ export const TANK_SIZES = {
 // ===========================================================================
 // ===========================================================================
 // PER-BUCKET OPEX CALIBRATION (Excel B1-B14 TCO sheets, label-matched rows)
-// maintBET/maintFCET are 4-point knots at [2025, 2045, 2050, 2055]
+// maintBET/maintFCET are 4-point knots at [2026, 2045, 2050, 2055]
 // (₹/km incl. tyres + battery replacement); Excel's post-2045 growth is
-// steeper than the 2025-45 CAGR, hence the extra knots. The rest are
-// [value@2025, value@2045] pairs whose implied CAGR also extends past 2045:
+// steeper than the 2026-45 CAGR, hence the extra knots. The rest are
+// [value@2026, value@2045] pairs whose implied CAGR also extends past 2045:
 //   tollPerYear : ₹/vehicle/year (same for all powertrains)
 //   manpowerIce : ₹/vehicle/year, Diesel/CNG/LNG/H2-ICE crews
 //   manpowerZet : ₹/vehicle/year, BET/H2-FCET crews
@@ -323,20 +324,20 @@ export const BUCKET_OPEX_CALIBRATION: Record<string, {
   /** Excel quirk: B7's CNG block escalates manpower on B8's rate (row 87). */
   manpowerCng?: [number, number];
 }> = {
-  B1:  { maintBET: [5.122, 6.640, 7.526, 8.828],    maintFCET: [5.765, 7.080, 7.944, 9.268],    tollPerYear: [572400, 698436.78],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
-  B2:  { maintBET: [7.178, 9.916, 11.362, 13.408],  maintFCET: [7.220, 9.945, 11.390, 13.437],  tollPerYear: [693000, 845591.70],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
-  B3:  { maintBET: [11.471, 17.887, 20.887, 24.893],maintFCET: [11.878, 18.166, 21.152, 25.172],tollPerYear: [972000, 1186024.72],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
-  B4:  { maintBET: [5.322, 6.777, 7.656, 8.965],    maintFCET: [5.997, 7.239, 8.095, 9.426],    tollPerYear: [572400, 698436.78],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
-  B5:  { maintBET: [6.923, 9.741, 11.196, 13.234],  maintFCET: [7.037, 9.819, 11.270, 13.311],  tollPerYear: [756000, 922463.67],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
-  B6:  { maintBET: [5.198, 7.144, 8.180, 9.648],    maintFCET: [5.805, 7.560, 8.575, 10.063],   tollPerYear: [636000, 776040.87],   manpowerIce: [400000, 971000],  manpowerZet: [460000, 1113000] },
-  B7:  { maintBET: [10.168, 15.579, 18.145, 21.596],maintFCET: [11.121, 16.231, 18.765, 22.248],tollPerYear: [666400, 813134.64],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000], manpowerCng: [450000, 1211000] },
-  B8:  { maintBET: [12.773, 20.586, 24.152, 28.855],maintFCET: [13.338, 20.973, 24.520, 29.242],tollPerYear: [571200, 696972.55],   manpowerIce: [500000, 1211000], manpowerZet: [560000, 1350000] },
-  B9:  { maintBET: [11.339, 17.796, 20.801, 24.803],maintFCET: [11.842, 18.141, 21.128, 25.147],tollPerYear: [1036800, 1265093.03], manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
-  B10: { maintBET: [10.064, 15.477, 18.036, 21.473],maintFCET: [10.948, 16.082, 18.612, 22.078],tollPerYear: [972000, 1186024.72],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
-  B11: { maintBET: [12.284, 19.709, 23.109, 27.599],maintFCET: [12.979, 20.184, 23.561, 28.074],tollPerYear: [864000, 1054244.20],  manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
-  B12: { maintBET: [6.435, 8.473, 9.630, 11.313],   maintFCET: [7.270, 9.045, 10.173, 11.885],  tollPerYear: [525000, 640599.77],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
-  B13: { maintBET: [6.455, 8.487, 9.643, 11.327],   maintFCET: [6.870, 8.771, 9.913, 11.611],   tollPerYear: [630000, 768719.73],   manpowerIce: [450000, 1083000], manpowerZet: [510000, 1231000] },
-  B14: { maintBET: [8.037, 10.896, 12.446, 14.661], maintFCET: [9.042, 11.584, 13.100, 15.349], tollPerYear: [540000, 658902.62],   manpowerIce: [600000, 1447000], manpowerZet: [660000, 1590000] },
+  B1:  { maintBET: [5.130, 6.640, 7.526, 8.828],    maintFCET: [5.756, 7.080, 7.944, 9.268],    tollPerYear: [578124.00, 698436.78],   manpowerIce: [418000, 971000],  manpowerZet: [481000, 1113000] },
+  B2:  { maintBET: [7.214, 9.916, 11.362, 13.408],  maintFCET: [7.255, 9.945, 11.390, 13.437],  tollPerYear: [699930.00, 845591.70],   manpowerIce: [470000, 1083000], manpowerZet: [533000, 1231000] },
+  B3:  { maintBET: [11.617, 17.887, 20.887, 24.893],maintFCET: [12.014, 18.166, 21.152, 25.172],tollPerYear: [981720.00, 1186024.72],  manpowerIce: [627000, 1447000], manpowerZet: [690000, 1590000] },
+  B4:  { maintBET: [5.325, 6.777, 7.656, 8.965],    maintFCET: [5.982, 7.239, 8.095, 9.426],    tollPerYear: [578124.00, 698436.78],   manpowerIce: [418000, 971000],  manpowerZet: [481000, 1113000] },
+  B5:  { maintBET: [6.966, 9.741, 11.196, 13.234],  maintFCET: [7.077, 9.819, 11.270, 13.311],  tollPerYear: [763560.00, 922463.67],   manpowerIce: [470000, 1083000], manpowerZet: [533000, 1231000] },
+  B6:  { maintBET: [5.223, 7.144, 8.180, 9.648],    maintFCET: [5.815, 7.560, 8.575, 10.063],   tollPerYear: [642360.00, 776040.87],   manpowerIce: [418000, 971000],  manpowerZet: [481000, 1113000] },
+  B7:  { maintBET: [10.286, 15.579, 18.145, 21.596],maintFCET: [11.215, 16.231, 18.765, 22.248],tollPerYear: [475104.00, 573977.39],   manpowerIce: [470000, 1083000], manpowerZet: [533000, 1231000], manpowerCng: [470000, 1211000] },
+  B8:  { maintBET: [12.964, 20.586, 24.152, 28.855],maintFCET: [13.515, 20.973, 24.520, 29.242],tollPerYear: [576912.00, 696972.55],   manpowerIce: [523000, 1211000], manpowerZet: [585000, 1350000] },
+  B9:  { maintBET: [11.488, 17.796, 20.801, 24.803],maintFCET: [11.979, 18.141, 21.128, 25.147],tollPerYear: [1047168.00, 1265093.03], manpowerIce: [627000, 1447000], manpowerZet: [690000, 1590000] },
+  B10: { maintBET: [10.182, 15.477, 18.036, 21.473],maintFCET: [11.044, 16.082, 18.612, 22.078],tollPerYear: [981720.00, 1186024.72],  manpowerIce: [627000, 1447000], manpowerZet: [690000, 1590000] },
+  B11: { maintBET: [12.464, 19.709, 23.109, 27.599],maintFCET: [13.142, 20.184, 23.561, 28.074],tollPerYear: [872640.00, 1054244.19],  manpowerIce: [627000, 1447000], manpowerZet: [690000, 1590000] },
+  B12: { maintBET: [6.450, 8.473, 9.630, 11.313],   maintFCET: [7.264, 9.045, 10.173, 11.885],  tollPerYear: [530250.00, 640599.77],   manpowerIce: [470000, 1083000], manpowerZet: [533000, 1231000] },
+  B13: { maintBET: [6.469, 8.487, 9.643, 11.327],   maintFCET: [6.874, 8.771, 9.913, 11.611],   tollPerYear: [636300.00, 768719.73],   manpowerIce: [470000, 1083000], manpowerZet: [533000, 1231000] },
+  B14: { maintBET: [8.069, 10.896, 12.446, 14.661], maintFCET: [9.049, 11.584, 13.100, 15.349], tollPerYear: [545400.00, 658902.62],   manpowerIce: [627000, 1447000], manpowerZet: [690000, 1590000] },
 };
 
 export const BET_OEM_MARGIN_BY_YEAR: Record<number, number> = (() => {
@@ -363,8 +364,8 @@ export const FCET_OEM_MARGIN_BY_YEAR: Record<number, number> = (() => {
 
 // ===========================================================================
 // TIV (Total Industry Volume) per year — all heavy trucks combined
-// Source: 'AnnualSalesSummary Revised' row 75. Pre-2025 values are
-// historical, used for stock evolution. From 2025+ used to compute
+// Source: 'AnnualSalesSummary Revised' row 75. Pre-2026 values are
+// historical, used for stock evolution. From 2026+ used to compute
 // annual sales by powertrain.
 // ===========================================================================
 export const HISTORICAL_SALES: Record<number, number> = {
@@ -373,6 +374,10 @@ export const HISTORICAL_SALES: Record<number, number> = {
   2011: 93708,  2012: 102292, 2013: 111304, 2014: 120475, 2015: 158398,
   2016: 214258, 2017: 211032, 2018: 247608, 2019: 274768, 2020: 143237,
   2021: 125404, 2022: 193951, 2023: 274193, 2024: 267078,
+  // 2025 is now a historical year (projection starts 2026). Total sales from
+  // 'Output Summary' row 29; split all-diesel for the stock roll-forward, as
+  // with every other pre-projection year.
+  2025: 267370,
 };
 
 export const TIV_PROJECTION: Record<number, number> = {
@@ -385,8 +390,11 @@ export const TIV_PROJECTION: Record<number, number> = {
   2055: 1029830,
 };
 
-// Pre-2025 stock baseline — used as starting diesel stock at end of 2024
-export const DIESEL_STOCK_END_2024 = 5193503;
+// Pre-2026 stock baseline — total heavy-truck stock at end of 2025 (the year
+// before the projection now starts). Source: 'Output Summary' row 29 stock
+// columns (Diesel 5,302,669 + CNG 11,875 + LNG 368 + BET 149). Seeded as
+// diesel, consistent with the all-diesel treatment of prior historical years.
+export const DIESEL_STOCK_END_2025 = 5315061;
 
 // 20-year scrappage policy — vehicles 20+ years old retire each year
 export const SCRAPPAGE_AGE_YEARS = 20;
@@ -412,9 +420,9 @@ export const START_OF_SUPPLY: Record<VehicleSize, Record<Powertrain, number>> = 
   '55T Tractor': { Diesel: 2025, CNG: 2028, LNG: 2028, BET: 2027, 'H2-ICE': 2036, 'H2-FCET': 2040 },
 };
 
-// Gompertz initial pilot share W (very small — represents 2025 sales as fraction of total)
+// Gompertz initial pilot share W (very small — represents base-year sales as fraction of total)
 export const PTTM_PILOT_SHARE = {
-  BET: 0.0009052,    // ~0.09% of TIV in 2025
+  BET: 0.0009052,    // ~0.09% of TIV at pilot
   'H2-ICE': 0.0001,
   'H2-FCET': 0.0001,
 };
@@ -423,10 +431,10 @@ export const PTTM_PILOT_SHARE = {
 export const WEIBULL_SHAPE_ALPHA = 5;
 export const WEIBULL_PEAK_YEAR = 2045;
 
-// 2025 known volumes (calibration anchors for Weibull) — Turn 3b: exact from
-// Output Summary row 29 (2025), cols J and L of CoEZET_PTCM_v3.xlsx.
-export const CNG_UNITS_2025 = 11875;
-export const LNG_UNITS_2025 = 368;
+// 2026 known volumes (calibration anchors for Weibull) — exact from
+// 'Output Summary' row 30 (2026), CNG sale (col J) and LNG sale (col L).
+export const CNG_UNITS_2026 = 13374;
+export const LNG_UNITS_2026 = 414;
 
 // Gompertz pilot/start year per powertrain (v3 PTTM col S, rows 2-4).
 // Kept for backwards reference — Gompertz loop now reads from GOMPERTZ_PARAMS_BY_PT.
@@ -473,33 +481,30 @@ export const SCENARIO_MATURITY_YEARS: Record<ScenarioName, {
 // BAU DEFAULT SCENARIO CONFIG — drop-in for ScenarioConfig.parameters
 // All deltas are decimal (0.025 = 2.5% per year)
 // ===========================================================================
-// BAU defaults — natively encoded in the v4 6-range CAGR shape.
-// Category A: CAGRs computed directly from CoEZET_PTCM_v4.xlsx 'Changing with year'
-//   at each range endpoint: cagr = (V_end / V_start)^(1/years) - 1.
-// Category B (// FLAG): v3 fallback values spread across the 6 ranges
-//   (v3 d2630 → d2530, v3 d3140 → d3135 & d3640, v3 d4150 → d4145 & d4650, v3 d5155 → d5155).
-//   These params aren't user-editable in the v4 Dashboard spec; re-extract from v4 later.
+// BAU defaults — 2026-based 6-range CAGR shape. baseValue = the 2026 column of
+// 'CoEZET PTCM v2.xlsx' → 'Changing with year'; each delta is the endpoint CAGR
+// reproducing the Excel trajectory: d2530 = (V2030/V2026)^(1/4)−1 (four steps
+// from the 2026 base), d3135 = (V2035/V2030)^(1/5)−1, … through d5155. The three
+// *_growth rows are per-year escalation rates (base-year independent), so their
+// deltas are unchanged; only the base prices they multiply moved to 2026.
 export const BAU_PARAMETERS = {
-  // Category A — native v4 6-range
-  diesel_price_per_l:            { baseValue: 88.9263, d2530:  0.0380, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
-  cng_price_per_kg:              { baseValue: 87,      d2530:  0.0343, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
-  lng_price_per_kg:              { baseValue: 83,      d2530:  0.0312, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
-  electricity_incl_caas_per_kwh: { baseValue: 11.9298, d2530:  0.0031, d3135: -0.0546, d3640: -0.0097, d4145:  0.0026, d4650:  0.0057, d5155:  0.0313 },
-  green_h2_production_per_kg:    { baseValue: 546.50,  d2530:  0.0020, d3135: -0.0409, d3640: -0.0344, d4145: -0.0403, d4650: -0.0264, d5155:  0.0021 },
-  h2_compression_storage_per_kg: { baseValue: 175,     d2530: -0.0400, d3135: -0.0300, d3640: -0.0300, d4145: -0.0300, d4650: -0.0300, d5155: -0.0200 },
-  battery_cost_per_kwh:          { baseValue: 9900,    d2530: -0.0150, d3135: -0.0250, d3640: -0.0250, d4145: -0.0100, d4650: -0.0100, d5155:  0.0100 },
-  fuel_cell_cost_per_kw:         { baseValue: 36000,   d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155:  0.0100 },
-  adblue_per_l:                  { baseValue: 55,      d2530:  0.0250, d3135:  0.0250, d3640:  0.0250, d4145:  0.0250, d4650:  0.0250, d5155:  0.0250 },
-  grey_h2_production_per_kg:     { baseValue: 250,     d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
+  diesel_price_per_l:            { baseValue: 99,      d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
+  cng_price_per_kg:              { baseValue: 91.5,    d2530:  0.0300, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
+  lng_price_per_kg:              { baseValue: 86,      d2530:  0.0300, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
+  electricity_incl_caas_per_kwh: { baseValue: 12.0798, d2530:  0.0008, d3135: -0.0546, d3640: -0.0097, d4145:  0.0026, d4650:  0.0057, d5155:  0.0313 },
+  green_h2_production_per_kg:    { baseValue: 546.80,  d2530:  0.0023, d3135: -0.0409, d3640: -0.0344, d4145: -0.0403, d4650: -0.0264, d5155:  0.0021 },
+  h2_compression_storage_per_kg: { baseValue: 168,     d2530: -0.0400, d3135: -0.0300, d3640: -0.0300, d4145: -0.0300, d4650: -0.0300, d5155: -0.0200 },
+  battery_cost_per_kwh:          { baseValue: 9751.5,  d2530: -0.0150, d3135: -0.0250, d3640: -0.0250, d4145: -0.0100, d4650: -0.0100, d5155:  0.0100 },
+  fuel_cell_cost_per_kw:         { baseValue: 34920,   d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155:  0.0100 },
+  adblue_per_l:                  { baseValue: 56.375,  d2530:  0.0250, d3135:  0.0250, d3640:  0.0250, d4145:  0.0250, d4650:  0.0250, d5155:  0.0250 },
+  grey_h2_production_per_kg:     { baseValue: 255,     d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
   grey_h2_blend_fraction:        { baseValue: 0,       d2530:  0,      d3135:  0,      d3640:  0,      d4145:  0,      d4650:  0,      d5155:  0      },
-
-  // Category B — FLAG: v3 fallback; re-extract from v4 'Changing with year' in a later round.
-  lng_tank_cost_per_kg:          { baseValue: 3050,    d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 LNG tank row
-  lng_valves_piping_per_vehicle: { baseValue: 100000,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback
-  h2_tank_cost_per_kg:           { baseValue: 56000,   d2530: -0.0500, d3135: -0.0400, d3640: -0.0400, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback — re-extract from v4 H2 tank row
-  diesel_vehicle_growth:         { baseValue: 0,       d2530:  0.0300, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 }, // FLAG: v3 fallback
-  engine_trans_growth:           { baseValue: 0,       d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 }, // FLAG: v3 fallback
-  e_powertrain_growth:           { baseValue: 0,       d2530: -0.0400, d3135: -0.0100, d3640: -0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 }, // FLAG: v3 fallback
+  lng_tank_cost_per_kg:          { baseValue: 3080.5,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
+  lng_valves_piping_per_vehicle: { baseValue: 101000,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
+  h2_tank_cost_per_kg:           { baseValue: 53200,   d2530: -0.0500, d3135: -0.0400, d3640: -0.0400, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
+  diesel_vehicle_growth:         { baseValue: 0,       d2530:  0.0300, d3135:  0.0300, d3640:  0.0300, d4145:  0.0300, d4650:  0.0300, d5155:  0.0300 },
+  engine_trans_growth:           { baseValue: 0,       d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
+  e_powertrain_growth:           { baseValue: 0,       d2530: -0.0400, d3135: -0.0100, d3640: -0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
 } satisfies Record<string, import('@/lib/types').ParameterConfig>;
 
 // BAU fixed (non-trajectory) parameters
@@ -518,8 +523,8 @@ export const BAU_FIXED = {
   },
 };
 
-// BAU per-segment vehicle base prices (mirrors VEHICLE_BASE_PRICES_2025, editable)
-export const BAU_SEGMENT_BASE_PRICES = { ...VEHICLE_BASE_PRICES_2025 };
+// BAU per-segment vehicle base prices (mirrors VEHICLE_BASE_PRICES_2026, editable)
+export const BAU_SEGMENT_BASE_PRICES = { ...VEHICLE_BASE_PRICES_2026 };
 
 // BAU policy levers
 export const BAU_POLICY = {
@@ -560,7 +565,7 @@ export const BEST_OVERRIDES = {
   parameters: {
     green_h2_production_per_kg:   { baseValue: 600,   d2530: -0.04,   d3135: -0.035, d3640: -0.035, d4145: -0.03,  d4650: -0.03,  d5155: -0.03 },
     h2_compression_storage_per_kg:{ baseValue: 175,   d2530: -0.04,   d3135: -0.03,  d3640: -0.03,  d4145: -0.03,  d4650: -0.03,  d5155: -0.02 },
-    diesel_price_per_l:           { baseValue: 88.93, d2530: 0.0208,  d3135: 0.0208, d3640: 0.0208, d4145: 0.0208, d4650: 0.0208, d5155: 0.05 }, // +5% YoY after 2045
+    diesel_price_per_l:           { baseValue: 99,    d2530: 0.0208,  d3135: 0.0208, d3640: 0.0208, d4145: 0.0208, d4650: 0.0208, d5155: 0.05 }, // 2026 base; +5% YoY after 2045
   },
   policy: {
     bet_demand_incentive_per_kwh: 10000, // until 2030, then 5000 till 2035
@@ -578,14 +583,14 @@ export const BEST_OVERRIDES = {
 // EMISSION FACTORS (Well-to-Wheel kgCO2e) — source: 'Emissions' sheet rows 2-7
 // Each is WTT + TTW (Excel col D = SUM(WTT, TTW)):
 //   Diesel 0.53 + 2.6 = 3.13 | CNG 0.4505 + 2.21 = 2.66 | LNG 0.4876 + 2.392 = 2.88
-// BET uses a year-varying grid factor (Excel 'Emissions' R49): 0.7455 in 2025
+// BET uses a year-varying grid factor (Excel 'Emissions' R49): 0.7231 in 2026
 // declining 3%/yr (grid decarbonisation) to 0.299 in 2055 — see betGridFactor().
 // ===========================================================================
 export const EMISSION_FACTORS = {
   diesel_kgCO2e_per_l:        3.13,  // 0.53 WTT + 2.6 TTW
   cng_kgCO2e_per_kg:          2.66,  // 0.4505 WTT + 2.21 TTW
   lng_kgCO2e_per_kg:          2.88,  // 0.4876 WTT + 2.392 TTW
-  bet_grid_kgCO2e_per_kwh_2025: 0.7455,
+  bet_grid_kgCO2e_per_kwh_2026: 0.723135, // Excel 'Emissions' R49 col C (= 0.7455 × 0.97)
   grid_decarb_rate_per_year:    0.03,
   h2ice_green_kgCO2e_per_km:  0.07,
   h2fcet_green_kgCO2e_per_km: 0.07,
@@ -593,8 +598,8 @@ export const EMISSION_FACTORS = {
 
 /** BET grid CO2 factor (kgCO2e/kWh) for a year — Excel 'Emissions' R49. */
 export function betGridFactor(year: number): number {
-  const dy = Math.max(0, year - 2025);
-  return EMISSION_FACTORS.bet_grid_kgCO2e_per_kwh_2025
+  const dy = Math.max(0, year - 2026);
+  return EMISSION_FACTORS.bet_grid_kgCO2e_per_kwh_2026
     * Math.pow(1 - EMISSION_FACTORS.grid_decarb_rate_per_year, dy);
 }
 
@@ -643,7 +648,7 @@ export const TCO_PARITY_YEARS = {
 // Run these after simulation; warn if any fail
 // ===========================================================================
 export const BAU_BASELINE_CHECKS = {
-  total_sales_2025: { value: 267370, tolerance: 0.02 },
+  total_sales_2026: { value: 301120, tolerance: 0.02 },
   total_sales_2045: { value: 707250, tolerance: 0.02 },
   total_sales_2055: { value: 1029830, tolerance: 0.02 },
   // Excel PTTM sheet (BAU): ZET share 79.35% in 2045, 100% in 2055
@@ -651,8 +656,9 @@ export const BAU_BASELINE_CHECKS = {
   zet_share_2045_max: 0.90,
   zet_share_2055_min: 0.95,
   zet_share_2055_max: 1.0,
-  diesel_2025_units_min: 240000,
-  diesel_2025_units_max: 270000,
+  // Excel 'Output Summary' row 30: 2026 diesel sales ≈ 286,923.
+  diesel_2026_units_min: 270000,
+  diesel_2026_units_max: 300000,
 };
 
 // ===========================================================================
