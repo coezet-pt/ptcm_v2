@@ -40,10 +40,10 @@ export default function HydrogenSourceMix() {
       {p.h2_source_mix === 'blend_2046_green' && (
         <div className="space-y-2 rounded-md border border-border/60 bg-muted/30 p-2">
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Grey hydrogen share by 5-year band
+            Grey hydrogen share by 5-year band (2026–2045)
           </div>
           <div className="flex flex-wrap items-end gap-2">
-            {DELTA_KEYS.map((key, i) => (
+            {DELTA_KEYS.slice(0, 4).map((key, i) => (
               <div key={key} className="flex flex-col">
                 <span className="text-[10px] text-muted-foreground mb-0.5">{DELTA_LABELS[i]}</span>
                 <div className="flex items-center gap-1">
@@ -60,7 +60,7 @@ export default function HydrogenSourceMix() {
           </div>
           <p className="text-[10px] text-muted-foreground">
             Share of grey hydrogen in the supply blend per band (0% = fully green). The rest is green;
-            production cost is blended pro-rata.
+            production cost is blended pro-rata. Grey is discontinued from 2046 (green-only thereafter).
           </p>
         </div>
       )}

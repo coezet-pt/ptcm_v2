@@ -81,15 +81,15 @@ function resaleTier(year: number): 0 | 1 | 2 {
 }
 
 /** Grey-hydrogen blend fraction (0–1) for a given year, from the per-5-year-band
- *  policy setting (keys d2530…d5155). Falls back to 0 (green-only) if unset. */
+ *  policy setting. Grey hydrogen is discontinued from 2046 onward, so the blend
+ *  applies to 2026–2045 only (bands d2530…d4145); later years are green-only. */
 function greyBlendForYear(policy: PolicyConfig, year: number): number {
+  if (year > 2045) return 0;
   const bands = policy.grey_h2_blend_bands ?? {};
   const key =
     year <= 2030 ? 'd2530' :
     year <= 2035 ? 'd3135' :
-    year <= 2040 ? 'd3640' :
-    year <= 2045 ? 'd4145' :
-    year <= 2050 ? 'd4650' : 'd5155';
+    year <= 2040 ? 'd3640' : 'd4145';
   const v = bands[key];
   return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
 }
@@ -102,29 +102,24 @@ function getH2PricePerKg(
   const green = getValueAtYear(ts.green_h2_production_per_kg, year);
   const grey = getValueAtYear(ts.grey_h2_production_per_kg, year);
   const compression = getValueAtYear(ts.h2_compression_storage_per_kg, year);
-  const blend = Math.max(0, Math.min(1, getValueAtYear(ts.grey_h2_blend_fraction, year) ?? 0));
 
   let productionCost: number;
-  if (blend > 0) {
-    // Explicit blend override (parameter trajectory)
-    productionCost = (1 - blend) * green + blend * grey;
-  } else {
-    switch (policy.h2_source_mix) {
-      case 'green_only':
-        productionCost = green;
-        break;
-      case 'blend_2046_green': {
-        // Grey/green blend driven by the per-5-year-band grey fraction.
-        const bandBlend = greyBlendForYear(policy, year);
-        productionCost = (1 - bandBlend) * green + bandBlend * grey;
-        break;
-      }
-      case 'cheapest':
-        productionCost = Math.min(green, grey);
-        break;
-      default:
-        productionCost = green;
+  switch (policy.h2_source_mix) {
+    case 'green_only':
+      productionCost = green;
+      break;
+    case 'blend_2046_green': {
+      // Grey/green blend driven by the per-5-year-band grey fraction
+      // (2026–2045 only; grey is discontinued from 2046).
+      const bandBlend = greyBlendForYear(policy, year);
+      productionCost = (1 - bandBlend) * green + bandBlend * grey;
+      break;
     }
+    case 'cheapest':
+      productionCost = Math.min(green, grey);
+      break;
+    default:
+      productionCost = green;
   }
   return productionCost + compression;
 }
