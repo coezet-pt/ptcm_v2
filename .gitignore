@@ -25,4 +25,5 @@ dist-ssr
 
 # Local reference data and debug dumps
 *.xlsx
+!CoEZET PTCM v2.xlsx
 dump/
