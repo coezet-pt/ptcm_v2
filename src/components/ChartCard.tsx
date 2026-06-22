@@ -26,8 +26,21 @@ export default function ChartCard({ title, description, subtitle, children, csvD
         {description && <CardDescription className="text-xs">{description}</CardDescription>}
       </CardHeader>
       <CardContent className="pb-3">
-        <div ref={chartRef} className="h-[320px]">
-          {children}
+        <div className="relative">
+          {/* PNG download — top-right corner of the chart box, independent of
+              the data buttons below. Sits outside chartRef so it isn't captured
+              in the exported image. */}
+          <Button
+            variant="ghost" size="icon"
+            className="absolute right-1 top-1 z-10 h-7 w-7 bg-card/70 backdrop-blur-sm hover:bg-secondary"
+            onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
+            title="Download chart as PNG"
+          >
+            <ImageDown className="h-3.5 w-3.5" />
+          </Button>
+          <div ref={chartRef} className="h-[320px]">
+            {children}
+          </div>
         </div>
 
         {/* Data table — shown above the action buttons */}
@@ -56,14 +69,13 @@ export default function ChartCard({ title, description, subtitle, children, csvD
           </div>
         )}
 
-        {/* Action buttons — placed below the chart (and data table) */}
-        <div className="mt-3 border-t pt-2">
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Data Table
-          </div>
-          <div className="flex flex-wrap items-center gap-0.5">
-            {csvData && (
-            <>
+        {/* Data buttons — placed below the chart (and data table) */}
+        {csvData && (
+          <div className="mt-3 border-t pt-2">
+            <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Data Table
+            </div>
+            <div className="flex flex-wrap items-center gap-0.5">
               <Button
                 variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
                 onClick={() => setShowTable(t => !t)}
@@ -88,18 +100,9 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                 <Download className="h-3.5 w-3.5" />
                 Excel
               </Button>
-            </>
-          )}
-          <Button
-            variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
-            onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
-            title="Download chart as PNG"
-          >
-              <ImageDown className="h-3.5 w-3.5" />
-              PNG
-            </Button>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
