@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,12 +9,9 @@ import { useState, type ReactNode } from 'react';
 import ParameterRow from './ParameterRow';
 import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
-import { RatingMatrix } from './RatingMatrix';
-import PolicyLevers from './PolicyLevers';
 import HydrogenSourceMix from './HydrogenSourceMix';
-import SegmentBasePricesTable from './SegmentBasePricesTable';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import GvwForZet from './GvwForZet';
+import KeyAggregateLifeInput from './KeyAggregateLifeInput';
 import { useScenario } from '@/contexts/ScenarioContext';
 
 
@@ -42,67 +39,39 @@ function CostSection({ title, children }: { title: string; children: ReactNode }
   );
 }
 
-/**
- * Placeholder for a section that isn't configurable yet — rendered as a
- * non-interactive row with a "coming soon" badge so it holds its place in
- * the ordering.
- */
-function ComingSoonSection({ title }: { title: string }) {
-  return (
-    <div className="py-1">
-      <div className="w-full flex items-center justify-between gap-2 rounded px-1 py-2.5 opacity-60 cursor-not-allowed">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
-        <span className="text-[10px] rounded-full bg-muted text-muted-foreground px-1.5 py-0.5">Coming soon</span>
-      </div>
-    </div>
-  );
-}
-
 export default function InputPanel() {
-  const { draftConfig, updateFixed } = useScenario();
-  const f = draftConfig.fixed;
-
   return (
     <div className="space-y-6">
       {/* Primary trajectories — always visible */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-semibold uppercase tracking-[0.14em]">Primary Cost Trajectories</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            2026 base value + CAGR % for each of the six year-range buckets (max ±20%).
-          </p>
-        </CardHeader>
-        <CardContent className="divide-y divide-border/50">
+        <CardContent className="divide-y divide-border/50 pt-4">
           {/* 1 — Fuel/Energy Cost (including Grey Hydrogen Cost) */}
           <CostSection title="Fuel/Energy Cost">
-            <ParameterRow paramKey="diesel_price_per_l" />
-            <ParameterRow paramKey="lng_price_per_kg"   />
-            <ParameterRow paramKey="cng_price_per_kg"   />
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity Cost at Charging Point (incl. CAAS)" />
-            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production Cost" />
-            <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production Cost" />
+            <ParameterRow paramKey="diesel_price_per_l" labelOverride="Diesel" />
+            <ParameterRow paramKey="lng_price_per_kg"   labelOverride="LNG" />
+            <ParameterRow paramKey="cng_price_per_kg"   labelOverride="CNG" />
+            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity at Charging Point (incl. CAAS)" />
+            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production" />
+            <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production" />
             <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispense" />
           </CostSection>
 
           {/* 2 — Key Aggregate Cost */}
           <CostSection title="Key Aggregate Cost">
-            <ParameterRow paramKey="battery_cost_per_kwh"  labelOverride="Battery Cost" />
-            <ParameterRow paramKey="fuel_cell_cost_per_kw" labelOverride="Fuel Cell Cost" />
-            <ParameterRow paramKey="h2_tank_cost_per_kg"   labelOverride="Hydrogen Tank Cost" />
-            <ParameterRow paramKey="lng_tank_cost_per_kg"  labelOverride="LNG Tank Cost" />
+            <ParameterRow paramKey="battery_cost_per_kwh"  labelOverride="Battery" />
+            <ParameterRow paramKey="fuel_cell_cost_per_kw" labelOverride="Fuel Cell" />
+            <ParameterRow paramKey="h2_tank_cost_per_kg"   labelOverride="Hydrogen Tank" />
+            <ParameterRow paramKey="lng_tank_cost_per_kg"  labelOverride="LNG Tank" />
           </CostSection>
 
-          {/* 3 — Key Aggregate Life (not configurable yet) */}
-          <ComingSoonSection title="Key Aggregate Life" />
+          {/* 3 — Key Aggregate Life */}
+          <CostSection title="Key Aggregate Life">
+            <KeyAggregateLifeInput />
+          </CostSection>
 
           {/* 4 — Hydrogen Source Mix */}
           <CostSection title="Hydrogen Source Mix">
             <HydrogenSourceMix />
-          </CostSection>
-
-          {/* 5 — Maintenance */}
-          <CostSection title="Maintenance">
-            <BucketMaintenanceInput />
           </CostSection>
         </CardContent>
       </Card>
@@ -123,71 +92,21 @@ export default function InputPanel() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="ratings">
+            <AccordionItem value="policy-support">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Powertrain ratings (TAT, range)
+                Policy support
               </AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Relative to Diesel = 1.0; feeds the powertrain choice model.</p>
-                  <RatingMatrix
-                    label="TAT / gradeability / productivity"
-                    values={f.tat_gradeability}
-                    onChange={(pt, v) => updateFixed('tat_gradeability', { ...f.tat_gradeability, [pt]: v })}
-                  />
-                  <RatingMatrix
-                    label="Range & filling time"
-                    values={f.range_filling_time}
-                    onChange={(pt, v) => updateFixed('range_filling_time', { ...f.range_filling_time, [pt]: v })}
-                  />
-                </div>
+                <GvwForZet />
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="segment-prices">
+            <AccordionItem value="maintenance">
               <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Segment base costs (2026)
+                Maintenance
               </AccordionTrigger>
               <AccordionContent>
-                <SegmentBasePricesTable />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="weights">
-              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Component weights (battery &amp; fuel cell)
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">Used to compute BET/FCET rated payload (battery and fuel-cell weight).</p>
-                  <div className="flex items-center justify-between gap-3 p-2 rounded border border-border/50">
-                    <Label className="text-sm flex-1">Battery energy density <span className="text-xs text-muted-foreground">(kg/kWh)</span></Label>
-                    <Input
-                      type="number" step={0.5}
-                      className="h-8 w-28 text-right font-mono text-sm"
-                      value={f.battery_energy_density_kg_per_kwh}
-                      onChange={e => updateFixed('battery_energy_density_kg_per_kwh', Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between gap-3 p-2 rounded border border-border/50">
-                    <Label className="text-sm flex-1">Fuel cell power density <span className="text-xs text-muted-foreground">(kg/kW)</span></Label>
-                    <Input
-                      type="number" step={0.5}
-                      className="h-8 w-28 text-right font-mono text-sm"
-                      value={f.fuel_cell_power_density_kg_per_kw}
-                      onChange={e => updateFixed('fuel_cell_power_density_kg_per_kw', Number(e.target.value))}
-                    />
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="policy">
-              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Policy levers
-              </AccordionTrigger>
-              <AccordionContent>
-                <PolicyLevers />
+                <BucketMaintenanceInput />
               </AccordionContent>
             </AccordionItem>
           </Accordion>

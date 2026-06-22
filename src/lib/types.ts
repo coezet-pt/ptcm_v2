@@ -44,6 +44,11 @@ export interface FixedParameters {
   adblue_consumption_l_per_l_diesel: number;
   battery_energy_density_kg_per_kwh: number;
   fuel_cell_power_density_kg_per_kw: number;
+  // Key Aggregate Life — Excel 'No change with year' D22/D23. Drives the
+  // battery / fuel-cell replacement portion of BET/FCET maintenance (see
+  // getMaintenancePerKm). Defaults: 3000 cycles, 25000 hrs.
+  battery_life_cycles: number;
+  fuel_cell_life_hours: number;
   tat_gradeability: Record<Powertrain, number>;
   range_filling_time: Record<Powertrain, number>;
   // v4 Dashboard: non-ZET funding tenure (rate already lives on interest_rate_ice).
@@ -101,6 +106,10 @@ export interface PolicyConfig {
   // Additional flags
   range_filling_concern_after_2035: boolean;
   gvw_payload_compensation_t: number;
+  // Policy support — additional GVW (kg) granted to ZETs (BET/FCET) per size
+  // class, keyed by the display label (e.g. '19T Rigid'). Raises rated payload.
+  // Excel 'No change with year' AT/AU ("GVW Increase for BETs/FCETs").
+  zet_additional_gvw_kg: Record<string, number>;
 }
 
 // ── Full scenario config ──

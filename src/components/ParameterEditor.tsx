@@ -7,7 +7,7 @@ import { X, Pin, AlertTriangle } from 'lucide-react';
 import type { ParameterConfig } from '@/lib/types';
 import { DELTA_LABELS, DELTA_KEYS, type DeltaKey } from './ParameterRow';
 
-const DEFAULT_CAGR_MAX = 0.10;
+const DEFAULT_CAGR_MAX = 0.20;
 const YEARS = Array.from({ length: 30 }, (_, i) => 2026 + i); // 2026..2055
 
 /** Years covered by each CAGR range (mirrors RANGE_YEARS in ScenarioContext). */
@@ -220,7 +220,7 @@ export default function ParameterEditor({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            CAGR % <span className="normal-case opacity-70">(max ±{cagrMaxPct}%)</span>
+            CAGR %
           </div>
           <div className="inline-flex rounded-md border border-border overflow-hidden">
             <button
@@ -276,10 +276,14 @@ export default function ParameterEditor({
                     Ranges currently differ — entering a value applies it to all six ranges.
                   </span>
                 )}
+                {over && (
+                  <span className="w-full text-[11px] text-destructive">max ±{cagrMaxPct}% allowed</span>
+                )}
               </div>
             );
           })()
         ) : (
+          <div className="flex flex-col gap-1">
           <div className="flex items-end gap-2 flex-wrap">
             {DELTA_KEYS.map((dk, i) => {
               const isPending = pendingCagr?.field === dk;
@@ -311,6 +315,14 @@ export default function ParameterEditor({
                 </div>
               );
             })}
+          </div>
+          {DELTA_KEYS.some(dk => {
+            const isPending = pendingCagr?.field === dk;
+            const refVal = isPending ? Number(pendingCagr.raw) : config[dk] * 100;
+            return Math.abs(refVal) > cagrMaxPct;
+          }) && (
+            <span className="text-[11px] text-destructive">max ±{cagrMaxPct}% allowed</span>
+          )}
           </div>
         )}
 

@@ -14,6 +14,12 @@ import {
   BUCKET_OPEX_CALIBRATION,
   FINANCE,
   POWERTRAINS,
+  DEFAULT_BATTERY_LIFE_CYCLES,
+  DEFAULT_FUEL_CELL_LIFE_HOURS,
+  BATT_REPL_COST_PER_KWH,
+  FC_REPL_COST_PER_KW,
+  FC_LIFE_MAX_YEARS,
+  BUCKET_ENGINE_HRS_PER_DAY,
 } from '@/lib/constants/extracted';
 import { buildSeriesFromConfig, getValueAtYear } from './timeSeries';
 import { defaultMaintConfig, type MaintMetric } from './maintenance';
@@ -245,6 +251,31 @@ const MAINT_METRIC_BY_PT: Partial<Record<Powertrain, MaintMetric>> = {
   'H2-FCET': 'fcet',
 };
 
+// ── Key Aggregate Life → maintenance link (Excel 'No change with year') ──
+// Battery replacement ₹/km at 2026 for a given battery life (cols BP–BV):
+//   cycles-in-7yr (BT) = annualKm·7·kWh/km / batteryKWh
+//   replacements (BU)  = MIN(BT / life, 1)
+//   ₹/km (BV)          = batteryKWh·BATT_REPL_COST_PER_KWH · BU / (annualKm·7)
+function batteryReplPerKm2026(bucket: Bucket, lifeCycles: number): number {
+  const km7 = bucket.annualKm * 7;
+  if (km7 <= 0 || lifeCycles <= 0) return 0;
+  const cycles7 = (km7 * bucket.betKwhPerKm) / bucket.betBatteryKWh;
+  const replacements = Math.min(cycles7 / lifeCycles, 1);
+  return (bucket.betBatteryKWh * BATT_REPL_COST_PER_KWH * replacements) / km7;
+}
+
+// Fuel-cell replacement ₹/km at 2026 for a given FC life (cols CC–CG):
+//   fcLifeYears (CF) = MIN(fc_life_hrs / (workingDays·engineHrs/day), 10)
+//   ₹/km (CG)        = ROUND(kW·FC_REPL_COST_PER_KW / (annualKm·fcLifeYears), 1)
+function fcReplPerKm2026(bucket: Bucket, lifeHours: number): number {
+  const hrsPerDay = BUCKET_ENGINE_HRS_PER_DAY[bucket.id] ?? 9;
+  const denom = bucket.workingDays * hrsPerDay;
+  if (denom <= 0 || lifeHours <= 0 || bucket.annualKm <= 0) return 0;
+  const fcLifeYears = Math.min(lifeHours / denom, FC_LIFE_MAX_YEARS);
+  const fcCost = bucket.fcetFuelCellKW * FC_REPL_COST_PER_KW;
+  return Math.round((fcCost / (bucket.annualKm * fcLifeYears)) * 10) / 10;
+}
+
 function getMaintenancePerKm(
   pt: Powertrain,
   bucket: Bucket,
@@ -255,7 +286,38 @@ function getMaintenancePerKm(
   if (metric) {
     const cfg = fixed?.bucket_maintenance?.[metric]?.[bucket.id]
       ?? defaultMaintConfig(metric, bucket);
-    return getValueAtYear(buildSeriesFromConfig(cfg), year);
+    const series = buildSeriesFromConfig(cfg);
+    const base = getValueAtYear(series, year);
+
+    // Key Aggregate Life delta — only BET/FCET maintenance carries battery /
+    // fuel-cell replacement. The delta is the change vs the calibration's
+    // default-life replacement cost (so it is exactly 0 at default life), grown
+    // proportionally with the maintenance line it lives in.
+    const battLife = fixed?.battery_life_cycles ?? DEFAULT_BATTERY_LIFE_CYCLES;
+    const fcLife = fixed?.fuel_cell_life_hours ?? DEFAULT_FUEL_CELL_LIFE_HOURS;
+    let delta2026 = 0;
+    if (metric === 'bet' && battLife !== DEFAULT_BATTERY_LIFE_CYCLES) {
+      delta2026 = batteryReplPerKm2026(bucket, battLife)
+        - batteryReplPerKm2026(bucket, DEFAULT_BATTERY_LIFE_CYCLES);
+    } else if (metric === 'fcet') {
+      // FCET carries a (battery-life-scaled) battery share + the FC share.
+      const battDelta = battLife !== DEFAULT_BATTERY_LIFE_CYCLES
+        ? (batteryReplPerKm2026(bucket, battLife)
+            - batteryReplPerKm2026(bucket, DEFAULT_BATTERY_LIFE_CYCLES))
+          * (bucket.fcetBatteryKWh / bucket.betBatteryKWh)
+        : 0;
+      const fcDelta = fcLife !== DEFAULT_FUEL_CELL_LIFE_HOURS
+        ? fcReplPerKm2026(bucket, fcLife)
+          - fcReplPerKm2026(bucket, DEFAULT_FUEL_CELL_LIFE_HOURS)
+        : 0;
+      delta2026 = battDelta + fcDelta;
+    }
+    if (delta2026 !== 0) {
+      const base2026 = series[0];
+      const growth = base2026 > 0 ? base / base2026 : 1;
+      return base + delta2026 * growth;
+    }
+    return base;
   }
   // CNG/LNG/H2-ICE: uniform 4%/yr, not user-editable. Base is the 2026 value.
   const dy = year - 2026;
@@ -281,6 +343,8 @@ export function computeTCO(
     adblue_consumption_l_per_l_diesel: 0.05,
     battery_energy_density_kg_per_kwh: 8,
     fuel_cell_power_density_kg_per_kw: 4,
+    battery_life_cycles: DEFAULT_BATTERY_LIFE_CYCLES,
+    fuel_cell_life_hours: DEFAULT_FUEL_CELL_LIFE_HOURS,
     tat_gradeability: { Diesel: 1, CNG: 0.95, LNG: 0.95, BET: 1.15, 'H2-ICE': 0.95, 'H2-FCET': 1.15 },
     range_filling_time: { Diesel: 1, CNG: 1.05, LNG: 1.10, BET: 1.20, 'H2-ICE': 1, 'H2-FCET': 1 },
   };

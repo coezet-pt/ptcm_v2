@@ -21,10 +21,23 @@ import type { BucketTCOMap } from './tco';
 // GVW − ULW; BET/FCET subtract battery (density × kWh) and fuel-cell
 // (power-density × kW) weight, round to the nearest 100 kg, then add the
 // regulator's GVW increase for ZETs (policy.gvw_payload_compensation_t).
+// Map a bucket's size to a "GVW for ZET" policy-support class label. The user's
+// 7-class table uses '35T Rigid' for the 35T tipper bucket; the 28T tipper has
+// no class and therefore no additional GVW.
+function zetGvwClassForBucket(bucket: Bucket): string | null {
+  if (bucket.size === '35T Tipper') return '35T Rigid';
+  if (bucket.size === '28T Tipper') return null;
+  return bucket.size;
+}
+
 function computeBucketPayload(bucket: Bucket, fixed?: FixedParameters, policy?: PolicyConfig) {
   const density = fixed?.battery_energy_density_kg_per_kwh ?? 8;
   const fcPowerDensity = fixed?.fuel_cell_power_density_kg_per_kw ?? 4;
-  const gvwCompKg = (policy?.gvw_payload_compensation_t ?? 0) * 1000;
+  // Additional GVW granted to ZETs: scalar tonnes compensation (legacy) plus
+  // the per-class kg from the policy-support "GVW for ZET" table.
+  const cls = zetGvwClassForBucket(bucket);
+  const perClassKg = (cls && policy?.zet_additional_gvw_kg?.[cls]) || 0;
+  const gvwCompKg = (policy?.gvw_payload_compensation_t ?? 0) * 1000 + perClassKg;
   const diesel = bucket.gvw - bucket.ulw;
   const bet = Math.round((diesel - density * bucket.betBatteryKWh) / 100) * 100 + gvwCompKg;
   const fcet = Math.round(

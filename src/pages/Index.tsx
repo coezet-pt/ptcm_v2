@@ -106,7 +106,7 @@ function DashboardContent() {
         <aside className="w-full lg:w-[360px] lg:shrink-0 border-b lg:border-b-0 lg:border-r border-border lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:flex lg:flex-col">
           <div className="flex-1 min-h-0 lg:overflow-y-auto overflow-x-hidden px-4 py-5">
             <div className="mb-4">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">User configurable parameters</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">User configurable parameters <span className="normal-case tracking-normal">(2026 base values)</span></p>
             </div>
             <InputPanel />
           </div>

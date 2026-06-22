@@ -293,6 +293,33 @@ export const TECH_SPECS = {
   adblue_consumption_l_per_l_diesel: 0.05,
 };
 
+// ===========================================================================
+// KEY AGGREGATE LIFE → MAINTENANCE LINK
+// Source: 'No change with year' battery-replacement (cols BP–BW) and
+// fuel-cell-replacement (cols CC–CG) blocks. Battery/FC life only enter TCO
+// through the replacement portion of BET/FCET maintenance:
+//   BET battery repl ₹/km = (kWh · BATT_REPL_COST_PER_KWH) · MIN(cycles7yr/life, 1) / km7yr
+//   FCET FC repl ₹/km      = ROUND(kW · FC_REPL_COST_PER_KW / (annualKm · fcLifeYears), 1)
+//     where fcLifeYears = MIN(fuel_cell_life_hours / (workingDays · engineHrsPerDay), 10)
+// At the default life values the delta vs the baked-in calibration is zero.
+// ===========================================================================
+export const DEFAULT_BATTERY_LIFE_CYCLES = 3000;   // 'No change with year' D22
+export const DEFAULT_FUEL_CELL_LIFE_HOURS = 25000; // 'No change with year' D23
+export const BATT_REPL_COST_PER_KWH = 8726.208356857089; // 'Changing with year' J19
+export const FC_REPL_COST_PER_KW = 26547.268568217416;   // 'No change with year' CD5/CC5
+export const FC_LIFE_MAX_YEARS = 10;               // MIN(...,10) cap in CF
+// Engine running hrs/day per bucket — 'No change with year' col Q (feeds CF).
+export const BUCKET_ENGINE_HRS_PER_DAY: Record<string, number> = {
+  B1: 9, B2: 9, B3: 9, B4: 8, B5: 8, B6: 6.666666666666667, B7: 9.6,
+  B8: 9.6, B9: 9, B10: 9, B11: 7.5, B12: 6.25, B13: 7.5, B14: 6.25,
+};
+
+// Size classes exposed in the "GVW for ZET" policy-support table (user spec).
+export const ZET_GVW_CLASSES = [
+  '15T Rigid', '19T Rigid', '28T Rigid', '35T Rigid', '48T Rigid',
+  '40T Tractor', '55T Tractor',
+] as const;
+
 // CNG/LNG/H2 tank physical sizes (used to compute tank cost contribution)
 export const TANK_SIZES = {
   cng_small_ltrs: 480,  cng_large_ltrs: 960,  cng_density_kg_per_l: 0.20,
@@ -515,6 +542,8 @@ export const BAU_FIXED = {
   adblue_consumption_l_per_l_diesel: 0.05,
   battery_energy_density_kg_per_kwh: 8,
   fuel_cell_power_density_kg_per_kw: 4,
+  battery_life_cycles: 3000,
+  fuel_cell_life_hours: 25000,
   tat_gradeability: {
     'Diesel': 1.0, 'CNG': 0.95, 'LNG': 0.95, 'BET': 1.15, 'H2-ICE': 0.95, 'H2-FCET': 1.15,
   },
@@ -558,6 +587,12 @@ export const BAU_POLICY = {
   fcet_maturity_year: 2045,
   range_filling_concern_after_2035: true,
   gvw_payload_compensation_t: 0,
+  // Policy support: additional GVW (kg) for ZETs per size class. Default 0
+  // (== Excel baseline, payload unchanged). Keyed by ZET_GVW_CLASSES labels.
+  zet_additional_gvw_kg: {
+    '15T Rigid': 0, '19T Rigid': 0, '28T Rigid': 0, '35T Rigid': 0,
+    '48T Rigid': 0, '40T Tractor': 0, '55T Tractor': 0,
+  } as Record<string, number>,
 };
 
 // BEST scenario overrides (apply on top of BAU)
