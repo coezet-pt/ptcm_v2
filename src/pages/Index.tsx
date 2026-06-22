@@ -6,7 +6,6 @@ import KpiCard from '@/components/KpiCard';
 import KpiRail, { type KpiItem } from '@/components/KpiRail';
 import ChartSections from '@/components/ChartSections';
 import { useSimulation } from '@/hooks/useSimulation';
-import { POWERTRAINS } from '@/lib/constants/extracted';
 import { Truck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -21,7 +20,7 @@ const SCENARIO_LABEL: Record<string, string> = {
 function DashboardContent() {
   const { config, activeScenario } = useScenario();
   const { result: simResult, isComputing } = useSimulation(config);
-  const [railOpen, setRailOpen] = useState(true);
+  const [railOpen, setRailOpen] = useState(false);
 
   useEffect(() => {
     if (simResult) {
@@ -32,32 +31,50 @@ function DashboardContent() {
   const scenarioLabel = SCENARIO_LABEL[activeScenario] ?? activeScenario;
   const yFinal = simResult?.years[simResult.years.length - 1];
 
-  const peakSalesByPT: KpiItem[] = simResult
-    ? POWERTRAINS.map(pt => {
-        const peak = simResult.years.reduce(
-          (best, y) => (y.salesByPT[pt] > best.salesByPT[pt] ? y : best),
-          simResult.years[0],
-        );
-        return {
-          label: `${pt} Peak Sales`,
-          value: peak.year,
-          context: `${Math.round(peak.salesByPT[pt]).toLocaleString()} trucks/yr`,
-        };
-      })
-    : [];
+  // Diesel peak-sales year (Diesel only — other powertrains dropped from rail).
+  const dieselPeak = simResult
+    ? simResult.years.reduce(
+        (best, y) => (y.salesByPT.Diesel > best.salesByPT.Diesel ? y : best),
+        simResult.years[0],
+      )
+    : null;
+
+  // Cumulative diesel displaced 2026–55, billion litres.
+  // Excel 'Energy Requirementsfinal' col 5: Σ(Diesel No P/T Adoption − Diesel actual); reported in Billion Litres.
+  const cumDieselSavedBnL = simResult
+    ? simResult.years.reduce(
+        (s, y) => s + Math.max(0, y.dieselCounterfactualLitres - y.energyByPT.Diesel),
+        0,
+      ) / 1000
+    : 0;
 
   const kpis: KpiItem[] = simResult ? [
+    {
+      label: 'Market Size 2055',
+      value: yFinal ? `${(yFinal.tiv / 1e5).toFixed(1)} Lakh` : '—',
+      context: 'Total industry volume, trucks/yr (2055)',
+    },
     {
       label: '50% ZET Adoption',
       value: simResult.year50PctZet ?? '—',
       context: 'ZET share of new sales crosses 50%',
     },
     {
-      label: 'Market Size 2055',
-      value: yFinal ? `${(yFinal.tiv / 1e5).toFixed(1)} lakh` : '—',
-      context: 'Total industry volume, trucks/yr (2055)',
+      label: 'Diesel Peak Sales',
+      value: dieselPeak ? dieselPeak.year : '—',
+      context: dieselPeak ? `${Math.round(dieselPeak.salesByPT.Diesel).toLocaleString()} trucks/yr` : undefined,
     },
-    ...peakSalesByPT,
+    {
+      // Excel 'Emissions' col 11 "Cummulative Emission Reduction" = Σ(diesel-only − with-adoption).
+      label: 'CO₂ Reduction 2026–55',
+      value: `${Math.round(simResult.cumulativeCO2Avoided).toLocaleString()} MMT`,
+      context: 'Cumulative, vs an all-diesel fleet',
+    },
+    {
+      label: 'Diesel Saved 2026–55',
+      value: `${Math.round(cumDieselSavedBnL).toLocaleString()} bn L`,
+      context: 'Cumulative diesel displaced vs all-diesel fleet',
+    },
   ] : [];
 
   return (
