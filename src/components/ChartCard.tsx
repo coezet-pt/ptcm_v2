@@ -57,8 +57,12 @@ export default function ChartCard({ title, description, subtitle, children, csvD
         )}
 
         {/* Action buttons — placed below the chart (and data table) */}
-        <div className="mt-3 flex flex-wrap items-center gap-0.5 border-t pt-2">
-          {csvData && (
+        <div className="mt-3 border-t pt-2">
+          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Data Table
+          </div>
+          <div className="flex flex-wrap items-center gap-0.5">
+            {csvData && (
             <>
               <Button
                 variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
@@ -91,9 +95,10 @@ export default function ChartCard({ title, description, subtitle, children, csvD
             onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
             title="Download chart as PNG"
           >
-            <ImageDown className="h-3.5 w-3.5" />
-            PNG
-          </Button>
+              <ImageDown className="h-3.5 w-3.5" />
+              PNG
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
