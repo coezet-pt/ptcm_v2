@@ -6,7 +6,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import type { ScenarioConfig, SimulationResult } from '@/lib/types';
 import { BUCKETS, START_OF_SUPPLY, PTTM_PILOT_SHARE, POWERTRAINS } from '@/lib/constants/extracted';
 import { buildTimeSeries, START_YEAR } from '@/lib/sim/timeSeries';
-import { computeTCO } from '@/lib/sim/tco';
+import { computeTCO, greyH2FractionForYear } from '@/lib/sim/tco';
 import { computeShares } from '@/lib/sim/choiceModel';
 import { computePTTM } from '@/lib/sim/pttm';
 import { computeStockEmissions } from '@/lib/sim/stockEmissions';
@@ -32,7 +32,11 @@ function runSimulation(config: ScenarioConfig): SimulationResult {
   // 2055 is the Excel '100% ZET' anchor — diesel/CNG/LNG excluded by design
   const shares2055 = computeShares(tco2055, BUCKETS, 2055, config.policy, true, config.fixed);
   const annualSales = computePTTM(shares2045, shares2050, shares2055, config.policy);
-  const result = computeStockEmissions(annualSales);
+  // Grey-H2 supply fraction per year (2026…2055) — feeds H2 emission factors so
+  // a grey/green blend raises CO2 as well as lowering H2 cost.
+  const greyH2ByYear = Array.from({ length: 30 }, (_, i) =>
+    greyH2FractionForYear(ts, config.policy, START_YEAR + i));
+  const result = computeStockEmissions(annualSales, greyH2ByYear);
 
   // 🔬 Diagnostic dump
   if (typeof window !== 'undefined') {

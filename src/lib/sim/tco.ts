@@ -94,6 +94,30 @@ function greyBlendForYear(policy: PolicyConfig, year: number): number {
   return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
 }
 
+/**
+ * Effective grey-hydrogen fraction (0–1) actually used in supply for a given
+ * year — the single source of truth shared by H2 cost (getH2PricePerKg) and
+ * H2 emissions (stockEmissions). green_only → 0; blend → per-band fraction
+ * (0 after 2045); cheapest → 1 when grey is cheaper than green, else 0.
+ */
+export function greyH2FractionForYear(
+  ts: Record<ParameterKey, number[]>,
+  policy: PolicyConfig,
+  year: number,
+): number {
+  switch (policy.h2_source_mix) {
+    case 'blend_2046_green':
+      return greyBlendForYear(policy, year);
+    case 'cheapest': {
+      const green = getValueAtYear(ts.green_h2_production_per_kg, year);
+      const grey = getValueAtYear(ts.grey_h2_production_per_kg, year);
+      return grey < green ? 1 : 0;
+    }
+    default:
+      return 0; // green_only
+  }
+}
+
 function getH2PricePerKg(
   ts: Record<ParameterKey, number[]>,
   policy: PolicyConfig,
@@ -102,25 +126,8 @@ function getH2PricePerKg(
   const green = getValueAtYear(ts.green_h2_production_per_kg, year);
   const grey = getValueAtYear(ts.grey_h2_production_per_kg, year);
   const compression = getValueAtYear(ts.h2_compression_storage_per_kg, year);
-
-  let productionCost: number;
-  switch (policy.h2_source_mix) {
-    case 'green_only':
-      productionCost = green;
-      break;
-    case 'blend_2046_green': {
-      // Grey/green blend driven by the per-5-year-band grey fraction
-      // (2026–2045 only; grey is discontinued from 2046).
-      const bandBlend = greyBlendForYear(policy, year);
-      productionCost = (1 - bandBlend) * green + bandBlend * grey;
-      break;
-    }
-    case 'cheapest':
-      productionCost = Math.min(green, grey);
-      break;
-    default:
-      productionCost = green;
-  }
+  const gf = greyH2FractionForYear(ts, policy, year);
+  const productionCost = (1 - gf) * green + gf * grey;
   return productionCost + compression;
 }
 

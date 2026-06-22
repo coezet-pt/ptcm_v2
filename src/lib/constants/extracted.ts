@@ -635,6 +635,13 @@ export const EMISSION_FACTORS = {
   grid_decarb_rate_per_year:    0.03,
   h2ice_green_kgCO2e_per_km:  0.07,
   h2fcet_green_kgCO2e_per_km: 0.07,
+  // Grey (SMR) hydrogen well-to-tank production intensity, kgCO2e per kg H2.
+  // NOT from the source workbook (the Excel models 0% grey in every year and
+  // carries no grey emission factor) — dashboard extension so the grey/green
+  // blend lever raises CO2 as well as lowering cost. Literature: SMR grey H2
+  // ≈ 10 kgCO2e/kg H2 (IEA / ICCT life-cycle estimates). Converted to per-km
+  // per bucket via the H2 efficiency (km/kg). H2 TTW (combustion) ≈ 0.
+  grey_h2_prod_kgCO2e_per_kg: 10.0,
 };
 
 /** BET grid CO2 factor (kgCO2e/kWh) for a year — Excel 'Emissions' R49. */

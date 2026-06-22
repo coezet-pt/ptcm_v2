@@ -38,19 +38,29 @@ function computeWeightedDieselEmissionRate(): number {
 
 // Bucket-weighted per-vehicle annual emission rate (kgCO2e/yr) by powertrain.
 // BET uses the year's grid factor (Excel 'Emissions' R49 declines ~3%/yr).
-function computeWeightedEmissionRate(year: number): Record<Powertrain, number> {
+// greyFrac (0–1) is the share of grey (SMR) hydrogen in supply for the year;
+// it lifts the H2-ICE/H2-FCET factor from green (0.07/km) toward grey
+// (grey_h2_prod_kgCO2e_per_kg ÷ km/kg). 0 reproduces the green-only baseline.
+function computeWeightedEmissionRate(year: number, greyFrac = 0): Record<Powertrain, number> {
   const betGrid = betGridFactor(year);
+  const gf = Math.max(0, Math.min(1, greyFrac));
+  const greyPerKg = EMISSION_FACTORS.grey_h2_prod_kgCO2e_per_kg;
   const rates: Record<Powertrain, number> = {
     Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0,
   };
   let totalWeight = 0;
   for (const b of BUCKETS) {
+    // H2 per-km factor: green baseline blended with grey production intensity.
+    const h2iceFactor = (1 - gf) * EMISSION_FACTORS.h2ice_green_kgCO2e_per_km
+      + gf * (greyPerKg / b.h2iceKmPerKg);
+    const h2fcetFactor = (1 - gf) * EMISSION_FACTORS.h2fcet_green_kgCO2e_per_km
+      + gf * (greyPerKg / b.fcetKmPerKg);
     rates.Diesel += (b.annualKm / b.dieselKMPL * EMISSION_FACTORS.diesel_kgCO2e_per_l) * b.tivShare2045;
     rates.CNG += (b.annualKm / b.cngKmPerKg * EMISSION_FACTORS.cng_kgCO2e_per_kg) * b.tivShare2045;
     rates.LNG += (b.annualKm / b.lngKmPerKg * EMISSION_FACTORS.lng_kgCO2e_per_kg) * b.tivShare2045;
     rates.BET += (b.annualKm * b.betKwhPerKm * betGrid) * b.tivShare2045;
-    rates['H2-ICE'] += (b.annualKm * EMISSION_FACTORS.h2ice_green_kgCO2e_per_km) * b.tivShare2045;
-    rates['H2-FCET'] += (b.annualKm * EMISSION_FACTORS.h2fcet_green_kgCO2e_per_km) * b.tivShare2045;
+    rates['H2-ICE'] += (b.annualKm * h2iceFactor) * b.tivShare2045;
+    rates['H2-FCET'] += (b.annualKm * h2fcetFactor) * b.tivShare2045;
     totalWeight += b.tivShare2045;
   }
   if (totalWeight > 0) {
@@ -74,7 +84,12 @@ function getSalesAtYear(year: number, annualSales: AnnualPTSales[]): Record<Powe
   return { Diesel: 0, CNG: 0, LNG: 0, BET: 0, 'H2-ICE': 0, 'H2-FCET': 0 };
 }
 
-export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationResult {
+export function computeStockEmissions(
+  annualSales: AnnualPTSales[],
+  // Per-year (2026…2055) grey-hydrogen supply fraction. Omitted/undefined →
+  // green-only (0), reproducing the Excel baseline.
+  greyH2FractionByYear?: number[],
+): SimulationResult {
   const dieselCounterfactualRate = computeWeightedDieselEmissionRate();
 
   // Stock arrays
@@ -149,7 +164,9 @@ export function computeStockEmissions(annualSales: AnnualPTSales[]): SimulationR
     }
 
     // Emissions (BET rate falls each year as the grid decarbonises)
-    const emissionRates = computeWeightedEmissionRate(year);
+    const greyFrac = (year >= START_YEAR && greyH2FractionByYear)
+      ? (greyH2FractionByYear[year - START_YEAR] ?? 0) : 0;
+    const emissionRates = computeWeightedEmissionRate(year, greyFrac);
     const emissionsByPT: Record<Powertrain, number> = {} as any;
     let totalEmissions = 0;
     for (const pt of POWERTRAINS) {
