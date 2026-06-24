@@ -568,6 +568,11 @@ export const BAU_POLICY = {
   h2ice_inflection_year: 2051,
   fcet_inflection_year: 2051,
   h2_source_mix: 'green_only' as const,
+  // How the grey/green blend is entered. Default 'uniform' = a single grey % shown
+  // by default; users can switch to the per-5-year-band input.
+  grey_h2_blend_mode: 'uniform' as const,
+  // Single grey-hydrogen fraction (0–1) applied across 2026–2045 in 'uniform' mode.
+  grey_h2_blend_uniform: 0.5,
   // Grey-hydrogen blend fraction per 5-year band (0–1), 2026–2045 only — grey is
   // discontinued from 2046 (green-only thereafter). Default mirrors the legacy
   // "blend till 2046" behaviour: 50% grey through 2045.

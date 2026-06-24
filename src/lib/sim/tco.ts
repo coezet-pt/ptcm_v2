@@ -80,18 +80,23 @@ function resaleTier(year: number): 0 | 1 | 2 {
   return 2;
 }
 
-/** Grey-hydrogen blend fraction (0–1) for a given year, from the per-5-year-band
- *  policy setting. Grey hydrogen is discontinued from 2046 onward, so the blend
- *  applies to 2026–2045 only (bands d2530…d4145); later years are green-only. */
+const clampFrac = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
+
+/** Grey-hydrogen blend fraction (0–1) for a given year, from the blend policy
+ *  setting. Either a single uniform % ('uniform' mode) or a per-5-year-band value
+ *  ('bands' mode). Grey hydrogen is discontinued from 2046 onward, so the blend
+ *  applies to 2026–2045 only; later years are green-only. */
 function greyBlendForYear(policy: PolicyConfig, year: number): number {
   if (year > 2045) return 0;
+  if ((policy.grey_h2_blend_mode ?? 'uniform') === 'uniform') {
+    return clampFrac(policy.grey_h2_blend_uniform);
+  }
   const bands = policy.grey_h2_blend_bands ?? {};
   const key =
     year <= 2030 ? 'd2530' :
     year <= 2035 ? 'd3135' :
     year <= 2040 ? 'd3640' : 'd4145';
-  const v = bands[key];
-  return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+  return clampFrac(bands[key]);
 }
 
 /**

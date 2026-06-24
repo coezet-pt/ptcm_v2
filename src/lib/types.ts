@@ -74,6 +74,9 @@ export type SegmentBasePrices = Record<VehicleSize, SegmentBasePrice>;
 
 export type H2SourceMix = 'green_only' | 'blend_2046_green' | 'cheapest';
 
+// Input style for the grey/green blend: a single uniform % vs per-5-year-band.
+export type H2BlendMode = 'uniform' | 'bands';
+
 // ── Policy levers ──
 export interface PolicyConfig {
   bet_demand_incentive_per_kwh: number;
@@ -87,8 +90,14 @@ export interface PolicyConfig {
   h2ice_inflection_year: number;
   fcet_inflection_year: number;
   h2_source_mix: H2SourceMix;
-  // Grey-hydrogen blend fraction (0–1) per 5-year band, used when h2_source_mix
-  // is the grey/green blend option. Keyed by the period keys d2530…d5155.
+  // How the grey/green blend is entered when h2_source_mix is the blend option:
+  // 'uniform' = a single grey % across 2026–2045; 'bands' = per-5-year-band.
+  grey_h2_blend_mode: H2BlendMode;
+  // Single grey-hydrogen fraction (0–1) applied 2026–2045, used when
+  // grey_h2_blend_mode === 'uniform'.
+  grey_h2_blend_uniform: number;
+  // Grey-hydrogen blend fraction (0–1) per 5-year band, used when
+  // grey_h2_blend_mode === 'bands'. Keyed by the period keys d2530…d5155.
   grey_h2_blend_bands: Record<string, number>;
   bet_resale_2046_plus: number;
   diesel_price_5pct_yoy_after_2045: boolean;

@@ -29,7 +29,7 @@ type SectionId = 'powertrain' | 'emissions' | 'energy';
 const NAV: { id: SectionId; label: string }[] = [
   { id: 'powertrain', label: 'projection - powertrain' },
   { id: 'emissions', label: 'impact - emission' },
-  { id: 'energy', label: 'impact - requirement' },
+  { id: 'energy', label: 'impact - fuel/energy requirement' },
 ];
 
 const SECTION_META: Record<SectionId, { title: string; kicker: string }> = {
