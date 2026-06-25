@@ -228,7 +228,9 @@ function triggerDownload(blob: Blob, filename: string): void {
 
 export function downloadParamsCsv(config: ScenarioConfig, filename = 'PTCM_parameters.csv'): void {
   const csv = Papa.unparse({ fields: PARAM_FILE_HEADERS, data: buildParamRows(config) });
-  triggerDownload(new Blob([csv], { type: 'text/csv;charset=utf-8' }), filename);
+  // Prepend a UTF-8 BOM so Excel renders Unicode (₹, em-dashes) correctly
+  // instead of mojibake when it opens the file.
+  triggerDownload(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), filename);
 }
 
 export function downloadParamsXlsx(config: ScenarioConfig, filename = 'PTCM_parameters.xlsx'): void {
