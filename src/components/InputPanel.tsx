@@ -13,6 +13,7 @@ import GvwForZet from './GvwForZet';
 import KeyAggregateLifeInput from './KeyAggregateLifeInput';
 import { useScenario } from '@/contexts/ScenarioContext';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
+import ParameterFileIO from './ParameterFileIO';
 
 
 
@@ -42,6 +43,14 @@ function CostSection({ title, children }: { title: string; children: ReactNode }
 export default function InputPanel() {
   return (
     <div className="space-y-6">
+      {/* Import / export all parameters as CSV or Excel */}
+      <div className="space-y-1.5">
+        <ParameterFileIO />
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Download the current parameters, edit in Excel/CSV, then upload to update the dashboard.
+        </p>
+      </div>
+
       {/* Primary trajectories — always visible */}
       <Card>
         <CardContent className="divide-y divide-border/50 pt-4">

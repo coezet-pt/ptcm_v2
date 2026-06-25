@@ -45,6 +45,7 @@ interface ScenarioContextValue {
   clearBucketOverride: (metric: 'diesel' | 'bet' | 'fcet', bucketId: string, year: number) => void;
   applyChanges: () => void;
   discardChanges: () => void;
+  importConfig: (next: ScenarioConfig) => void;
 }
 
 const ScenarioContext = createContext<ScenarioContextValue | null>(null);
@@ -265,6 +266,14 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(false);
   }, [config]);
 
+  // Load a scenario from an imported file into the draft and mark it dirty, so
+  // the user reviews and clicks Apply Changes before the charts update.
+  const importConfig = useCallback((next: ScenarioConfig) => {
+    setActiveScenarioState('Custom');
+    setDraftConfig(structuredClone(next));
+    setIsDirty(true);
+  }, []);
+
   return (
     <ScenarioContext.Provider value={{
       presets, loading, activeScenario, config, draftConfig, isDirty,
@@ -272,7 +281,7 @@ export function ScenarioProvider({ children }: { children: React.ReactNode }) {
       resetToBAU, resetToDefaults, updateBucketMaintenance,
       setParameterOverride, clearParameterOverride,
       setBucketOverride, clearBucketOverride,
-      applyChanges, discardChanges,
+      applyChanges, discardChanges, importConfig,
     }}>
       {children}
     </ScenarioContext.Provider>
