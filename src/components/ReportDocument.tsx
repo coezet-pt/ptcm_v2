@@ -1,5 +1,5 @@
 import type { SimulationResult, PolicyConfig, ScenarioConfig } from '@/lib/types';
-import { buildParamSummary, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
+import { buildParamSummary, buildOtherInputs, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
 
 import TotalSalesChart from '@/components/charts/TotalSalesChart';
 import AnnualSalesChart from '@/components/charts/AnnualSalesChart';
@@ -36,7 +36,9 @@ function Block({ children }: { children: React.ReactNode }) {
 export default function ReportDocument({ result, config, policy, scenarioLabel }: Props) {
   const years = result.years;
   const rows = buildParamSummary(config);
+  const otherSections = buildOtherInputs(config);
   const generated = new Date().toLocaleString();
+  const cellBorder = { border: '1px solid hsl(var(--border))' } as const;
 
   return (
     <div className="bg-background text-foreground" style={{ padding: 8 }}>
@@ -83,6 +85,30 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
             ))}
           </tbody>
         </table>
+      </Block>
+
+      <Block>
+        <h2 className="font-serif text-lg mb-2">Other configured inputs</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {otherSections.map(section => (
+            <table key={section.title} className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr className="bg-muted/50 text-left">
+                  <th className="px-2 py-1 font-medium" style={cellBorder}>{section.title}</th>
+                  <th className="px-2 py-1" style={cellBorder} />
+                </tr>
+              </thead>
+              <tbody>
+                {section.rows.map(r => (
+                  <tr key={r.label}>
+                    <td className="px-2 py-1" style={cellBorder}>{r.label}</td>
+                    <td className="px-2 py-1 text-right font-mono" style={cellBorder}>{r.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ))}
+        </div>
       </Block>
 
       <Block><TotalSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useScenario } from '@/contexts/ScenarioContext';
-import { buildParamSummary, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
+import { buildParamSummary, buildOtherInputs, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
 
 /**
  * Collapsible summary of the configured input parameters, shown above the charts.
@@ -13,6 +13,7 @@ export default function ParameterSummaryTable() {
   const { config } = useScenario();
   const [open, setOpen] = useState(false);
   const rows = useMemo(() => buildParamSummary(config), [config]);
+  const otherSections = useMemo(() => buildOtherInputs(config), [config]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="mb-4">
@@ -65,6 +66,32 @@ export default function ParameterSummaryTable() {
           2055 is the projected value after compounding each period's CAGR from the 2026 base
           (pinned years override the trajectory). Reflects the currently applied scenario.
         </p>
+
+        {/* Non-trajectory inputs — single fixed values / categorical choices */}
+        <div className="mt-4">
+          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Other configured inputs
+          </h4>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {otherSections.map(section => (
+              <div key={section.title} className="rounded-md border border-border">
+                <div className="border-b border-border bg-muted/50 px-2 py-1 text-[11px] font-medium">
+                  {section.title}
+                </div>
+                <table className="w-full text-[11px]">
+                  <tbody>
+                    {section.rows.map((r, i) => (
+                      <tr key={r.label} className={i % 2 ? 'bg-muted/30' : ''}>
+                        <td className="px-2 py-1">{r.label}</td>
+                        <td className="px-2 py-1 text-right font-mono tabular-nums whitespace-nowrap">{r.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );
