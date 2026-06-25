@@ -14,7 +14,7 @@ export default function EmissionsChart({ years, scenarioLabel }: Props) {
     years.map(y => {
       const row: Record<string, number> = { year: y.year };
       for (const pt of POWERTRAINS) row[pt] = parseFloat(y.emissionsByPT[pt].toFixed(3));
-      row['Diesel Counterfactual'] = parseFloat(y.dieselCounterfactualEmissions.toFixed(3));
+      row['Diesel with no ZET adoption'] = parseFloat(y.dieselCounterfactualEmissions.toFixed(3));
       return row;
     }), [years]);
 
@@ -38,7 +38,7 @@ export default function EmissionsChart({ years, scenarioLabel }: Props) {
             <Area key={pt} type="monotone" dataKey={pt} name={POWERTRAIN_LABELS[pt]} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
           ))}
-          <Line type="monotone" dataKey="Diesel Counterfactual"
+          <Line type="monotone" dataKey="Diesel with no ZET adoption"
             stroke="#b91c1c" strokeWidth={2} strokeDasharray="6 3" dot={false} />
         </ComposedChart>
       </ResponsiveContainer>
