@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { POWERTRAINS } from '@/lib/constants/extracted';
-import { POWERTRAIN_LABELS, SALE_VOLUME_SUBTITLE } from '@/lib/constants/displayLabels';
+import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
 import type { AnnualResult } from '@/lib/types';
@@ -21,8 +21,8 @@ export default function AnnualSalesChart({ years, scenarioLabel }: Props) {
 
   return (
     <ChartCard
-      title="Annual Sales by Powertrain"
-      subtitle={`${SALE_VOLUME_SUBTITLE}${scenarioLabel ? ` · ${scenarioLabel} scenario` : ''}`}
+      title="Annual sales by power train (No./year)"
+      subtitle={scenarioLabel ? `${scenarioLabel} scenario` : undefined}
       csvData={csvData}
       csvFilename="annual_sales"
     >
@@ -33,7 +33,7 @@ export default function AnnualSalesChart({ years, scenarioLabel }: Props) {
           <YAxis tickFormatter={v => `${(v / 1000).toFixed(0)}k`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={45} />
           <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => v.toLocaleString()} labelFormatter={l => `Year ${l}`} />
           <Legend {...LEGEND_PROPS} />
-          {[...POWERTRAINS].reverse().map(pt => (
+          {POWERTRAINS.map(pt => (
             <Area key={pt} type="monotone" dataKey={pt} name={POWERTRAIN_LABELS[pt]} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
           ))}

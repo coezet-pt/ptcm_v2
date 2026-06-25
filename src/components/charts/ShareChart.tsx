@@ -26,8 +26,8 @@ export default function ShareChart({ years, scenarioLabel }: Props) {
 
   return (
     <ChartCard
-      title="Market Share by Powertrain"
-      subtitle={`% of annual sales${scenarioLabel ? ` · ${scenarioLabel} scenario` : ''}`}
+      title="Annual sales mix by power train (%)"
+      subtitle={scenarioLabel ? `${scenarioLabel} scenario` : undefined}
       csvData={csvData}
       csvFilename="market_share"
     >
@@ -38,7 +38,7 @@ export default function ShareChart({ years, scenarioLabel }: Props) {
           <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={40} />
           <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => `${(v * 100).toFixed(1)}%`} labelFormatter={l => `Year ${l}`} />
           <Legend {...LEGEND_PROPS} />
-          {[...POWERTRAINS].reverse().map(pt => (
+          {POWERTRAINS.map(pt => (
             <Area key={pt} type="monotone" dataKey={pt} name={POWERTRAIN_LABELS[pt]} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
           ))}

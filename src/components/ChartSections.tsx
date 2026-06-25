@@ -34,7 +34,7 @@ const NAV: { id: SectionId; label: string }[] = [
 
 const SECTION_META: Record<SectionId, { title: string; kicker: string }> = {
   powertrain: { title: 'Powertrain mix', kicker: 'Sales · share · stock · segments' },
-  emissions: { title: 'Emissions & ZET penetration', kicker: 'Well To Wheel (WTW) CO₂e' },
+  emissions: { title: 'Emissions', kicker: 'Well To Wheel (WTW) CO₂e' },
   energy: { title: 'Energy requirements & savings', kicker: 'Annual energy demand · diesel displaced' },
 };
 
@@ -88,6 +88,7 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
             <AnnualSalesChart years={result.years} scenarioLabel={scenarioLabel} />
             <ShareChart years={result.years} scenarioLabel={scenarioLabel} />
             <StockChart years={result.years} scenarioLabel={scenarioLabel} />
+            <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
 
             <Collapsible open={appsOpen} onOpenChange={setAppsOpen} className="space-y-4">
               <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm font-medium hover:bg-secondary transition-colors">
@@ -112,7 +113,6 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
           <>
             <EmissionsChart years={result.years} scenarioLabel={scenarioLabel} />
             <CumulativeAvoidedChart years={result.years} scenarioLabel={scenarioLabel} />
-            <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
           </>
         )}
 

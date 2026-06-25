@@ -28,4 +28,4 @@ export const ENERGY_UNIT_BY_PT: Record<Powertrain, string> = {
 };
 export const DIESEL_FUEL_UNIT = 'Million litres';
 export const ELECTRICITY_UNIT = 'TWh';
-export const DIESEL_SAVINGS_SUBTITLE = 'Diesel burned vs an all-diesel fleet — gap is diesel displaced';
+export const DIESEL_SAVINGS_SUBTITLE = 'Diesel consumption with vs w/o ZET adoption';

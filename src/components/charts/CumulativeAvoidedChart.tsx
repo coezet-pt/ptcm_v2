@@ -19,7 +19,7 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
       cumCounter += y.dieselCounterfactualEmissions;
       return {
         year: y.year,
-        'Cumulative Avoided':         +cumAvoided.toFixed(3),
+        'Cumulative reduction':       +cumAvoided.toFixed(3),
         'Cumulative Actual':          +cumActual.toFixed(3),
         'Cumulative Diesel-only':     +cumCounter.toFixed(3),
       };
@@ -51,7 +51,7 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
             formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${EMISSIONS_UNIT_SHORT}`}
           />
           <Legend {...LEGEND_PROPS} />
-          <Area type="monotone" dataKey="Cumulative Avoided"
+          <Area type="monotone" dataKey="Cumulative reduction"
             fill="url(#avoidedFill)" stroke="#059669" strokeWidth={2} />
           <Line type="monotone" dataKey="Cumulative Diesel-only"
             stroke="#b91c1c" strokeWidth={1.5} strokeDasharray="6 3" dot={false} />

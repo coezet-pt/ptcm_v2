@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
-import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { POWERTRAINS, type Powertrain } from '@/lib/constants/extracted';
-import { POWERTRAIN_LABELS, ENERGY_UNIT_BY_PT, ELECTRICITY_UNIT } from '@/lib/constants/displayLabels';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { POWERTRAIN_LABELS, ELECTRICITY_UNIT } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
 import type { AnnualResult } from '@/lib/types';
@@ -9,82 +8,140 @@ import ChartCard from '@/components/ChartCard';
 
 interface Props { years: AnnualResult[]; scenarioLabel?: string; }
 
-// Lower-heating-value energy content (kWh per kg of fuel) used to express the
-// gas/hydrogen carriers on a common electricity-equivalent (TWh) axis.
-// Methane (CNG/LNG) ≈ 50 MJ/kg, hydrogen ≈ 120 MJ/kg.
-const KWH_PER_KG: Partial<Record<Powertrain, number>> = {
-  CNG: 13.9, LNG: 13.9, 'H2-ICE': 33.33, 'H2-FCET': 33.33,
-};
+// Report (Chapter 5) units: diesel in Million litres, natural gas & hydrogen in
+// MMT (Million Metric Tonnes), electricity in TWh. The engine stores gas/H₂ in
+// million kg, so MMT = million kg ÷ 1000.
+const MN_KG_TO_MMT = 1 / 1000;
 
-// BET energy is already TWh; gas/H2 (million kg) → TWh via LHV.
-function toTWh(pt: Powertrain, native: number): number {
-  if (pt === 'BET') return native;
-  const kwhPerKg = KWH_PER_KG[pt] ?? 0;
-  return native * kwhPerKg / 1000; // (million kg) × kWh/kg ÷ 1e3 = TWh
+const TOTAL_H2_COLOR = '#6f6051';
+
+function sub(line: string, scenarioLabel?: string) {
+  return `${line}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`;
 }
 
-const RIGHT_AXIS_PT = POWERTRAINS.filter(pt => pt !== 'Diesel');
-const DIESEL_LABEL = POWERTRAIN_LABELS.Diesel;
-const BET_LABEL = POWERTRAIN_LABELS.BET;
-
 export default function EnergyRequirementsChart({ years, scenarioLabel }: Props) {
-  const { chartData, csvData } = useMemo(() => {
-    const chart: Record<string, number>[] = [];
-    const csv: Record<string, number>[] = [];
+  const { diesel, gas, hydrogen, electricity } = useMemo(() => {
+    const diesel: Record<string, number>[] = [];
+    const gas: Record<string, number>[] = [];
+    const hydrogen: Record<string, number>[] = [];
+    const electricity: Record<string, number>[] = [];
     for (const y of years) {
-      const crow: Record<string, number> = { year: y.year };
-      const xrow: Record<string, number> = { year: y.year };
-      crow[DIESEL_LABEL] = +y.energyByPT.Diesel.toFixed(1);
-      xrow[`Diesel (${ENERGY_UNIT_BY_PT.Diesel})`] = +y.energyByPT.Diesel.toFixed(1);
-      for (const pt of RIGHT_AXIS_PT) {
-        const native = y.energyByPT[pt];
-        const label = POWERTRAIN_LABELS[pt];
-        crow[label] = +toTWh(pt, native).toFixed(2);
-        crow[`native:${label}`] = +native.toFixed(2);
-        xrow[`${label} (${ENERGY_UNIT_BY_PT[pt]})`] = +native.toFixed(2);
-        if (pt !== 'BET') xrow[`${label} (TWh-eq)`] = +toTWh(pt, native).toFixed(2);
-      }
-      chart.push(crow);
-      csv.push(xrow);
+      diesel.push({ year: y.year, 'Diesel (Mn litres)': +y.energyByPT.Diesel.toFixed(0) });
+
+      const cng = +(y.energyByPT.CNG * MN_KG_TO_MMT).toFixed(2);
+      const lng = +(y.energyByPT.LNG * MN_KG_TO_MMT).toFixed(2);
+      gas.push({ year: y.year, 'CNG (MMT)': cng, 'LNG (MMT)': lng });
+
+      const h2ice = +(y.energyByPT['H2-ICE'] * MN_KG_TO_MMT).toFixed(2);
+      const h2fcet = +(y.energyByPT['H2-FCET'] * MN_KG_TO_MMT).toFixed(2);
+      hydrogen.push({
+        year: y.year,
+        'H₂-ICE (MMT)': h2ice,
+        'H₂-FCET (MMT)': h2fcet,
+        'Total H₂ (MMT)': +(h2ice + h2fcet).toFixed(2),
+      });
+
+      electricity.push({ year: y.year, 'BET (TWh)': +y.energyByPT.BET.toFixed(2) });
     }
-    return { chartData: chart, csvData: csv };
+    return { diesel, gas, hydrogen, electricity };
   }, [years]);
 
   return (
-    <ChartCard
-      title="Energy Requirement by Powertrain"
-      subtitle={`Diesel in Mn litres (left); other carriers as electricity-equivalent ${ELECTRICITY_UNIT} (right, gas/H₂ via LHV)${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
-      csvData={csvData}
-      csvFilename="energy_requirements"
-    >
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <ComposedChart data={chartData} margin={{ ...CHART_MARGIN, right: 12 }}>
-          <CartesianGrid {...GRID_PROPS} />
-          <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-          <YAxis yAxisId="diesel" tick={AXIS_TICK} axisLine={false} tickLine={false} width={55}
-            tickFormatter={(v: number) => v.toLocaleString()} />
-          <YAxis yAxisId="other" orientation="right" tick={AXIS_TICK} axisLine={false} tickLine={false} width={48} />
-          <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE}
-            labelFormatter={l => `Year ${l}`}
-            formatter={(value: number, name: string, item: { payload?: Record<string, number> }) => {
-              if (name === DIESEL_LABEL) {
-                return [`${value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${ENERGY_UNIT_BY_PT.Diesel}`, name];
-              }
-              if (name === BET_LABEL) {
-                return [`${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${ELECTRICITY_UNIT}`, name];
-              }
-              const native = item?.payload?.[`native:${name}`] ?? 0;
-              return [`${native.toLocaleString(undefined, { maximumFractionDigits: 2 })} Mn kg (${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${ELECTRICITY_UNIT})`, name];
-            }} />
-          <Legend {...LEGEND_PROPS} />
-          <Line yAxisId="diesel" type="monotone" dataKey={DIESEL_LABEL} name={DIESEL_LABEL}
-            stroke={PT_COLORS.Diesel} strokeWidth={2.5} dot={false} />
-          {RIGHT_AXIS_PT.map(pt => (
-            <Line key={pt} yAxisId="other" type="monotone" dataKey={POWERTRAIN_LABELS[pt]} name={POWERTRAIN_LABELS[pt]}
-              stroke={PT_COLORS[pt]} strokeWidth={2} dot={false} />
-          ))}
-        </ComposedChart>
-      </ResponsiveContainer>
-    </ChartCard>
+    <>
+      {/* 5.1 Diesel */}
+      <ChartCard
+        title="Diesel Energy Requirement"
+        subtitle={sub('Annual diesel demand · Million litres', scenarioLabel)}
+        csvData={diesel}
+        csvFilename="energy_diesel"
+      >
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <LineChart data={diesel} margin={CHART_MARGIN}>
+            <CartesianGrid {...GRID_PROPS} />
+            <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={55}
+              tickFormatter={(v: number) => v.toLocaleString()} />
+            <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE}
+              labelFormatter={l => `Year ${l}`}
+              formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} Mn litres`} />
+            <Legend {...LEGEND_PROPS} />
+            <Line type="monotone" dataKey="Diesel (Mn litres)" name={POWERTRAIN_LABELS.Diesel}
+              stroke={PT_COLORS.Diesel} strokeWidth={2.5} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      {/* 5.2 Natural gas */}
+      <ChartCard
+        title="CNG / LNG Energy Requirement"
+        subtitle={sub('Annual natural-gas demand · Million Metric Tonnes (MMT)', scenarioLabel)}
+        csvData={gas}
+        csvFilename="energy_natural_gas"
+      >
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <LineChart data={gas} margin={CHART_MARGIN}>
+            <CartesianGrid {...GRID_PROPS} />
+            <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={45} />
+            <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE}
+              labelFormatter={l => `Year ${l}`}
+              formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} MMT`} />
+            <Legend {...LEGEND_PROPS} />
+            <Line type="monotone" dataKey="CNG (MMT)" name={POWERTRAIN_LABELS.CNG}
+              stroke={PT_COLORS.CNG} strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="LNG (MMT)" name={POWERTRAIN_LABELS.LNG}
+              stroke={PT_COLORS.LNG} strokeWidth={2.5} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      {/* 5.3 Hydrogen */}
+      <ChartCard
+        title="Hydrogen Energy Requirement"
+        subtitle={sub('Annual green-H₂ demand · Million Metric Tonnes (MMT)', scenarioLabel)}
+        csvData={hydrogen}
+        csvFilename="energy_hydrogen"
+      >
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <LineChart data={hydrogen} margin={CHART_MARGIN}>
+            <CartesianGrid {...GRID_PROPS} />
+            <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={45} />
+            <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE}
+              labelFormatter={l => `Year ${l}`}
+              formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} MMT`} />
+            <Legend {...LEGEND_PROPS} />
+            <Line type="monotone" dataKey="H₂-ICE (MMT)" name={POWERTRAIN_LABELS['H2-ICE']}
+              stroke={PT_COLORS['H2-ICE']} strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="H₂-FCET (MMT)" name={POWERTRAIN_LABELS['H2-FCET']}
+              stroke={PT_COLORS['H2-FCET']} strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="Total H₂ (MMT)" name="Total H₂"
+              stroke={TOTAL_H2_COLOR} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
+
+      {/* 5.4 Electricity */}
+      <ChartCard
+        title="Electricity Demand (BET)"
+        subtitle={sub(`Annual battery-electric demand · ${ELECTRICITY_UNIT}`, scenarioLabel)}
+        csvData={electricity}
+        csvFilename="energy_electricity"
+      >
+        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <LineChart data={electricity} margin={CHART_MARGIN}>
+            <CartesianGrid {...GRID_PROPS} />
+            <XAxis dataKey="year" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} width={45} />
+            <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE}
+              labelFormatter={l => `Year ${l}`}
+              formatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${ELECTRICITY_UNIT}`} />
+            <Legend {...LEGEND_PROPS} />
+            <Line type="monotone" dataKey="BET (TWh)" name={POWERTRAIN_LABELS.BET}
+              stroke={PT_COLORS.BET} strokeWidth={2.5} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
+    </>
   );
 }

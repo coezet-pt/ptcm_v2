@@ -33,7 +33,7 @@ export default function StockChart({ years, scenarioLabel }: Props) {
           <YAxis tickFormatter={v => `${(v / 1e6).toFixed(1)}M`} tick={AXIS_TICK} axisLine={false} tickLine={false} width={45} />
           <Tooltip contentStyle={TOOLTIP_CONTENT_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} formatter={(v: number) => v.toLocaleString()} labelFormatter={l => `Year ${l}`} />
           <Legend {...LEGEND_PROPS} />
-          {[...POWERTRAINS].reverse().map(pt => (
+          {POWERTRAINS.map(pt => (
             <Area key={pt} type="monotone" dataKey={pt} name={POWERTRAIN_LABELS[pt]} stackId="1"
               fill={PT_COLORS[pt]} stroke={PT_COLORS[pt]} fillOpacity={0.8} dot={false} />
           ))}

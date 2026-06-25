@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { SALE_VOLUME_SUBTITLE } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE } from '@/lib/chartTheme';
 import type { AnnualResult } from '@/lib/types';
@@ -16,8 +15,8 @@ export default function TotalSalesChart({ years, scenarioLabel }: Props) {
 
   return (
     <ChartCard
-      title="Annual Sales Volumes"
-      subtitle={`Total industry volume · ${SALE_VOLUME_SUBTITLE}${scenarioLabel ? ` · ${scenarioLabel} scenario` : ''}`}
+      title="Annual sales - Total industry (No./year)"
+      subtitle={scenarioLabel ? `${scenarioLabel} scenario` : undefined}
       csvData={csvData}
       csvFilename="annual_sales_volumes"
     >

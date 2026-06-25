@@ -7,7 +7,6 @@ import {
 import { Play, Undo2, RotateCcw, ChevronRight, ChevronDown } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import ParameterRow from './ParameterRow';
-import BucketMaintenanceInput from './BucketMaintenanceInput';
 import FundingInput from './FundingInput';
 import HydrogenSourceMix from './HydrogenSourceMix';
 import GvwForZet from './GvwForZet';
@@ -98,15 +97,6 @@ export default function InputPanel() {
               </AccordionTrigger>
               <AccordionContent>
                 <GvwForZet />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="maintenance">
-              <AccordionTrigger className="text-sm font-medium whitespace-normal text-left items-start py-3">
-                Maintenance
-              </AccordionTrigger>
-              <AccordionContent>
-                <BucketMaintenanceInput />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
