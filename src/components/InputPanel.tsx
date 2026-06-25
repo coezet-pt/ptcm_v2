@@ -12,6 +12,7 @@ import HydrogenSourceMix from './HydrogenSourceMix';
 import GvwForZet from './GvwForZet';
 import KeyAggregateLifeInput from './KeyAggregateLifeInput';
 import { useScenario } from '@/contexts/ScenarioContext';
+import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
 
 
 
@@ -44,24 +45,14 @@ export default function InputPanel() {
       {/* Primary trajectories — always visible */}
       <Card>
         <CardContent className="divide-y divide-border/50 pt-4">
-          {/* 1 — Fuel/Energy Cost (including Grey Hydrogen Cost) */}
-          <CostSection title="Fuel/Energy Cost">
-            <ParameterRow paramKey="diesel_price_per_l" labelOverride="Diesel" />
-            <ParameterRow paramKey="cng_price_per_kg"   labelOverride="CNG" />
-            <ParameterRow paramKey="lng_price_per_kg"   labelOverride="LNG" />
-            <ParameterRow paramKey="electricity_incl_caas_per_kwh" labelOverride="Electricity at Charging Point" />
-            <ParameterRow paramKey="green_h2_production_per_kg"    labelOverride="Green Hydrogen Production" />
-            <ParameterRow paramKey="grey_h2_production_per_kg"     labelOverride="Grey Hydrogen Production" />
-            <ParameterRow paramKey="h2_compression_storage_per_kg" labelOverride="Hydrogen Compression, Transport & Dispensing" />
-          </CostSection>
-
-          {/* 2 — Key Aggregate Cost */}
-          <CostSection title="Key Aggregate Cost">
-            <ParameterRow paramKey="battery_cost_per_kwh"  labelOverride="Battery" />
-            <ParameterRow paramKey="fuel_cell_cost_per_kw" labelOverride="Fuel Cell" />
-            <ParameterRow paramKey="h2_tank_cost_per_kg"   labelOverride="Hydrogen Tank" />
-            <ParameterRow paramKey="lng_tank_cost_per_kg"  labelOverride="LNG Tank" />
-          </CostSection>
+          {/* 1 & 2 — Fuel/Energy Cost and Key Aggregate Cost (shared param groups) */}
+          {CONFIGURABLE_PARAM_GROUPS.map(group => (
+            <CostSection key={group.title} title={group.title}>
+              {group.params.map(p => (
+                <ParameterRow key={p.key} paramKey={p.key} labelOverride={p.label} />
+              ))}
+            </CostSection>
+          ))}
 
           {/* 3 — Key Aggregate Life */}
           <CostSection title="Key Aggregate Life">

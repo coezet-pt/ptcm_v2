@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import type { ParameterKey } from '@/lib/types';
 import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { useScenario } from '@/contexts/ScenarioContext';
+import { buildSeriesFromConfig } from '@/lib/sim/timeSeries';
 import ParameterEditor from './ParameterEditor';
 
 export const DELTA_LABELS = ['2026-30', '2031-35', '2036-40', '2041-45', '2046-50', '2051-55'] as const;
@@ -29,6 +30,14 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
   const baseValueMax = meta?.maxValue;
   const pinCount = param.overrides ? Object.keys(param.overrides).length : 0;
 
+  // Live final-year (2055) value, recomputed from the draft config so the
+  // projected value updates the instant a base/CAGR/pin changes — no Apply needed.
+  const value2055 = useMemo(
+    () => buildSeriesFromConfig(param, isGrowthRate).at(-1) ?? param.baseValue,
+    [param, isGrowthRate],
+  );
+  const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
   return (
     <div className="py-1 border-b border-border/50 last:border-b-0">
       <button
@@ -52,10 +61,15 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
             </Tooltip>
           )}
         </span>
-        <span className="font-mono text-sm text-muted-foreground tabular-nums">
-          {param.baseValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        <span className="flex flex-col items-end shrink-0 leading-tight">
+          <span className="font-mono text-sm text-muted-foreground tabular-nums">
+            {fmt(param.baseValue)}
+            <span className="text-[10px] ml-1">{unit}</span>
+          </span>
+          <span className="font-mono text-[10px] text-primary tabular-nums">
+            2055: {fmt(value2055)}
+          </span>
         </span>
-        <span className="text-[10px] text-muted-foreground">{unit}</span>
         {pinCount > 0 && (
           <span className="text-[10px] rounded-full bg-primary/10 text-primary px-1.5 py-0.5">
             {pinCount} pin{pinCount > 1 ? 's' : ''}

@@ -107,3 +107,10 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Off-screen report capture (see lib/report.tsx): strip interactive chrome so the
+   PDF shows only chart bodies + the parameter table. ChartCard footers and the
+   inline data table both use a top border (.border-t); the chart body has none. */
+.report-capture button { display: none !important; }
+.report-capture .border-t { display: none !important; }
+

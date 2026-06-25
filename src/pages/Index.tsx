@@ -5,8 +5,11 @@ import ModelHealthBadge from '@/components/ModelHealthBadge';
 import KpiCard from '@/components/KpiCard';
 import KpiRail, { type KpiItem } from '@/components/KpiRail';
 import ChartSections from '@/components/ChartSections';
+import ParameterSummaryTable from '@/components/ParameterSummaryTable';
 import { useSimulation } from '@/hooks/useSimulation';
-import { Truck } from 'lucide-react';
+import { downloadReport } from '@/lib/report';
+import { Button } from '@/components/ui/button';
+import { Truck, FileDown, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const SCENARIO_LABEL: Record<string, string> = {
@@ -21,6 +24,7 @@ function DashboardContent() {
   const { config, activeScenario } = useScenario();
   const { result: simResult, isComputing } = useSimulation(config);
   const [railOpen, setRailOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (simResult) {
@@ -30,6 +34,23 @@ function DashboardContent() {
 
   const scenarioLabel = SCENARIO_LABEL[activeScenario] ?? activeScenario;
   const yFinal = simResult?.years[simResult.years.length - 1];
+
+  const handleDownloadReport = async () => {
+    if (!simResult || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadReport({
+        result: simResult,
+        config,
+        policy: config.policy,
+        scenarioLabel,
+      });
+    } catch (e) {
+      console.error('Report generation failed:', e);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   // Diesel peak-sales year (Diesel only — other powertrains dropped from rail).
   const dieselPeak = simResult
@@ -115,13 +136,27 @@ function DashboardContent() {
 
         {/* Center — editorial title + stacked chart sections */}
         <main className="flex-1 min-w-0 px-4 lg:px-8 py-6">
-          <div className="mb-6">
-            <h2 className="font-serif text-3xl lg:text-[2.5rem] leading-tight tracking-tight">
-              Powertrain transition projections - M&HD trucks (2026-55)
-            </h2>
-            <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-              {scenarioLabel} scenario · PTCM interactive engine
-            </p>
+          <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-serif text-3xl lg:text-[2.5rem] leading-tight tracking-tight">
+                Powertrain transition projections - M&HD trucks (2026-55)
+              </h2>
+              <p className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                {scenarioLabel} scenario · PTCM interactive engine
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              onClick={handleDownloadReport}
+              disabled={!simResult || downloading}
+              title="Download a PDF report with the parameter table and all charts"
+            >
+              {downloading
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Preparing…</>
+                : <><FileDown className="h-4 w-4" /> Download report</>}
+            </Button>
           </div>
 
           {/* KPI band — small screens only; right rail covers lg+ */}
@@ -132,6 +167,8 @@ function DashboardContent() {
               ))}
             </section>
           )}
+
+          {simResult && <ParameterSummaryTable />}
 
           {simResult ? (
             <ChartSections
