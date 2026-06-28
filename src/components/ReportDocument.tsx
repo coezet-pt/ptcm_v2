@@ -1,5 +1,6 @@
 import type { SimulationResult, PolicyConfig, ScenarioConfig } from '@/lib/types';
 import { buildParamSummary, buildOtherInputs, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
+import { SECTION_META } from '@/components/ChartSections';
 
 import TotalSalesChart from '@/components/charts/TotalSalesChart';
 import AnnualSalesChart from '@/components/charts/AnnualSalesChart';
@@ -25,6 +26,16 @@ interface Props {
 /** Wrap a section so each becomes its own paginated block in the PDF. */
 function Block({ children }: { children: React.ReactNode }) {
   return <div data-report-block style={{ marginBottom: 12 }}>{children}</div>;
+}
+
+/** Same section heading used on the dashboard (title + kicker), for the PDF. */
+function SectionHeading({ title, kicker }: { title: string; kicker: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 flex-wrap border-b border-border pb-2 mb-3">
+      <h2 className="font-serif text-xl tracking-tight">{title}</h2>
+      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{kicker}</span>
+    </div>
+  );
 }
 
 /**
@@ -111,7 +122,11 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
         </div>
       </Block>
 
-      <Block><TotalSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
+      {/* Powertrain mix — heading rides with the first chart so it never orphans at a page break */}
+      <Block>
+        <SectionHeading title={SECTION_META.powertrain.title} kicker={SECTION_META.powertrain.kicker} />
+        <TotalSalesChart years={years} scenarioLabel={scenarioLabel} />
+      </Block>
       <Block><AnnualSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
       <Block><ShareChart years={years} scenarioLabel={scenarioLabel} /></Block>
       <Block><StockChart years={years} scenarioLabel={scenarioLabel} /></Block>
@@ -120,9 +135,19 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
       <Block><SegmentStockChart years={years} scenarioLabel={scenarioLabel} /></Block>
       <Block><ApplicationSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
       <Block><ApplicationStockChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><EmissionsChart years={years} scenarioLabel={scenarioLabel} /></Block>
+
+      {/* Emissions */}
+      <Block>
+        <SectionHeading title={SECTION_META.emissions.title} kicker={SECTION_META.emissions.kicker} />
+        <EmissionsChart years={years} scenarioLabel={scenarioLabel} />
+      </Block>
       <Block><CumulativeAvoidedChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><DieselSavingsChart years={years} scenarioLabel={scenarioLabel} /></Block>
+
+      {/* Energy requirements & savings */}
+      <Block>
+        <SectionHeading title={SECTION_META.energy.title} kicker={SECTION_META.energy.kicker} />
+        <DieselSavingsChart years={years} scenarioLabel={scenarioLabel} />
+      </Block>
       <Block><EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} /></Block>
     </div>
   );

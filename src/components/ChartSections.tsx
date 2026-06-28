@@ -32,7 +32,7 @@ const NAV: { id: SectionId; label: string }[] = [
   { id: 'energy', label: 'impact - fuel/energy requirement' },
 ];
 
-const SECTION_META: Record<SectionId, { title: string; kicker: string }> = {
+export const SECTION_META: Record<SectionId, { title: string; kicker: string }> = {
   powertrain: { title: 'Powertrain mix', kicker: 'Sales · share · stock · segments' },
   emissions: { title: 'Emissions', kicker: 'Well To Wheel (WTW) CO₂e' },
   energy: { title: 'Energy requirements & savings', kicker: 'Annual energy demand · diesel displaced' },
