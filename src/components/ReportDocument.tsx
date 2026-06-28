@@ -23,18 +23,38 @@ interface Props {
   scenarioLabel: string;
 }
 
-/** Wrap a section so each becomes its own paginated block in the PDF. */
-function Block({ children }: { children: React.ReactNode }) {
-  return <div data-report-block style={{ marginBottom: 12 }}>{children}</div>;
+type BlockKind = 'intro' | 'section' | 'chart';
+
+/**
+ * Wrap a section so each becomes its own paginated block in the PDF. `kind`
+ * drives pagination in report.tsx: 'section' banners force a new page, 'chart'
+ * blocks are laid 2 per page, 'intro' flows on the opening page(s).
+ */
+function Block({ kind, children }: { kind: BlockKind; children: React.ReactNode }) {
+  return <div data-report-block data-block-kind={kind} style={{ marginBottom: 12 }}>{children}</div>;
 }
 
-/** Same section heading used on the dashboard (title + kicker), for the PDF. */
-function SectionHeading({ title, kicker }: { title: string; kicker: string }) {
+/** Section banner — same title + kicker used on the dashboard (see SECTION_META). */
+function SectionBanner({ title, kicker }: { title: string; kicker: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 flex-wrap border-b border-border pb-2 mb-3">
-      <h2 className="font-serif text-xl tracking-tight">{title}</h2>
-      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{kicker}</span>
-    </div>
+    <Block kind="section">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap border-b-2 border-border pb-2">
+        <h2 className="font-serif text-2xl tracking-tight">{title}</h2>
+        <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{kicker}</span>
+      </div>
+    </Block>
+  );
+}
+
+/** A numbered chart block: "Figure N" eyebrow above the chart card. */
+function Figure({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <Block kind="chart">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">
+        Figure {n}
+      </p>
+      {children}
+    </Block>
   );
 }
 
@@ -51,9 +71,43 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
   const generated = new Date().toLocaleString();
   const cellBorder = { border: '1px solid hsl(var(--border))' } as const;
 
+  // Sequenced sections; figures are numbered with a running counter so the
+  // captions read Figure 1..13 across the whole report.
+  const sections = [
+    {
+      meta: SECTION_META.powertrain,
+      charts: [
+        <TotalSalesChart years={years} scenarioLabel={scenarioLabel} />,
+        <AnnualSalesChart years={years} scenarioLabel={scenarioLabel} />,
+        <ShareChart years={years} scenarioLabel={scenarioLabel} />,
+        <StockChart years={years} scenarioLabel={scenarioLabel} />,
+        <ZETPenetrationChart years={years} policy={policy} scenarioLabel={scenarioLabel} />,
+        <SegmentSalesChart years={years} scenarioLabel={scenarioLabel} />,
+        <SegmentStockChart years={years} scenarioLabel={scenarioLabel} />,
+        <ApplicationSalesChart years={years} scenarioLabel={scenarioLabel} />,
+        <ApplicationStockChart years={years} scenarioLabel={scenarioLabel} />,
+      ],
+    },
+    {
+      meta: SECTION_META.emissions,
+      charts: [
+        <EmissionsChart years={years} scenarioLabel={scenarioLabel} />,
+        <CumulativeAvoidedChart years={years} scenarioLabel={scenarioLabel} />,
+      ],
+    },
+    {
+      meta: SECTION_META.energy,
+      charts: [
+        <DieselSavingsChart years={years} scenarioLabel={scenarioLabel} />,
+        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} />,
+      ],
+    },
+  ];
+  let figureNo = 0;
+
   return (
     <div className="bg-background text-foreground" style={{ padding: 8 }}>
-      <Block>
+      <Block kind="intro">
         <div style={{ borderBottom: '2px solid hsl(var(--border))', paddingBottom: 8, marginBottom: 8 }}>
           <h1 className="font-serif text-2xl tracking-tight">
             PTCM Dashboard — Powertrain transition projections (2026–55)
@@ -98,7 +152,7 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
         </table>
       </Block>
 
-      <Block>
+      <Block kind="intro">
         <h2 className="font-serif text-lg mb-2">Other configured inputs</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {otherSections.map(section => (
@@ -122,33 +176,15 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
         </div>
       </Block>
 
-      {/* Powertrain mix — heading rides with the first chart so it never orphans at a page break */}
-      <Block>
-        <SectionHeading title={SECTION_META.powertrain.title} kicker={SECTION_META.powertrain.kicker} />
-        <TotalSalesChart years={years} scenarioLabel={scenarioLabel} />
-      </Block>
-      <Block><AnnualSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><ShareChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><StockChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><ZETPenetrationChart years={years} policy={policy} scenarioLabel={scenarioLabel} /></Block>
-      <Block><SegmentSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><SegmentStockChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><ApplicationSalesChart years={years} scenarioLabel={scenarioLabel} /></Block>
-      <Block><ApplicationStockChart years={years} scenarioLabel={scenarioLabel} /></Block>
-
-      {/* Emissions */}
-      <Block>
-        <SectionHeading title={SECTION_META.emissions.title} kicker={SECTION_META.emissions.kicker} />
-        <EmissionsChart years={years} scenarioLabel={scenarioLabel} />
-      </Block>
-      <Block><CumulativeAvoidedChart years={years} scenarioLabel={scenarioLabel} /></Block>
-
-      {/* Energy requirements & savings */}
-      <Block>
-        <SectionHeading title={SECTION_META.energy.title} kicker={SECTION_META.energy.kicker} />
-        <DieselSavingsChart years={years} scenarioLabel={scenarioLabel} />
-      </Block>
-      <Block><EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} /></Block>
+      {/* One banner per section (forces a new page), then its charts 2-per-page. */}
+      {sections.map(section => (
+        <div key={section.meta.title} style={{ display: 'contents' }}>
+          <SectionBanner title={section.meta.title} kicker={section.meta.kicker} />
+          {section.charts.map((chart, i) => (
+            <Figure key={i} n={++figureNo}>{chart}</Figure>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

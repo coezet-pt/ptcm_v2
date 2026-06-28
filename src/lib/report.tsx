@@ -44,9 +44,16 @@ export async function downloadReport({ result, config, policy, scenarioLabel }: 
     const pageH = pdf.internal.pageSize.getHeight();
     const margin = 10;
     const contentW = pageW - margin * 2;
+    const CHARTS_PER_PAGE = 2;
     let cursorY = margin;
+    let chartsOnPage = 0;
+
+    const atPageTop = () => cursorY <= margin + 0.01;
+    const newPage = () => { pdf.addPage(); cursorY = margin; chartsOnPage = 0; };
 
     for (const block of blocks) {
+      const kind = (block.dataset.blockKind ?? 'intro') as 'intro' | 'section' | 'chart';
+
       // JPEG keeps the file small (charts are mostly flat fills); quality 0.92
       // keeps axis text / lines crisp at 2× scale.
       const dataUrl = await toJpeg(block, { cacheBust: true, pixelRatio: 2, quality: 0.92, backgroundColor: '#ffffff' });
@@ -55,11 +62,21 @@ export async function downloadReport({ result, config, policy, scenarioLabel }: 
       await img.decode();
       const imgH = (contentW * img.height) / img.width;
 
-      // Page break when this block won't fit in the remaining space.
-      if (cursorY + imgH > pageH - margin && cursorY > margin) {
-        pdf.addPage();
-        cursorY = margin;
+      if (kind === 'section') {
+        // Each section opens at the top of a fresh page (banner never orphans).
+        if (!atPageTop()) newPage();
+        chartsOnPage = 0;
+      } else if (kind === 'chart') {
+        // Cap at 2 charts per page; also break if it simply won't fit.
+        if (chartsOnPage >= CHARTS_PER_PAGE || (cursorY + imgH > pageH - margin && !atPageTop())) {
+          newPage();
+        }
+        chartsOnPage += 1;
+      } else if (cursorY + imgH > pageH - margin && !atPageTop()) {
+        // intro blocks: flow, breaking only when they won't fit.
+        newPage();
       }
+
       pdf.addImage(dataUrl, 'JPEG', margin, cursorY, contentW, imgH);
       cursorY += imgH + 4;
     }

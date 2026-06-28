@@ -113,4 +113,8 @@
    inline data table both use a top border (.border-t); the chart body has none. */
 .report-capture button { display: none !important; }
 .report-capture .border-t { display: none !important; }
+/* Make each chart's name (ChartCard title = the h3) read as a proper figure heading. */
+.report-capture [data-block-kind="chart"] h3 { font-size: 1rem !important; font-weight: 700 !important; }
+/* Taller chart bodies so two charts comfortably fill an A4 page. */
+.report-capture [data-block-kind="chart"] .h-\[320px\] { height: 400px !important; }
 
