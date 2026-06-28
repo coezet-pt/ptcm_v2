@@ -206,6 +206,23 @@ export function computeStockEmissions(
     for (const seg of SEGMENTS) { salesBySegment[seg] = 0; stockBySegment[seg] = 0; }
     for (const app of APPLICATIONS) { salesByApplication[app] = 0; stockByApplication[app] = 0; }
 
+    // Same breakdowns kept split by powertrain (the per-PT split is computed in
+    // the bucket loop below anyway; here we keep it instead of collapsing it).
+    const emptySegPT = (): Record<Powertrain, Record<string, number>> => {
+      const o = {} as Record<Powertrain, Record<string, number>>;
+      for (const pt of POWERTRAINS) { o[pt] = {}; for (const seg of SEGMENTS) o[pt][seg] = 0; }
+      return o;
+    };
+    const emptyAppPT = (): Record<Powertrain, Record<string, number>> => {
+      const o = {} as Record<Powertrain, Record<string, number>>;
+      for (const pt of POWERTRAINS) { o[pt] = {}; for (const app of APPLICATIONS) o[pt][app] = 0; }
+      return o;
+    };
+    const salesBySegmentPT = emptySegPT();
+    const stockBySegmentPT = emptySegPT();
+    const salesByApplicationPT = emptyAppPT();
+    const stockByApplicationPT = emptyAppPT();
+
     // Per-bucket annual energy use (raw, pre-scaling). Diesel/CNG/LNG/H2 in their
     // fuel units (litres/kg), BET in kWh. Counterfactual = whole bucket as diesel.
     const energyRaw: Record<Powertrain, number> = emptyPT();
@@ -225,6 +242,10 @@ export function computeStockEmissions(
         if (pt === 'Diesel') s -= pre2001Scrappage * bucketWeight(b);
         curStockB[pt] = Math.max(0, s);
         bucketStock += curStockB[pt];
+        salesBySegmentPT[pt][seg] += curBucketSales[b.id][pt];
+        stockBySegmentPT[pt][seg] += curStockB[pt];
+        salesByApplicationPT[pt][app] += curBucketSales[b.id][pt];
+        stockByApplicationPT[pt][app] += curStockB[pt];
       }
       prevStockByBucket[b.id] = curStockB;
 
@@ -270,6 +291,10 @@ export function computeStockEmissions(
       stockBySegment,
       salesByApplication,
       stockByApplication,
+      salesBySegmentPT,
+      stockBySegmentPT,
+      salesByApplicationPT,
+      stockByApplicationPT,
     });
 
     // Advance stock

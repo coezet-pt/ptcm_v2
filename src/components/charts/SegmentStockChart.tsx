@@ -2,25 +2,29 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { SEGMENTS, SEGMENT_COLORS } from '@/lib/constants/segments';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
-import { SEGMENT_GROUPING } from '@/lib/constants/displayLabels';
+import { SEGMENT_GROUPING, POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
+import type { Powertrain } from '@/lib/constants/extracted';
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
-interface Props { years: AnnualResult[]; scenarioLabel?: string; }
+interface Props { years: AnnualResult[]; scenarioLabel?: string; pt?: Powertrain; }
 
-export default function SegmentStockChart({ years, scenarioLabel }: Props) {
+export default function SegmentStockChart({ years, scenarioLabel, pt }: Props) {
   const data = useMemo(() => years.map(y => {
+    const src = pt ? (y.stockBySegmentPT[pt] ?? {}) : y.stockBySegment;
     const row: Record<string, number> = { year: y.year };
-    for (const s of SEGMENTS) row[s] = Math.round(y.stockBySegment[s] ?? 0);
+    for (const s of SEGMENTS) row[s] = Math.round(src[s] ?? 0);
     return row;
-  }), [years]);
+  }), [years, pt]);
+
+  const ptLabel = pt ? POWERTRAIN_LABELS[pt] : '';
 
   return (
     <ChartCard
-      title="Fleet Stock by Segment"
-      subtitle={`Vehicles on road, ${SEGMENT_GROUPING}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      title={`Fleet Stock by Segment${ptLabel ? ` — ${ptLabel}` : ''}`}
+      subtitle={`Vehicles on road, ${SEGMENT_GROUPING}${ptLabel ? ` · ${ptLabel} only` : ''}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
-      csvFilename="fleet_stock_by_segment"
+      csvFilename={`fleet_stock_by_segment${pt ? `_${pt}` : ''}`}
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={data} margin={CHART_MARGIN}>

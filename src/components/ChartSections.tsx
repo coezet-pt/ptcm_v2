@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { POWERTRAINS, type Powertrain } from '@/lib/constants/extracted';
+import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
 import type { SimulationResult, PolicyConfig } from '@/lib/types';
 
 import TotalSalesChart from '@/components/charts/TotalSalesChart';
@@ -38,8 +40,12 @@ export const SECTION_META: Record<SectionId, { title: string; kicker: string }> 
   energy: { title: 'Energy requirements & savings', kicker: 'Annual energy demand · diesel displaced' },
 };
 
-const PRELIM_NOTE =
-  'Preliminary grouping — uses vehicle size / use-case from BUCKETS. Will switch to the workbook’s formal 7-segment / 10-application taxonomy after the v3 extraction.';
+// Powertrain filter for the Applications & segments charts. 'Overall' = the
+// aggregate across all powertrains (current behaviour); the rest restrict each
+// chart to a single powertrain (the six per-PT views sum to Overall).
+type SegFilter = 'Overall' | Powertrain;
+const SEG_FILTERS: SegFilter[] = ['Overall', ...POWERTRAINS];
+const SEG_FILTER_LABEL = (f: SegFilter) => (f === 'Overall' ? 'Overall' : POWERTRAIN_LABELS[f]);
 
 function SectionHeader({ title, kicker }: { title: string; kicker: string }) {
   return (
@@ -53,7 +59,9 @@ function SectionHeader({ title, kicker }: { title: string; kicker: string }) {
 export default function ChartSections({ result, policy, scenarioLabel, isComputing }: Props) {
   const [active, setActive] = useState<SectionId>('powertrain');
   const [appsOpen, setAppsOpen] = useState(false);
+  const [segFilter, setSegFilter] = useState<SegFilter>('Overall');
   const meta = SECTION_META[active];
+  const segPt = segFilter === 'Overall' ? undefined : segFilter;
 
   return (
     <div>
@@ -99,11 +107,28 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
                 </span>
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-4">
-                <p className="text-xs text-muted-foreground">{PRELIM_NOTE}</p>
-                <SegmentSalesChart years={result.years} scenarioLabel={scenarioLabel} />
-                <SegmentStockChart years={result.years} scenarioLabel={scenarioLabel} />
-                <ApplicationSalesChart years={result.years} scenarioLabel={scenarioLabel} />
-                <ApplicationStockChart years={result.years} scenarioLabel={scenarioLabel} />
+                {/* Powertrain sub-tabs — Overall + one per powertrain */}
+                <div className="flex gap-2 flex-wrap">
+                  {SEG_FILTERS.map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setSegFilter(f)}
+                      aria-pressed={segFilter === f}
+                      className={`rounded-full border px-3 py-1 text-[11px] font-medium whitespace-nowrap transition-colors ${
+                        segFilter === f
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-card hover:bg-secondary'
+                      }`}
+                    >
+                      {SEG_FILTER_LABEL(f)}
+                    </button>
+                  ))}
+                </div>
+                <SegmentSalesChart years={result.years} scenarioLabel={scenarioLabel} pt={segPt} />
+                <SegmentStockChart years={result.years} scenarioLabel={scenarioLabel} pt={segPt} />
+                <ApplicationSalesChart years={result.years} scenarioLabel={scenarioLabel} pt={segPt} />
+                <ApplicationStockChart years={result.years} scenarioLabel={scenarioLabel} pt={segPt} />
               </CollapsibleContent>
             </Collapsible>
           </>

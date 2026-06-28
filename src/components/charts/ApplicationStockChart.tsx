@@ -2,24 +2,29 @@ import { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { APPLICATIONS, APPLICATION_COLORS } from '@/lib/constants/segments';
 import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, LEGEND_PROPS } from '@/lib/chartTheme';
+import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
+import type { Powertrain } from '@/lib/constants/extracted';
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
-interface Props { years: AnnualResult[]; scenarioLabel?: string; }
+interface Props { years: AnnualResult[]; scenarioLabel?: string; pt?: Powertrain; }
 
-export default function ApplicationStockChart({ years, scenarioLabel }: Props) {
+export default function ApplicationStockChart({ years, scenarioLabel, pt }: Props) {
   const data = useMemo(() => years.map(y => {
+    const src = pt ? (y.stockByApplicationPT[pt] ?? {}) : y.stockByApplication;
     const row: Record<string, number> = { year: y.year };
-    for (const a of APPLICATIONS) row[a] = Math.round(y.stockByApplication[a] ?? 0);
+    for (const a of APPLICATIONS) row[a] = Math.round(src[a] ?? 0);
     return row;
-  }), [years]);
+  }), [years, pt]);
+
+  const ptLabel = pt ? POWERTRAIN_LABELS[pt] : '';
 
   return (
     <ChartCard
-      title="Fleet Stock by Application"
-      subtitle={`Vehicles on road, grouped by use-case${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
+      title={`Fleet Stock by Application${ptLabel ? ` — ${ptLabel}` : ''}`}
+      subtitle={`Vehicles on road, grouped by use-case${ptLabel ? ` · ${ptLabel} only` : ''}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`}
       csvData={data}
-      csvFilename="fleet_stock_by_application"
+      csvFilename={`fleet_stock_by_application${pt ? `_${pt}` : ''}`}
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={data} margin={CHART_MARGIN}>

@@ -153,6 +153,12 @@ export interface AnnualResult {
   stockBySegment: Record<string, number>;
   salesByApplication: Record<string, number>;
   stockByApplication: Record<string, number>;
+  // Same breakdowns split by powertrain. For each powertrain, the per-band
+  // values sum (across powertrains) to the aggregated fields above.
+  salesBySegmentPT: Record<Powertrain, Record<string, number>>;
+  stockBySegmentPT: Record<Powertrain, Record<string, number>>;
+  salesByApplicationPT: Record<Powertrain, Record<string, number>>;
+  stockByApplicationPT: Record<Powertrain, Record<string, number>>;
 }
 
 export interface SimulationResult {
