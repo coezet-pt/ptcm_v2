@@ -60,7 +60,14 @@ export async function downloadReport({ result, config, policy, scenarioLabel }: 
       const img = new Image();
       img.src = dataUrl;
       await img.decode();
-      const imgH = (contentW * img.height) / img.width;
+      // Shrink any block taller than a full page so it can never be clipped.
+      const maxH = pageH - margin * 2;
+      let drawW = contentW;
+      let drawH = (contentW * img.height) / img.width;
+      if (drawH > maxH) {
+        drawW = (contentW * maxH) / drawH;
+        drawH = maxH;
+      }
 
       if (kind === 'section') {
         // Each section opens at the top of a fresh page (banner never orphans).
@@ -68,17 +75,17 @@ export async function downloadReport({ result, config, policy, scenarioLabel }: 
         chartsOnPage = 0;
       } else if (kind === 'chart') {
         // Cap at 2 charts per page; also break if it simply won't fit.
-        if (chartsOnPage >= CHARTS_PER_PAGE || (cursorY + imgH > pageH - margin && !atPageTop())) {
+        if (chartsOnPage >= CHARTS_PER_PAGE || (cursorY + drawH > pageH - margin && !atPageTop())) {
           newPage();
         }
         chartsOnPage += 1;
-      } else if (cursorY + imgH > pageH - margin && !atPageTop()) {
+      } else if (cursorY + drawH > pageH - margin && !atPageTop()) {
         // intro blocks: flow, breaking only when they won't fit.
         newPage();
       }
 
-      pdf.addImage(dataUrl, 'JPEG', margin, cursorY, contentW, imgH);
-      cursorY += imgH + 4;
+      pdf.addImage(dataUrl, 'JPEG', margin + (contentW - drawW) / 2, cursorY, drawW, drawH);
+      cursorY += drawH + 4;
     }
 
     const safe = scenarioLabel.replace(/[^\w-]+/g, '_');

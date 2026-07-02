@@ -73,7 +73,7 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
             type="button"
             onClick={() => setActive(n.id)}
             aria-pressed={active === n.id}
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium whitespace-nowrap transition-colors ${
+            className={`rounded-full border px-3 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
               active === n.id
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card hover:bg-secondary'
@@ -99,7 +99,7 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
             <ZETPenetrationChart years={result.years} policy={policy} scenarioLabel={scenarioLabel} />
 
             <Collapsible open={appsOpen} onOpenChange={setAppsOpen} className="space-y-4">
-              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm font-medium hover:bg-secondary transition-colors">
+              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm font-medium cursor-pointer hover:bg-secondary transition-colors">
                 {appsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 Applications &amp; segments
                 <span className="ml-auto text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -115,7 +115,7 @@ export default function ChartSections({ result, policy, scenarioLabel, isComputi
                       type="button"
                       onClick={() => setSegFilter(f)}
                       aria-pressed={segFilter === f}
-                      className={`rounded-full border px-3 py-1 text-[11px] font-medium whitespace-nowrap transition-colors ${
+                      className={`rounded-full border px-3 py-1 text-[11px] font-medium whitespace-nowrap cursor-pointer transition-colors ${
                         segFilter === f
                           ? 'border-primary bg-primary text-primary-foreground'
                           : 'border-border bg-card hover:bg-secondary'

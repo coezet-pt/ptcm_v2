@@ -43,7 +43,7 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-start gap-2 text-left hover:bg-muted/40 rounded px-1 py-1.5 transition-colors"
+        className="w-full flex items-start gap-2 text-left cursor-pointer hover:bg-muted/40 rounded px-1 py-1.5 transition-colors"
       >
         {open
           ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

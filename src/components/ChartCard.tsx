@@ -29,8 +29,8 @@ export default function ChartCard({ title, description, subtitle, children, csvD
         {/* PNG download — top-right of the card header, in line with the title,
             independent of the data buttons below. */}
         <Button
-          variant="ghost" size="sm"
-          className="h-7 shrink-0 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
+          variant="outline" size="sm"
+          className="h-7 shrink-0 gap-1 px-2 text-[10px] font-medium tracking-wide"
           onClick={() => chartRef.current && exportPNG(chartRef.current, fname)}
           title="Download chart as PNG"
         >
@@ -59,7 +59,7 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                   {csvData.slice(0, 31).map((row, i) => (
                     <tr key={i} className="odd:bg-muted/40">
                       {Object.entries(row).map(([k, v], j) => (
-                        <td key={j} className="px-1 py-0.5">{typeof v === 'number' && k !== 'year' ? v.toLocaleString() : String(v)}</td>
+                        <td key={j} className="px-1 py-0.5">{typeof v === 'number' && k !== 'year' ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v)}</td>
                       ))}
                     </tr>
                   ))}
@@ -77,7 +77,7 @@ export default function ChartCard({ title, description, subtitle, children, csvD
             </div>
             <div className="flex flex-wrap items-center gap-0.5">
               <Button
-                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
+                variant="outline" size="sm" className="h-7 gap-1 px-2 text-[10px] font-medium tracking-wide"
                 onClick={() => setShowTable(t => !t)}
                 title="View data table"
               >
@@ -85,7 +85,7 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                 View
               </Button>
               <Button
-                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
+                variant="outline" size="sm" className="h-7 gap-1 px-2 text-[10px] font-medium tracking-wide"
                 onClick={() => exportCSV(csvData, fname)}
                 title="Download as CSV"
               >
@@ -93,7 +93,7 @@ export default function ChartCard({ title, description, subtitle, children, csvD
                 CSV
               </Button>
               <Button
-                variant="ghost" size="sm" className="h-7 gap-1 px-1.5 text-[10px] font-medium tracking-wide"
+                variant="outline" size="sm" className="h-7 gap-1 px-2 text-[10px] font-medium tracking-wide"
                 onClick={() => exportXLSX(csvData, fname)}
                 title="Download as Excel"
               >

@@ -6,7 +6,14 @@ import { AXIS_TICK, AXIS_LINE, GRID_PROPS, CHART_MARGIN, TOOLTIP_CONTENT_STYLE, 
 import type { AnnualResult } from '@/lib/types';
 import ChartCard from '@/components/ChartCard';
 
-interface Props { years: AnnualResult[]; scenarioLabel?: string; }
+export type EnergyChartKind = 'diesel' | 'gas' | 'hydrogen' | 'electricity';
+
+interface Props {
+  years: AnnualResult[];
+  scenarioLabel?: string;
+  /** Render just one of the four cards (used by the PDF report so each chart paginates as its own figure). */
+  only?: EnergyChartKind;
+}
 
 // Report (Chapter 5) units: diesel in Million litres, natural gas & hydrogen in
 // MMT (Million Metric Tonnes), electricity in TWh. The engine stores gas/H₂ in
@@ -19,7 +26,8 @@ function sub(line: string, scenarioLabel?: string) {
   return `${line}${scenarioLabel ? ` · ${scenarioLabel}` : ''}`;
 }
 
-export default function EnergyRequirementsChart({ years, scenarioLabel }: Props) {
+export default function EnergyRequirementsChart({ years, scenarioLabel, only }: Props) {
+  const show = (kind: EnergyChartKind) => !only || only === kind;
   const { diesel, gas, hydrogen, electricity } = useMemo(() => {
     const diesel: Record<string, number>[] = [];
     const gas: Record<string, number>[] = [];
@@ -49,7 +57,7 @@ export default function EnergyRequirementsChart({ years, scenarioLabel }: Props)
   return (
     <>
       {/* 5.1 Diesel */}
-      <ChartCard
+      {show('diesel') && <ChartCard
         title="Diesel Energy Requirement"
         subtitle={sub('Annual diesel demand · Million litres', scenarioLabel)}
         csvData={diesel}
@@ -69,10 +77,10 @@ export default function EnergyRequirementsChart({ years, scenarioLabel }: Props)
               stroke={PT_COLORS.Diesel} strokeWidth={2.5} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
 
       {/* 5.2 Natural gas */}
-      <ChartCard
+      {show('gas') && <ChartCard
         title="CNG / LNG Energy Requirement"
         subtitle={sub('Annual natural-gas demand · Million Metric Tonnes (MMT)', scenarioLabel)}
         csvData={gas}
@@ -93,10 +101,10 @@ export default function EnergyRequirementsChart({ years, scenarioLabel }: Props)
               stroke={PT_COLORS.LNG} strokeWidth={2.5} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
 
       {/* 5.3 Hydrogen */}
-      <ChartCard
+      {show('hydrogen') && <ChartCard
         title="Hydrogen Energy Requirement"
         subtitle={sub('Annual green-H₂ demand · Million Metric Tonnes (MMT)', scenarioLabel)}
         csvData={hydrogen}
@@ -119,10 +127,10 @@ export default function EnergyRequirementsChart({ years, scenarioLabel }: Props)
               stroke={TOTAL_H2_COLOR} strokeWidth={1.5} strokeDasharray="6 3" dot={false} />
           </LineChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
 
       {/* 5.4 Electricity */}
-      <ChartCard
+      {show('electricity') && <ChartCard
         title="Electricity Demand (BET)"
         subtitle={sub(`Annual battery-electric demand · ${ELECTRICITY_UNIT}`, scenarioLabel)}
         csvData={electricity}
@@ -141,7 +149,7 @@ export default function EnergyRequirementsChart({ years, scenarioLabel }: Props)
               stroke={PT_COLORS.BET} strokeWidth={2.5} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
     </>
   );
 }

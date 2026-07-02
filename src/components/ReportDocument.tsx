@@ -99,7 +99,12 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
       meta: SECTION_META.energy,
       charts: [
         <DieselSavingsChart years={years} scenarioLabel={scenarioLabel} />,
-        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} />,
+        // One figure per energy chart — bundling all four in one block used to
+        // overflow the A4 page and clip the hydrogen/electricity charts.
+        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} only="diesel" />,
+        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} only="gas" />,
+        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} only="hydrogen" />,
+        <EnergyRequirementsChart years={years} scenarioLabel={scenarioLabel} only="electricity" />,
       ],
     },
   ];

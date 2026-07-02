@@ -146,7 +146,6 @@ function DashboardContent() {
               </p>
             </div>
             <Button
-              variant="outline"
               size="sm"
               className="gap-1.5 shrink-0"
               onClick={handleDownloadReport}

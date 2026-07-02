@@ -320,6 +320,14 @@ export const ZET_GVW_CLASSES = [
   '40T Tractor', '55T Tractor',
 ] as const;
 
+// Current (baseline) GVW in kg per policy class — the `gvw` of the BUCKETS
+// above ('35T Rigid' class covers the 35T Tipper bucket B8). Shown read-only
+// next to the editable "revised" GVW in the policy-support table.
+export const ZET_GVW_CURRENT_KG: Record<string, number> = {
+  '15T Rigid': 16000, '19T Rigid': 18500, '28T Rigid': 28000, '35T Rigid': 35000,
+  '48T Rigid': 47500, '40T Tractor': 39500, '55T Tractor': 55000,
+};
+
 // CNG/LNG/H2 tank physical sizes (used to compute tank cost contribution)
 export const TANK_SIZES = {
   cng_small_ltrs: 480,  cng_large_ltrs: 960,  cng_density_kg_per_l: 0.20,

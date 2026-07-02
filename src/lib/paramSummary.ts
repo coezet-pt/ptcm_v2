@@ -4,6 +4,7 @@ import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
 import {
   DEFAULT_BATTERY_LIFE_CYCLES, DEFAULT_FUEL_CELL_LIFE_HOURS, ZET_GVW_CLASSES,
+  ZET_GVW_CURRENT_KG,
 } from '@/lib/constants/extracted';
 import { DELTA_KEYS } from '@/components/ParameterRow';
 
@@ -119,14 +120,17 @@ export function buildOtherInputs(config: ScenarioConfig): OtherInputSection[] {
     ],
   });
 
-  // Policy support — additional GVW for ZETs, per size class
+  // Policy support — GVW for ZETs, per size class (current → revised)
   const gvw = policy.zet_additional_gvw_kg ?? {};
   sections.push({
-    title: 'Policy support — additional GVW for ZETs',
-    rows: ZET_GVW_CLASSES.map(cls => ({
-      label: cls,
-      value: `${fmtNum(gvw[cls] ?? 0)} kg`,
-    })),
+    title: 'Policy support — GVW for ZETs (current → revised)',
+    rows: ZET_GVW_CLASSES.map(cls => {
+      const current = ZET_GVW_CURRENT_KG[cls] ?? 0;
+      return {
+        label: cls,
+        value: `${fmtNum(current)} → ${fmtNum(current + (gvw[cls] ?? 0))} kg`,
+      };
+    }),
   });
 
   return sections;

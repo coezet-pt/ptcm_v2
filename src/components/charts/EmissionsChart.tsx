@@ -13,8 +13,8 @@ export default function EmissionsChart({ years, scenarioLabel }: Props) {
   const data = useMemo(() =>
     years.map(y => {
       const row: Record<string, number> = { year: y.year };
-      for (const pt of POWERTRAINS) row[pt] = parseFloat(y.emissionsByPT[pt].toFixed(3));
-      row['Diesel with no ZET adoption'] = parseFloat(y.dieselCounterfactualEmissions.toFixed(3));
+      for (const pt of POWERTRAINS) row[pt] = parseFloat(y.emissionsByPT[pt].toFixed(2));
+      row['Diesel with no ZET adoption'] = parseFloat(y.dieselCounterfactualEmissions.toFixed(2));
       return row;
     }), [years]);
 

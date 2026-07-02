@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { SimulationResult } from '@/lib/types';
 import { runSanityChecks } from '@/lib/sim/sanityCheck';
@@ -31,25 +31,26 @@ export default function ModelHealthBadge({ simResult }: Props) {
     ? `All ${total} checks passing`
     : `${passCount}/${total} checks passing — Failing: ${failures.map(f => f.message).join('; ').slice(0, 220)}${failures.map(f => f.message).join('; ').length > 220 ? '…' : ''}`;
 
+  // Popover (not Collapsible) so the panel closes on any outside click or Esc.
   return (
-    <Collapsible>
+    <Popover>
       <Tooltip>
         <TooltipTrigger asChild>
-          <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-1.5 text-xs">
+          <PopoverTrigger asChild>
+            <button className="flex items-center gap-1.5 text-xs cursor-pointer">
               <Badge variant={variant} className="gap-1 cursor-pointer">
                 <Icon className={`h-3 w-3 ${color}`} />
                 {passCount}/{total}
                 <ChevronDown className="h-3 w-3" />
               </Badge>
             </button>
-          </CollapsibleTrigger>
+          </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-sm text-xs">
           {tooltipSummary}
         </TooltipContent>
       </Tooltip>
-      <CollapsibleContent className="absolute right-0 top-full mt-1 z-50 w-96 rounded-lg border bg-card p-3 shadow-lg">
+      <PopoverContent side="bottom" align="end" sideOffset={6} className="w-96 p-3">
         <p className="text-xs font-semibold mb-2">Model Health Checks</p>
         <div className="space-y-1 max-h-64 overflow-y-auto">
           {checks.map(c => (
@@ -66,7 +67,7 @@ export default function ModelHealthBadge({ simResult }: Props) {
             </div>
           ))}
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      </PopoverContent>
+    </Popover>
   );
 }

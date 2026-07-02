@@ -28,7 +28,7 @@ function CostSection({ title, children }: { title: string; children: ReactNode }
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 rounded px-1 py-2.5 text-left hover:bg-muted/40 transition-colors"
+        className="w-full flex items-center justify-between gap-2 rounded px-1 py-2.5 text-left cursor-pointer hover:bg-muted/40 transition-colors"
       >
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</span>
         {open
@@ -130,7 +130,10 @@ export function InputActionBar() {
         <Button variant="outline" size="sm" disabled={!isDirty} onClick={discardChanges} className="gap-1.5 flex-1">
           <Undo2 className="h-3.5 w-3.5" /> Discard
         </Button>
-        <Button size="sm" disabled={!isDirty} onClick={applyChanges} className="gap-1.5 flex-1">
+        <Button
+          size="sm" disabled={!isDirty} onClick={applyChanges}
+          className="gap-1.5 flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+        >
           <Play className="h-3.5 w-3.5" /> Apply Changes
         </Button>
       </div>

@@ -19,9 +19,9 @@ export default function CumulativeAvoidedChart({ years, scenarioLabel }: Props) 
       cumCounter += y.dieselCounterfactualEmissions;
       return {
         year: y.year,
-        'Cumulative reduction':       +cumAvoided.toFixed(3),
-        'Cumulative Actual':          +cumActual.toFixed(3),
-        'Cumulative Diesel-only':     +cumCounter.toFixed(3),
+        'Cumulative reduction':       +cumAvoided.toFixed(2),
+        'Cumulative Actual':          +cumActual.toFixed(2),
+        'Cumulative Diesel-only':     +cumCounter.toFixed(2),
       };
     });
   }, [years]);
