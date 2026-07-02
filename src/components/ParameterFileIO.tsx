@@ -44,7 +44,7 @@ export default function ParameterFileIO() {
     <div className="flex items-center gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 flex-1" disabled={busy}>
+          <Button size="sm" className="gap-1.5 flex-1" disabled={busy}>
             <Download className="h-3.5 w-3.5" /> Download
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </Button>
@@ -60,7 +60,6 @@ export default function ParameterFileIO() {
       </DropdownMenu>
 
       <Button
-        variant="outline"
         size="sm"
         className="gap-1.5 flex-1"
         disabled={busy}
