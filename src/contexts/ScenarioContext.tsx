@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { ScenarioConfig, PolicyConfig, ParameterKey, FixedParameters, SegmentBasePrice, ParameterConfig } from '@/lib/types';
 import type { ScenarioName, VehicleSize } from '@/lib/constants/extracted';
 import { BAU_PARAMETERS, BAU_POLICY, BAU_FIXED, BAU_SEGMENT_BASE_PRICES, BUCKETS } from '@/lib/constants/extracted';
@@ -59,37 +58,21 @@ function ensureFullConfig(cfg: Partial<ScenarioConfig> | undefined): ScenarioCon
   };
 }
 
+// Scenario presets are defined entirely in local constants — no remote fetch.
+const PRESETS = Object.fromEntries(
+  Object.entries(SCENARIO_CONFIGS).map(([name, cfg]) => [
+    name,
+    { id: name, description: '', config: ensureFullConfig(cfg) },
+  ]),
+) as ScenarioContextValue['presets'];
+
 export function ScenarioProvider({ children }: { children: React.ReactNode }) {
-  const [presets, setPresets] = useState<ScenarioContextValue['presets']>({} as any);
-  const [loading, setLoading] = useState(true);
+  const [presets] = useState<ScenarioContextValue['presets']>(PRESETS);
+  const loading = false;
   const [activeScenario, setActiveScenarioState] = useState<ScenarioName | 'Custom'>('BAU');
   const [config, setConfig] = useState<ScenarioConfig>(structuredClone(bauConfig));
   const [draftConfig, setDraftConfig] = useState<ScenarioConfig>(structuredClone(bauConfig));
   const [isDirty, setIsDirty] = useState(false);
-
-  useEffect(() => {
-    supabase
-      .from('scenarios')
-      .select('*')
-      .then(({ data }) => {
-        if (data) {
-          const map: any = {};
-          for (const row of data) {
-            const name = row.name as ScenarioName;
-            const hasConfig = row.config && Object.keys(row.config as object).length > 0;
-            const fallback = SCENARIO_CONFIGS[name] ?? bauConfig;
-            const raw = hasConfig ? (row.config as unknown as Partial<ScenarioConfig>) : fallback;
-            map[name] = {
-              id: row.id,
-              description: row.description || '',
-              config: ensureFullConfig(raw),
-            };
-          }
-          setPresets(map);
-        }
-        setLoading(false);
-      });
-  }, []);
 
   const setActiveScenario = useCallback((name: ScenarioName | 'Custom') => {
     setActiveScenarioState(name);

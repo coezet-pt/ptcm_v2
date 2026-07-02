@@ -84,7 +84,7 @@ src/
 ├── hooks/
 │   └── useSimulation.ts       # Wires 5 sim modules with debounced memoization
 ├── contexts/
-│   └── ScenarioContext.tsx    # Loads scenarios from Supabase + local state
+│   └── ScenarioContext.tsx    # Scenario presets + active/draft config state
 └── pages/
     └── Index.tsx              # Main dashboard layout
 ```
@@ -143,16 +143,7 @@ npm run build
 npm run preview
 ```
 
-### Environment variables
-
-Create `.env` with:
-
-```
-VITE_SUPABASE_URL=<your-supabase-project-url>
-VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>
-```
-
-Supabase is only used for persisting the 4 scenario preset configs. If not configured, the app falls back to hardcoded presets in `scenarios.ts`.
+The app is fully self-contained — no environment variables or backend services are required. Scenario presets are defined locally in `src/lib/constants/scenarios.ts`.
 
 ---
 
