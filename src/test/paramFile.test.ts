@@ -60,6 +60,16 @@ describe('param file round-trip', () => {
     expect(unknownKeys).toEqual(['totally.bogus']);
   });
 
+  it('exports cost values rounded to two decimals', () => {
+    const rows = buildParamRows(bau());
+    const elec = rows.find(r => r[COL.key] === 'electricity_incl_caas_per_kwh')!;
+    expect(elec[COL.value]).toBe(12.08); // stored as 12.0798
+    for (const row of rows.filter(r => r['CAGR 2026-30 (%/yr)'] !== '')) {
+      const v = row[COL.value] as number;
+      expect(Math.round(v * 100) / 100).toBe(v);
+    }
+  });
+
   it('exports a projected 2055 column for trajectory rows, blank for scalars', () => {
     const rows = buildParamRows(bau());
     const diesel = rows.find(r => r[COL.key] === 'diesel_price_per_l')!;

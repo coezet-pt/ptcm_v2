@@ -77,10 +77,11 @@ const trajectorySpecs: FieldSpec[] = CONFIGURABLE_PARAM_GROUPS.flatMap(group =>
     read: c => {
       const p = c.parameters[key];
       const series = buildSeriesFromConfig(p, false);
+      // Costs export at two decimals, matching how they display everywhere else.
       return {
-        value: p.baseValue,
-        cagrs: PERIOD_KEYS.map(pk => round(p[pk] * 100)),
-        value2055: round(series.at(-1) ?? p.baseValue),
+        value: round2(p.baseValue),
+        cagrs: PERIOD_KEYS.map(pk => round2(p[pk] * 100)),
+        value2055: round2(series.at(-1) ?? p.baseValue),
       };
     },
     write: (c, parsed) => {
@@ -180,6 +181,9 @@ const SPEC_BY_KEY = new Map(SPECS.map(s => [s.key.toLowerCase(), s]));
 function round(n: number): number {
   return Number.isFinite(n) ? Number(n.toFixed(4)) : 0;
 }
+function round2(n: number): number {
+  return Number.isFinite(n) ? Number(n.toFixed(2)) : 0;
+}
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
@@ -244,18 +248,45 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Numeric columns that display with two decimals (trajectory/cost rows only). */
+const TWO_DEC_COLS = [COL.value, ...CAGR_COLS, COL.value2055];
+
+/** A row is a trajectory (cost) row iff its CAGR cells are filled in. */
+const isTrajectoryRow = (row: Record<string, string | number>) => row[CAGR_COLS[0]] !== '';
+
 export function downloadParamsCsv(config: ScenarioConfig, filename = 'PTCM_parameters.csv'): void {
-  const csv = Papa.unparse({ fields: PARAM_FILE_HEADERS, data: buildParamRows(config) });
+  // Cost cells are written as "99.00"-style strings so the CSV shows two
+  // decimals everywhere, matching the dashboard tables.
+  const rows = buildParamRows(config).map(row => {
+    if (!isTrajectoryRow(row)) return row;
+    const out = { ...row };
+    for (const col of TWO_DEC_COLS) {
+      if (typeof out[col] === 'number') out[col] = (out[col] as number).toFixed(2);
+    }
+    return out;
+  });
+  const csv = Papa.unparse({ fields: PARAM_FILE_HEADERS, data: rows });
   // Prepend a UTF-8 BOM so Excel renders Unicode (₹, em-dashes) correctly
   // instead of mojibake when it opens the file.
   triggerDownload(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), filename);
 }
 
 export function downloadParamsXlsx(config: ScenarioConfig, filename = 'PTCM_parameters.xlsx'): void {
-  const ws = XLSX.utils.json_to_sheet(buildParamRows(config), { header: PARAM_FILE_HEADERS });
+  const rows = buildParamRows(config);
+  const ws = XLSX.utils.json_to_sheet(rows, { header: PARAM_FILE_HEADERS });
   ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 },
     ...CAGR_COLS.map(() => ({ wch: 14 })),
     { wch: 14 }, { wch: 22 }, { wch: 34 }];
+  // Cost cells stay numeric but get a 0.00 number format so Excel shows two
+  // decimals (99.00) without "number stored as text" warnings.
+  rows.forEach((row, r) => {
+    if (!isTrajectoryRow(row)) return;
+    for (const col of TWO_DEC_COLS) {
+      const c = PARAM_FILE_HEADERS.indexOf(col);
+      const cell = ws[XLSX.utils.encode_cell({ r: r + 1, c })];
+      if (cell && cell.t === 'n') cell.z = '0.00';
+    }
+  });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Parameters');
   XLSX.writeFile(wb, filename);
