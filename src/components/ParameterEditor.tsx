@@ -143,6 +143,7 @@ export default function ParameterEditor({
           step={baseStep ?? (isGrowthRate ? 0.01 : 1)}
           className={`h-8 w-28 text-right font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${baseExceeded ? 'border-destructive ring-1 ring-destructive' : ''}`}
           value={config.baseValue}
+          format={n => n.toFixed(2)}
           onValueChange={onBaseChange}
         />
         <span className="text-xs text-muted-foreground">{unit}</span>

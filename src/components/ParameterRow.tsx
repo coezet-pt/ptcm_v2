@@ -5,6 +5,7 @@ import type { ParameterKey } from '@/lib/types';
 import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { useScenario } from '@/contexts/ScenarioContext';
 import { buildSeriesFromConfig } from '@/lib/sim/timeSeries';
+import { fmtCost } from '@/lib/paramSummary';
 import ParameterEditor from './ParameterEditor';
 
 export const DELTA_LABELS = ['2026-30', '2031-35', '2036-40', '2041-45', '2046-50', '2051-55'] as const;
@@ -36,7 +37,7 @@ export default function ParameterRow({ paramKey, labelOverride, unitOverride }: 
     () => buildSeriesFromConfig(param, isGrowthRate).at(-1) ?? param.baseValue,
     [param, isGrowthRate],
   );
-  const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const fmt = fmtCost; // costs always show exactly two decimals, matching the summary table
 
   return (
     <div className="py-1 border-b border-border/50 last:border-b-0">

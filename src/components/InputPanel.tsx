@@ -47,7 +47,10 @@ export default function InputPanel() {
       <div className="space-y-1.5">
         <ParameterFileIO />
         <p className="text-[10px] leading-snug text-muted-foreground">
-          Download the current parameters, edit in Excel/CSV, then upload to update the dashboard.
+          Download the current parameters, edit in Excel/CSV, then upload to update the
+          dashboard. Upload only recognises files in the downloaded layout — edit the
+          2026 values and CAGRs but keep the column headers and the Key column. Blank
+          cells keep their current values.
         </p>
       </div>
 
