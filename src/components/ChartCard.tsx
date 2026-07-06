@@ -1,8 +1,15 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Table2, ImageDown } from 'lucide-react';
 import { exportPNG, exportCSV, exportXLSX } from '@/lib/exporters';
+
+/**
+ * True while rendering inside the off-screen PDF report (see ReportDocument).
+ * Forces each chart's data table open, un-clamped, so the report includes the
+ * values behind every figure.
+ */
+export const ReportTablesContext = createContext(false);
 
 interface Props {
   title: string;
@@ -16,6 +23,7 @@ interface Props {
 export default function ChartCard({ title, description, subtitle, children, csvData, csvFilename }: Props) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [showTable, setShowTable] = useState(false);
+  const inReport = useContext(ReportTablesContext);
   const fname = csvFilename || title;
 
   return (
@@ -43,10 +51,11 @@ export default function ChartCard({ title, description, subtitle, children, csvD
           {children}
         </div>
 
-        {/* Data table — shown above the action buttons */}
-        {showTable && csvData && (
-          <div className="mt-3 border-t pt-2">
-            <div className="max-h-48 overflow-auto text-[10px]">
+        {/* Data table — shown above the action buttons. In report capture it is
+            always on and un-clamped (no border-t: the capture CSS hides those). */}
+        {(showTable || inReport) && csvData && (
+          <div className={inReport ? 'mt-3 pt-2' : 'mt-3 border-t pt-2'}>
+            <div className={inReport ? 'text-[9px]' : 'max-h-48 overflow-auto text-[10px]'}>
               <table className="w-full">
                 <thead>
                   <tr>

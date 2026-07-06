@@ -1,6 +1,7 @@
 import type { SimulationResult, PolicyConfig, ScenarioConfig } from '@/lib/types';
-import { buildParamSummary, buildOtherInputs, PARAM_PERIOD_LABELS, fmtNum } from '@/lib/paramSummary';
+import { buildParamSummary, buildOtherInputs, PARAM_PERIOD_LABELS, fmtCost } from '@/lib/paramSummary';
 import { SECTION_META } from '@/components/ChartSections';
+import { ReportTablesContext } from '@/components/ChartCard';
 
 import TotalSalesChart from '@/components/charts/TotalSalesChart';
 import AnnualSalesChart from '@/components/charts/AnnualSalesChart';
@@ -60,9 +61,9 @@ function Figure({ n, children }: { n: number; children: React.ReactNode }) {
 
 /**
  * Off-screen report layout captured block-by-block into a PDF. Renders every
- * chart (across all tabs) plus the configured-parameters table. The capturing
- * code hides chart action buttons / data-table footers via the `.report-capture`
- * CSS scope (see index.css).
+ * chart (across all tabs) plus the configured-parameters table. Each chart's
+ * value table is forced open via ReportTablesContext; action buttons are hidden
+ * by the `.report-capture` CSS scope (see index.css).
  */
 export default function ReportDocument({ result, config, policy, scenarioLabel }: Props) {
   const years = result.years;
@@ -111,6 +112,7 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
   let figureNo = 0;
 
   return (
+    <ReportTablesContext.Provider value={true}>
     <div className="bg-background text-foreground" style={{ padding: 8 }}>
       <Block kind="intro">
         <div style={{ borderBottom: '2px solid hsl(var(--border))', paddingBottom: 8, marginBottom: 8 }}>
@@ -122,10 +124,11 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
           </p>
         </div>
 
-        <h2 className="font-serif text-lg mb-2">Configured parameters</h2>
+        <h2 className="font-serif text-lg mb-2">Configured Parameters (Inputs)</h2>
+        <div className="rounded-md border border-warning/50 bg-warning/10 p-2">
         <table className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
           <thead>
-            <tr className="bg-muted/50 text-left">
+            <tr className="bg-warning/20 text-left">
               <th className="px-2 py-1 font-medium" style={{ border: '1px solid hsl(var(--border))' }}>Parameter</th>
               <th className="px-2 py-1 font-medium" style={{ border: '1px solid hsl(var(--border))' }}>Unit</th>
               <th className="px-2 py-1 text-right font-medium" style={{ border: '1px solid hsl(var(--border))' }}>2026</th>
@@ -144,26 +147,27 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
                   {r.label}{r.pins > 0 ? ` (${r.pins} pin${r.pins > 1 ? 's' : ''})` : ''}
                 </td>
                 <td className="px-2 py-1 font-sans text-muted-foreground" style={{ border: '1px solid hsl(var(--border))' }}>{r.unit}</td>
-                <td className="px-2 py-1 text-right" style={{ border: '1px solid hsl(var(--border))' }}>{fmtNum(r.base)}</td>
+                <td className="px-2 py-1 text-right" style={{ border: '1px solid hsl(var(--border))' }}>{fmtCost(r.base)}</td>
                 {r.cagrs.map((c, j) => (
                   <td key={j} className="px-2 py-1 text-right text-muted-foreground" style={{ border: '1px solid hsl(var(--border))' }}>
                     {c === 0 ? '—' : `${c > 0 ? '+' : ''}${c.toFixed(1)}`}
                   </td>
                 ))}
-                <td className="px-2 py-1 text-right font-semibold" style={{ border: '1px solid hsl(var(--border))' }}>{fmtNum(r.value2055)}</td>
+                <td className="px-2 py-1 text-right font-semibold" style={{ border: '1px solid hsl(var(--border))' }}>{fmtCost(r.value2055)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </Block>
 
       <Block kind="intro">
         <h2 className="font-serif text-lg mb-2">Other configured inputs</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="rounded-md border border-warning/50 bg-warning/10 p-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {otherSections.map(section => (
             <table key={section.title} className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr className="bg-muted/50 text-left">
+                <tr className="bg-warning/20 text-left">
                   <th className="px-2 py-1 font-medium" style={cellBorder}>{section.title}</th>
                   <th className="px-2 py-1" style={cellBorder} />
                 </tr>
@@ -191,5 +195,6 @@ export default function ReportDocument({ result, config, policy, scenarioLabel }
         </div>
       ))}
     </div>
+    </ReportTablesContext.Provider>
   );
 }

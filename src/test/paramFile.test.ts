@@ -59,4 +59,31 @@ describe('param file round-trip', () => {
     expect(applied).toBe(0);
     expect(unknownKeys).toEqual(['totally.bogus']);
   });
+
+  it('exports a projected 2055 column for trajectory rows, blank for scalars', () => {
+    const rows = buildParamRows(bau());
+    const diesel = rows.find(r => r[COL.key] === 'diesel_price_per_l')!;
+    expect(typeof diesel[COL.value2055]).toBe('number');
+    const battery = rows.find(r => r[COL.key] === 'fixed.battery_life_cycles')!;
+    expect(battery[COL.value2055]).toBe('');
+  });
+
+  it('ignores the 2055 column on import', () => {
+    const src = bau();
+    const rows = buildParamRows(src);
+    const diesel = rows.find(r => r[COL.key] === 'diesel_price_per_l')!;
+    diesel[COL.value2055] = 99999; // must not affect anything
+    const { config } = applyParamRows(rows, bau());
+    expect(config.parameters.diesel_price_per_l.baseValue)
+      .toBeCloseTo(src.parameters.diesel_price_per_l.baseValue, 6);
+  });
+
+  it('imports legacy files that use the old "Value (2026)" column', () => {
+    const { config, applied } = applyParamRows(
+      [{ [COL.key]: 'diesel_price_per_l', 'Value (2026)': 150 }],
+      bau(),
+    );
+    expect(applied).toBe(1);
+    expect(config.parameters.diesel_price_per_l.baseValue).toBe(150);
+  });
 });

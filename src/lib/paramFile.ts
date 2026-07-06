@@ -4,23 +4,27 @@ import type { ScenarioConfig, ParameterKey, H2SourceMix, H2BlendMode } from '@/l
 import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
 import { ZET_GVW_CLASSES } from '@/lib/constants/extracted';
+import { buildSeriesFromConfig } from '@/lib/sim/timeSeries';
 
 /**
  * Import/export of the user-configurable sidebar parameters as a single flat
  * table, usable as CSV or Excel. One spec drives both directions so the file
  * format and the dashboard can never drift apart.
  *
- * Layout (one row per editable value):
- *   Section | Parameter | Key | Unit | Value (2026) | CAGR 2026-30 … 2051-55
+ * Layout mirrors the on-screen "Configured Parameters (Inputs)" table
+ * (one row per editable value):
+ *   Parameter | Unit | 2026 | CAGR 2026-30 … 2051-55 | 2055 (projected) | Section | Key
  *
- * - Trajectory params (fuel/energy + key aggregate costs) use the Value column
- *   for the 2026 base and the six CAGR columns (entered as %/yr).
+ * - Trajectory params (fuel/energy + key aggregate costs) use the 2026 column
+ *   for the base value and the six CAGR columns (entered as %/yr). The 2055
+ *   column is the projected value — informational on export, ignored on import.
  * - Scalars / toggles (battery life, funding rates, H2 source mix, GVW…) use
- *   only the Value column; their CAGR cells stay blank.
+ *   only the 2026 column; their CAGR and 2055 cells stay blank.
  *
  * On import the `Key` column is the source of truth, so rows may be reordered.
  * Blank cells keep the current value, and per-year "pins" are preserved (they
- * are intentionally not represented in the file).
+ * are intentionally not represented in the file). Files downloaded before the
+ * layout change (a "Value (2026)" column) still import fine.
  */
 
 const PERIOD_KEYS = ['d2530', 'd3135', 'd3640', 'd4145', 'd4650', 'd5155'] as const;
@@ -31,13 +35,17 @@ export const COL = {
   parameter: 'Parameter',
   key: 'Key',
   unit: 'Unit',
-  value: 'Value (2026)',
+  value: '2026',
+  value2055: '2055 (projected)',
 } as const;
+
+/** Header of files downloaded before the layout matched the on-screen table. */
+const LEGACY_VALUE_COL = 'Value (2026)';
 
 const CAGR_COLS = PERIOD_LABELS.map(l => `CAGR ${l} (%/yr)`);
 
 export const PARAM_FILE_HEADERS = [
-  COL.section, COL.parameter, COL.key, COL.unit, COL.value, ...CAGR_COLS,
+  COL.parameter, COL.unit, COL.value, ...CAGR_COLS, COL.value2055, COL.section, COL.key,
 ];
 
 const H2_SOURCE_VALUES: H2SourceMix[] = ['green_only', 'blend_2046_green', 'cheapest'];
@@ -51,9 +59,10 @@ interface FieldSpec {
   label: string;
   key: string;
   unit: string;
-  /** Read the export values from a config. cagrs is a length-6 %/yr array for
-   *  trajectory rows, or undefined for scalar rows. */
-  read: (c: ScenarioConfig) => { value: Cell; cagrs?: number[] };
+  /** Read the export values from a config. cagrs is a length-6 %/yr array and
+   *  value2055 the projected end value for trajectory rows; both are undefined
+   *  for scalar rows. value2055 is informational only — ignored on import. */
+  read: (c: ScenarioConfig) => { value: Cell; cagrs?: number[]; value2055?: number };
   /** Apply parsed file values onto a (mutable clone of a) config. */
   write: (c: ScenarioConfig, p: Parsed) => void;
 }
@@ -67,7 +76,12 @@ const trajectorySpecs: FieldSpec[] = CONFIGURABLE_PARAM_GROUPS.flatMap(group =>
     unit: PARAMETER_META[key]?.unit ?? '',
     read: c => {
       const p = c.parameters[key];
-      return { value: p.baseValue, cagrs: PERIOD_KEYS.map(pk => round(p[pk] * 100)) };
+      const series = buildSeriesFromConfig(p, false);
+      return {
+        value: p.baseValue,
+        cagrs: PERIOD_KEYS.map(pk => round(p[pk] * 100)),
+        value2055: round(series.at(-1) ?? p.baseValue),
+      };
     },
     write: (c, parsed) => {
       const p = c.parameters[key];
@@ -178,15 +192,16 @@ function toNum(v: Cell): number | undefined {
 // ── Export: config → row objects ──────────────────────────────────────────────
 export function buildParamRows(config: ScenarioConfig): Record<string, string | number>[] {
   return SPECS.map(spec => {
-    const { value, cagrs } = spec.read(config);
+    const { value, cagrs, value2055 } = spec.read(config);
     const row: Record<string, string | number> = {
-      [COL.section]: spec.section,
       [COL.parameter]: spec.label,
-      [COL.key]: spec.key,
       [COL.unit]: spec.unit,
       [COL.value]: value ?? '',
     };
     CAGR_COLS.forEach((col, i) => { row[col] = cagrs?.[i] ?? ''; });
+    row[COL.value2055] = value2055 ?? '';
+    row[COL.section] = spec.section;
+    row[COL.key] = spec.key;
     return row;
   });
 }
@@ -207,7 +222,10 @@ export function applyParamRows(
     const spec = SPEC_BY_KEY.get(keyRaw.toLowerCase());
     if (!spec) { unknownKeys.push(keyRaw); continue; }
     const cagrs = CAGR_COLS.map(col => toNum(rec[col]));
-    spec.write(next, { value: rec[COL.value], cagrs });
+    // Prefer the current "2026" column; fall back to the legacy header so
+    // files downloaded before the layout change still import.
+    const value = COL.value in rec ? rec[COL.value] : rec[LEGACY_VALUE_COL];
+    spec.write(next, { value, cagrs });
     applied++;
   }
 
@@ -235,8 +253,9 @@ export function downloadParamsCsv(config: ScenarioConfig, filename = 'PTCM_param
 
 export function downloadParamsXlsx(config: ScenarioConfig, filename = 'PTCM_parameters.xlsx'): void {
   const ws = XLSX.utils.json_to_sheet(buildParamRows(config), { header: PARAM_FILE_HEADERS });
-  ws['!cols'] = [{ wch: 22 }, { wch: 34 }, { wch: 34 }, { wch: 12 }, { wch: 12 },
-    ...CAGR_COLS.map(() => ({ wch: 14 }))];
+  ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 },
+    ...CAGR_COLS.map(() => ({ wch: 14 })),
+    { wch: 14 }, { wch: 22 }, { wch: 34 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Parameters');
   XLSX.writeFile(wb, filename);

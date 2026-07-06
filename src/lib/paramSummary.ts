@@ -51,6 +51,10 @@ export const PARAM_PERIOD_LABELS = ['2026-30', '2031-35', '2036-40', '2041-45', 
 export const fmtNum = (n: number) =>
   n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
+/** Cost values always show exactly two decimals (82.50, 7.00) so columns read uniformly. */
+export const fmtCost = (n: number) =>
+  n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 // ── Non-trajectory inputs (single fixed values / categorical choices) ──
 
 export interface OtherInputRow {
