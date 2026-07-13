@@ -14,12 +14,8 @@ import {
   EMISSION_FACTORS,
   betGridFactor,
 } from '@/lib/constants/extracted';
-import {
-  SEGMENTS,
-  APPLICATIONS,
-  SEGMENT_OF_BUCKET,
-  APPLICATION_OF_BUCKET,
-} from '@/lib/constants/segments';
+import { SEGMENTS, APPLICATIONS } from '@/lib/constants/segments';
+import { segmentShare, applicationShare } from '@/lib/constants/segmentAppShares';
 import type { SimulationResult, AnnualResult } from '@/lib/types';
 import type { AnnualPTSales } from './pttm';
 import { START_YEAR, END_YEAR, YEAR_COUNT } from './timeSeries';
@@ -196,9 +192,11 @@ export function computeStockEmissions(
     }
 
     // ── Segment / Application breakdowns ──
-    const curBucketSales = bucketSalesAt(year);
-    const retireBucketSales = bucketSalesAt(retireYear);
-
+    // Excel method ('Segmentwise Sales/Stock', 'Applicationwise Sales/Stock'):
+    // each powertrain's yearly total × that year's share row. Diesel/BET/H2 use
+    // the general segment shares; CNG/LNG use their normalised segment shares
+    // (CNG only in Rigid 12–28.5T, LNG only in the TT bands). Applications use
+    // one share table for every powertrain.
     const salesBySegment: Record<string, number> = {};
     const salesByApplication: Record<string, number> = {};
     const stockBySegment: Record<string, number> = {};
@@ -206,22 +204,36 @@ export function computeStockEmissions(
     for (const seg of SEGMENTS) { salesBySegment[seg] = 0; stockBySegment[seg] = 0; }
     for (const app of APPLICATIONS) { salesByApplication[app] = 0; stockByApplication[app] = 0; }
 
-    // Same breakdowns kept split by powertrain (the per-PT split is computed in
-    // the bucket loop below anyway; here we keep it instead of collapsing it).
-    const emptySegPT = (): Record<Powertrain, Record<string, number>> => {
-      const o = {} as Record<Powertrain, Record<string, number>>;
-      for (const pt of POWERTRAINS) { o[pt] = {}; for (const seg of SEGMENTS) o[pt][seg] = 0; }
-      return o;
-    };
-    const emptyAppPT = (): Record<Powertrain, Record<string, number>> => {
-      const o = {} as Record<Powertrain, Record<string, number>>;
-      for (const pt of POWERTRAINS) { o[pt] = {}; for (const app of APPLICATIONS) o[pt][app] = 0; }
-      return o;
-    };
-    const salesBySegmentPT = emptySegPT();
-    const stockBySegmentPT = emptySegPT();
-    const salesByApplicationPT = emptyAppPT();
-    const stockByApplicationPT = emptyAppPT();
+    const salesBySegmentPT = {} as Record<Powertrain, Record<string, number>>;
+    const stockBySegmentPT = {} as Record<Powertrain, Record<string, number>>;
+    const salesByApplicationPT = {} as Record<Powertrain, Record<string, number>>;
+    const stockByApplicationPT = {} as Record<Powertrain, Record<string, number>>;
+    for (const pt of POWERTRAINS) {
+      salesBySegmentPT[pt] = {}; stockBySegmentPT[pt] = {};
+      salesByApplicationPT[pt] = {}; stockByApplicationPT[pt] = {};
+      for (const seg of SEGMENTS) {
+        const sh = segmentShare(pt, seg, year);
+        const sSales = sales[pt] * sh;
+        const sStock = currentStock[pt] * sh;
+        salesBySegmentPT[pt][seg] = sSales;
+        stockBySegmentPT[pt][seg] = sStock;
+        salesBySegment[seg] += sSales;
+        stockBySegment[seg] += sStock;
+      }
+      for (const app of APPLICATIONS) {
+        const sh = applicationShare(app, year);
+        const aSales = sales[pt] * sh;
+        const aStock = currentStock[pt] * sh;
+        salesByApplicationPT[pt][app] = aSales;
+        stockByApplicationPT[pt][app] = aStock;
+        salesByApplication[app] += aSales;
+        stockByApplication[app] += aStock;
+      }
+    }
+
+    // ── Per-bucket stock roll-forward (energy accounting only) ──
+    const curBucketSales = bucketSalesAt(year);
+    const retireBucketSales = bucketSalesAt(retireYear);
 
     // Per-bucket annual energy use (raw, pre-scaling). Diesel/CNG/LNG/H2 in their
     // fuel units (litres/kg), BET in kWh. Counterfactual = whole bucket as diesel.
@@ -229,23 +241,14 @@ export function computeStockEmissions(
     let dieselCounterfactualLitresRaw = 0;
 
     for (const b of BUCKETS) {
-      const seg = SEGMENT_OF_BUCKET[b.id];
-      const app = APPLICATION_OF_BUCKET[b.id];
-
       // Roll per-bucket stock forward with this bucket's sales and retirements.
       const curStockB = emptyPT();
-      let bucketSales = 0;
       let bucketStock = 0;
       for (const pt of POWERTRAINS) {
-        bucketSales += curBucketSales[b.id][pt];
         let s = prevStockByBucket[b.id][pt] + curBucketSales[b.id][pt] - retireBucketSales[b.id][pt];
         if (pt === 'Diesel') s -= pre2001Scrappage * bucketWeight(b);
         curStockB[pt] = Math.max(0, s);
         bucketStock += curStockB[pt];
-        salesBySegmentPT[pt][seg] += curBucketSales[b.id][pt];
-        stockBySegmentPT[pt][seg] += curStockB[pt];
-        salesByApplicationPT[pt][app] += curBucketSales[b.id][pt];
-        stockByApplicationPT[pt][app] += curStockB[pt];
       }
       prevStockByBucket[b.id] = curStockB;
 
@@ -257,11 +260,6 @@ export function computeStockEmissions(
       energyRaw['H2-ICE'] += curStockB['H2-ICE']  * b.annualKm / b.h2iceKmPerKg;
       energyRaw['H2-FCET']+= curStockB['H2-FCET'] * b.annualKm / b.fcetKmPerKg;
       dieselCounterfactualLitresRaw += bucketStock * b.annualKm / b.dieselKMPL;
-
-      salesBySegment[seg] += bucketSales;
-      salesByApplication[app] += bucketSales;
-      stockBySegment[seg] += bucketStock;
-      stockByApplication[app] += bucketStock;
     }
 
     // Scale to display units: litres→million litres, kg→million kg, kWh→TWh.

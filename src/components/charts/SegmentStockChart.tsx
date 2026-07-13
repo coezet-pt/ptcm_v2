@@ -13,7 +13,9 @@ export default function SegmentStockChart({ years, scenarioLabel, pt }: Props) {
   const data = useMemo(() => years.map(y => {
     const src = pt ? (y.stockBySegmentPT[pt] ?? {}) : y.stockBySegment;
     const row: Record<string, number> = { year: y.year };
-    for (const s of SEGMENTS) row[s] = Math.round(src[s] ?? 0);
+    let total = 0;
+    for (const s of SEGMENTS) { row[s] = Math.round(src[s] ?? 0); total += row[s]; }
+    row.Total = total;
     return row;
   }), [years, pt]);
 

@@ -13,7 +13,9 @@ export default function ApplicationStockChart({ years, scenarioLabel, pt }: Prop
   const data = useMemo(() => years.map(y => {
     const src = pt ? (y.stockByApplicationPT[pt] ?? {}) : y.stockByApplication;
     const row: Record<string, number> = { year: y.year };
-    for (const a of APPLICATIONS) row[a] = Math.round(src[a] ?? 0);
+    let total = 0;
+    for (const a of APPLICATIONS) { row[a] = Math.round(src[a] ?? 0); total += row[a]; }
+    row.Total = total;
     return row;
   }), [years, pt]);
 
