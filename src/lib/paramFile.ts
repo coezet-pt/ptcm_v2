@@ -133,6 +133,7 @@ const FUNDING = 'Funding';
 const LIFE = 'Key Aggregate Life';
 const H2 = 'Hydrogen Source Mix';
 const GVW = 'Policy support — GVW for ZET';
+const TOLL = 'Policy support — Toll waiver';
 
 const scalarSpecs: FieldSpec[] = [
   numberSpec(LIFE, 'Battery Life', 'fixed.battery_life_cycles', 'cycles',
@@ -172,6 +173,10 @@ const scalarSpecs: FieldSpec[] = [
       (c, v) => {
         c.policy.zet_additional_gvw_kg = { ...(c.policy.zet_additional_gvw_kg ?? {}), [cls]: v };
       })),
+
+  // Toll waiver for ZETs — flat share of ZET toll waived (Excel $AL$276)
+  numberSpec(TOLL, 'Toll waiver for ZETs', 'policy.toll_waiver_pct', '%',
+    c => c.policy.toll_waiver_pct ?? 0, (c, v) => { c.policy.toll_waiver_pct = clamp01(v); }, 100),
 ];
 
 const SPECS: FieldSpec[] = [...trajectorySpecs, ...scalarSpecs];

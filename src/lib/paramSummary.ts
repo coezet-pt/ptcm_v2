@@ -137,5 +137,13 @@ export function buildOtherInputs(config: ScenarioConfig): OtherInputSection[] {
     }),
   });
 
+  // Policy support — Toll waiver for ZETs (flat share, Excel $AL$276)
+  sections.push({
+    title: 'Policy support — Toll waiver',
+    rows: [
+      { label: 'Toll waiver for ZETs', value: `${((policy.toll_waiver_pct ?? 0) * 100).toFixed(0)}% of ZET toll waived` },
+    ],
+  });
+
   return sections;
 }

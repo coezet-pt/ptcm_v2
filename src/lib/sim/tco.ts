@@ -408,16 +408,11 @@ export function computeTCO(
       const fuelPerKm = computeFuelCostPerKm(pt, bucket, targetYear, ts, policy, fp);
       const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear, fp);
 
+      // ZET toll waiver — Excel 'Changing with year' $AL$276 = 1 − toll_waiver_pct,
+      // a single flat multiplier on the ZET toll rate (BET/H2-ICE/FCET), all years.
       let effectiveToll = tollPerKm;
       if (isZET(pt)) {
-        const life = FINANCE.useful_life_years;
-        const p1 = Math.min(policy.toll_waiver_first_period_years, life);
-        const p2 = Math.min(policy.toll_waiver_second_period_years, life - p1);
-        const p3 = Math.max(0, life - p1 - p2);
-        const waiverAvg = (p1 * policy.toll_waiver_pct_first_5y
-          + p2 * policy.toll_waiver_pct_next_5y
-          + p3 * 0) / life;
-        effectiveToll = tollPerKm * (1 - waiverAvg);
+        effectiveToll = tollPerKm * (1 - policy.toll_waiver_pct);
       }
 
       const manpowerPair = (pt === 'BET' || pt === 'H2-FCET') ? cal.manpowerZet

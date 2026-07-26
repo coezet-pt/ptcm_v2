@@ -84,8 +84,8 @@ export interface PolicyConfig {
   interest_rate_zet: number;
   loan_tenure_years: number;
   electricity_subsidy_per_kwh: number;
-  toll_waiver_pct_first_5y: number;
-  toll_waiver_pct_next_5y: number;
+  // Fraction (0–1) of ZET toll waived, all years. Excel 'Changing with year' $AL$276 = 1 − this.
+  toll_waiver_pct: number;
   bet_inflection_year: number;
   h2ice_inflection_year: number;
   fcet_inflection_year: number;
@@ -109,8 +109,6 @@ export interface PolicyConfig {
   fcet_demand_incentive_phase2_per_kwh: number;
   fcet_incentive_phase2_end_year: number;
   electricity_subsidy_end_year: number;
-  toll_waiver_first_period_years: number;
-  toll_waiver_second_period_years: number;
   // Maturity years
   bet_maturity_year: number;
   h2ice_maturity_year: number;

@@ -10,6 +10,7 @@ import ParameterRow from './ParameterRow';
 import FundingInput from './FundingInput';
 import HydrogenSourceMix from './HydrogenSourceMix';
 import GvwForZet from './GvwForZet';
+import TollWaiver from './TollWaiver';
 import KeyAggregateLifeInput from './KeyAggregateLifeInput';
 import { useScenario } from '@/contexts/ScenarioContext';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
@@ -99,7 +100,10 @@ export default function InputPanel() {
                 Policy support
               </AccordionTrigger>
               <AccordionContent>
-                <GvwForZet />
+                <div className="space-y-5">
+                  <GvwForZet />
+                  <TollWaiver />
+                </div>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
