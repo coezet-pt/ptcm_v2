@@ -570,8 +570,10 @@ export const BAU_POLICY = {
   interest_rate_zet: 0.12,
   loan_tenure_years: 7,
   electricity_subsidy_per_kwh: 0,
-  // Fraction of ZET toll waived. 0 = Excel $AL$276 = 1 (no waiver).
-  toll_waiver_pct: 0,
+  // Fraction of ZET toll waived per 5-year band. 0 = Excel $AL$276 = 1 (no waiver).
+  toll_waiver_bands: {
+    d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0,
+  } as Record<string, number>,
   bet_inflection_year: 2031,
   h2ice_inflection_year: 2051,
   fcet_inflection_year: 2051,
@@ -624,7 +626,7 @@ export const BEST_OVERRIDES = {
     fcet_demand_incentive_per_kwh: 30000,
     interest_rate_zet: 0.10,
     electricity_subsidy_per_kwh: 2,
-    toll_waiver_pct: 1.0,
+    toll_waiver_bands: { d2530: 1, d3135: 1, d3640: 1, d4145: 1, d4650: 1, d5155: 1 },
     bet_inflection_year: 2032,
     bet_resale_2046_plus: 0.45,
   },

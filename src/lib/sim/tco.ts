@@ -86,6 +86,21 @@ const clampFrac = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v
  *  setting. Either a single uniform % ('uniform' mode) or a per-5-year-band value
  *  ('bands' mode). Grey hydrogen is discontinued from 2046 onward, so the blend
  *  applies to 2026–2045 only; later years are green-only. */
+/**
+ * ZET toll-waiver fraction (0–1) for the given purchase year, selected from the
+ * per-5-year band table (keys d2530…d5155). 0 = no waiver.
+ */
+function tollWaiverForYear(policy: PolicyConfig, year: number): number {
+  const bands = policy.toll_waiver_bands ?? {};
+  const key =
+    year <= 2030 ? 'd2530' :
+    year <= 2035 ? 'd3135' :
+    year <= 2040 ? 'd3640' :
+    year <= 2045 ? 'd4145' :
+    year <= 2050 ? 'd4650' : 'd5155';
+  return clampFrac(bands[key]);
+}
+
 function greyBlendForYear(policy: PolicyConfig, year: number): number {
   if (year > 2045) return 0;
   if ((policy.grey_h2_blend_mode ?? 'uniform') === 'uniform') {
@@ -408,11 +423,11 @@ export function computeTCO(
       const fuelPerKm = computeFuelCostPerKm(pt, bucket, targetYear, ts, policy, fp);
       const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear, fp);
 
-      // ZET toll waiver — Excel 'Changing with year' $AL$276 = 1 − toll_waiver_pct,
-      // a single flat multiplier on the ZET toll rate (BET/H2-ICE/FCET), all years.
+      // ZET toll waiver — Excel 'Changing with year' ZET toll = diesel toll ×
+      // (1 − waiver); waiver is set per 5-year band (by purchase year) for ZETs.
       let effectiveToll = tollPerKm;
       if (isZET(pt)) {
-        effectiveToll = tollPerKm * (1 - policy.toll_waiver_pct);
+        effectiveToll = tollPerKm * (1 - tollWaiverForYear(policy, targetYear));
       }
 
       const manpowerPair = (pt === 'BET' || pt === 'H2-FCET') ? cal.manpowerZet

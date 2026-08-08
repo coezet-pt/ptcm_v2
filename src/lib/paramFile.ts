@@ -174,9 +174,13 @@ const scalarSpecs: FieldSpec[] = [
         c.policy.zet_additional_gvw_kg = { ...(c.policy.zet_additional_gvw_kg ?? {}), [cls]: v };
       })),
 
-  // Toll waiver for ZETs — flat share of ZET toll waived (Excel $AL$276)
-  numberSpec(TOLL, 'Toll waiver for ZETs', 'policy.toll_waiver_pct', '%',
-    c => c.policy.toll_waiver_pct ?? 0, (c, v) => { c.policy.toll_waiver_pct = clamp01(v); }, 100),
+  // Toll waiver for ZETs — share of ZET toll waived per 5-year band (Excel $AL$276)
+  ...PERIOD_KEYS.map((pk, i): FieldSpec =>
+    numberSpec(TOLL, `Toll waiver for ZETs — ${PERIOD_LABELS[i]}`, `policy.toll_waiver_bands.${pk}`, '%',
+      c => c.policy.toll_waiver_bands?.[pk] ?? 0,
+      (c, v) => {
+        c.policy.toll_waiver_bands = { ...(c.policy.toll_waiver_bands ?? {}), [pk]: clamp01(v) };
+      }, 100)),
 ];
 
 const SPECS: FieldSpec[] = [...trajectorySpecs, ...scalarSpecs];

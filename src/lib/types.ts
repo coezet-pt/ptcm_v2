@@ -84,8 +84,10 @@ export interface PolicyConfig {
   interest_rate_zet: number;
   loan_tenure_years: number;
   electricity_subsidy_per_kwh: number;
-  // Fraction (0–1) of ZET toll waived, all years. Excel 'Changing with year' $AL$276 = 1 − this.
-  toll_waiver_pct: number;
+  // Fraction (0–1) of ZET toll waived, per 5-year band (keys d2530…d5155, by
+  // purchase year). Excel 'Changing with year' ZET toll = diesel toll × (1 − band).
+  // 0 = no waiver ($AL$276 = 1).
+  toll_waiver_bands: Record<string, number>;
   bet_inflection_year: number;
   h2ice_inflection_year: number;
   fcet_inflection_year: number;

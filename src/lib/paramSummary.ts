@@ -6,7 +6,7 @@ import {
   DEFAULT_BATTERY_LIFE_CYCLES, DEFAULT_FUEL_CELL_LIFE_HOURS, ZET_GVW_CLASSES,
   ZET_GVW_CURRENT_KG,
 } from '@/lib/constants/extracted';
-import { DELTA_KEYS } from '@/components/ParameterRow';
+import { DELTA_KEYS, DELTA_LABELS } from '@/components/ParameterRow';
 
 export interface ParamSummaryRow {
   group: string;
@@ -137,12 +137,14 @@ export function buildOtherInputs(config: ScenarioConfig): OtherInputSection[] {
     }),
   });
 
-  // Policy support — Toll waiver for ZETs (flat share, Excel $AL$276)
+  // Policy support — Toll waiver for ZETs, per 5-year band (Excel $AL$276)
+  const tollBands = policy.toll_waiver_bands ?? {};
   sections.push({
-    title: 'Policy support — Toll waiver',
-    rows: [
-      { label: 'Toll waiver for ZETs', value: `${((policy.toll_waiver_pct ?? 0) * 100).toFixed(0)}% of ZET toll waived` },
-    ],
+    title: 'Policy support — Toll waiver for ZETs (% of toll waived)',
+    rows: DELTA_KEYS.map((key, i) => ({
+      label: DELTA_LABELS[i],
+      value: `${((tollBands[key] ?? 0) * 100).toFixed(0)}%`,
+    })),
   });
 
   return sections;
