@@ -20,7 +20,7 @@ export default function TollWaiver() {
     <div className="space-y-2">
       <div className="text-sm font-medium">Toll waiver for ZETs</div>
       <p className="text-xs text-muted-foreground">
-        Share of toll waived for BET/H₂-ICE/FCET, per 5-year block (Excel $AL$276).
+        Share of toll waived for ZETs (BET, FCET, H₂ ICE), per 5-year block.
       </p>
       <div className="flex flex-wrap items-end gap-2 pt-1">
         {DELTA_KEYS.map((key, i) => (
