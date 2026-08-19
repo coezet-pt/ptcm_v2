@@ -63,24 +63,34 @@ is fully dead: the blend is driven by `policy.grey_h2_blend_*` instead.
 | `FundingInput` (non-ZET) | `fixed.interest_rate_ice`, `fixed.loan_tenure_years_nonzet` | `tco.ts` annuity for Diesel/CNG/LNG/H2-ICE |
 | `FundingInput` (ZET) | `policy.interest_rate_zet`, `policy.loan_tenure_years` | `tco.ts` annuity for BET/FCET |
 | `GvwForZet` | `policy.zet_additional_gvw_kg` (7 size classes, default 0) | `choiceModel.ts computeBucketPayload` → payload factor |
-| `TollWaiver` | `policy.toll_waiver_bands` (6 bands, 0–1) | `tco.ts tollWaiverForYear` → `toll × (1 − band)` for BET/FCET |
+| `TollWaiver` | `policy.toll_waiver_bands` (3 bands, 0–1 — `TOLL_WAIVER_KEYS`) | `tco.ts tollWaiverForYear` → `toll × (1 − band)` for BET/H2-ICE/FCET |
 
 ### Policy levers with no UI
 
-`PolicyConfig` is much larger than the sidebar. These are set only by scenario presets and
-by parameter-file import — there is no on-screen control for them:
+`PolicyConfig` is much larger than the sidebar. These have no on-screen control:
 
-`bet_demand_incentive_per_kwh`, `fcet_demand_incentive_per_kwh` and their phase-2/end-year
-fields, `electricity_subsidy_per_kwh` + `electricity_subsidy_end_year`,
-`bet_inflection_year` / `h2ice_inflection_year` / `fcet_inflection_year`,
-`bet_maturity_year` / `h2ice_maturity_year` / `fcet_maturity_year`,
-`bet_resale_2046_plus`, `diesel_price_5pct_yoy_after_2045`,
-`range_filling_concern_after_2035`, `gvw_payload_compensation_t`.
+- **Editable through the parameter file** (Download → edit → Upload), so they are reachable
+  without a widget: `bet_maturity_year` / `h2ice_maturity_year` / `fcet_maturity_year`,
+  `electricity_subsidy_per_kwh` + `electricity_subsidy_end_year`.
+- **Scenario presets only**: `bet_demand_incentive_per_kwh`, `fcet_demand_incentive_per_kwh`
+  and their phase-2/end-year fields, `bet_inflection_year` / `h2ice_inflection_year` /
+  `fcet_inflection_year`, `bet_resale_2046_plus`, `diesel_price_5pct_yoy_after_2045`,
+  `range_filling_concern_after_2035`, `gvw_payload_compensation_t`.
 
 Orphaned components exist for some of these and are **not mounted anywhere**:
 `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`,
 `BucketMaintenanceInput.tsx`. If you need a lever back, these are your starting point —
 check whether they still compile against the current `PolicyConfig` first.
+
+> **Before surfacing any of them, check it is not inert.** TCO is only evaluated at 2045,
+> 2050 and 2055, so a lever gated on an earlier end-year can never reach a result. The only
+> remaining inert levers are `bet_demand_incentive_per_kwh` / `fcet_demand_incentive_per_kwh`
+> (+ phase-2; end-years 2030/2035) — and that inertness is **Excel-faithful**, so do not
+> "fix" it by extending the end years. See [03](03-model-reference.md) and
+> `src/test/demandIncentive.test.ts`.
+>
+> `src/test/tollWaiver.test.ts` and `src/test/choiceAdjustment.test.ts` show the pattern for
+> asserting a lever is *not* dead — copy it whenever you add a control.
 
 ### Which levers move which charts
 
@@ -91,7 +101,9 @@ TIV comes from `TIV_PROJECTION` and is never a function of policy.
 |---|---|
 | GVW for ZET | Powertrain mix (BET ↔ FCET). Small — ZET is ~85 % saturated by 2045. |
 | H₂ source mix | Powertrain mix (H2-ICE/FCET via cost) + TCO parity + Emissions (via grey factor). |
-| Toll waiver | ZET TCO → powertrain mix. |
+| Toll waiver | ZET TCO → powertrain mix. Strong: a 100 % waiver lifts 2045 BET share ~76 % → ~93 %. |
+| Powertrain maturity year | Share adjustments at the 2050 and 2055 anchors → powertrain mix. Parameter file only. |
+| Electricity subsidy | BET fuel cost → powertrain mix. Parameter file only; applies to `electricity_subsidy_end_year` (default 2055). |
 | Battery / fuel-cell cost | ZET TCO → mix, and TCO parity year. |
 | Diesel price | Everything downstream of TCO. |
 | Total sales / TIV | **Nothing moves it.** It is a fixed projection. |

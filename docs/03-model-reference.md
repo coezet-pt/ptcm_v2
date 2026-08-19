@@ -17,7 +17,7 @@ Sheets that matter, and where they land in code:
 | `Parameters Varying` / `Changing with year` | `BAU_PARAMETERS` base values + CAGRs, vehicle price build-up, toll rows |
 | `Input Sheet` | choice-model elasticity ratings (`BUCKET_CHOICE_ELASTICITIES`) |
 | `B1`–`B14 - TCO ML` | per-bucket TCO build-up; `BUCKET_OPEX_CALIBRATION`, maintenance defaults |
-| `Estimation SS-2045` / `Estimation SS-2050` | `CHOICE_SHARE_ADJUSTMENT[2045]`, `[2050]` |
+| `Estimation SS-2045` / `Estimation SS-2050` | share adjustments, rebuilt from year inputs in `sim/adjustments.ts` (snapshot: `CHOICE_SHARE_ADJUSTMENT_BASELINE`) |
 | `Estimation 100% ZET 2055` | the `zetOnly` branch of `computeShares` |
 | `PTTM` | Gompertz/Weibull curve shapes, `GOMPERTZ_PARAMS_BY_PT`, pilot shares |
 | `Emissions` | `EMISSION_FACTORS`, `betGridFactor` |
@@ -106,7 +106,11 @@ FCET     = Diesel(y) − engineTrans(y) + ePowertrain(y) + fuelCell(y)
 - **Demand incentives** are two-phase: full rate through
   `*_incentive_phase1_end_year`, a reduced phase-2 rate through
   `*_incentive_phase2_end_year`, then zero. Incentive is per kWh × battery size (BET uses
-  `betBatteryKWh`, FCET uses `fcetBatteryKWh`).
+  `betBatteryKWh`, FCET uses `fcetBatteryKWh`). The two phases are the workbook's `$AH$128`
+  (2026-30) and `$AI$128` (2031-35) cells; rows 129-137 / 142-149 subtract nothing from 2036
+  on. **Because the choice model only prices 2045/2050/2055, this lever is inert by
+  construction** — that is the workbook's behaviour, not a defect. Do not "fix" it by pushing
+  the end years past 2045; `src/test/demandIncentive.test.ts` guards it.
 
 ### TCO per km (7-year ownership)
 
@@ -125,12 +129,20 @@ TCO/km     = (capex + opex/km × annualKm × 7) / (annualKm × 7)
 ```
 
 - **Interest rate and tenure** split on `isZET(pt)`, which in code is
-  **`BET || H2-FCET` only** — H2-ICE is financed as an ICE. Same split governs the toll
-  waiver. See [07](07-gotchas-and-backlog.md) for why that is worth double-checking against
-  the workbook.
+  **`BET || H2-FCET` only** — H2-ICE is financed as an ICE. The workbook itself is
+  inconsistent here (8 of the 14 bucket sheets discount H2-ICE at the ICE rate `C26`/`C25`,
+  6 at the ZET rate `C28`/`C27`); both rates are 12 %/7 yr at BAU so it is invisible until
+  someone moves the Funding inputs. See [07](07-gotchas-and-backlog.md).
+- **Toll** splits on a *separate* predicate, `usesZetToll(pt)` = **BET + H2-ICE + H2-FCET**.
+  All 14 bucket sheets agree on this one: the row is labelled
+  `Toll Charges (H2 ICE, BET & FCET)` and the H2-ICE block points at it (B1 row 122 → row
+  60 → `Changing with year` row 277, the ZET toll table at rows 276–284).
 - **Fuel/km** — diesel adds AdBlue; BET uses `electricity_incl_caas_per_kwh` minus the
-  electricity subsidy (until `electricity_subsidy_end_year`); H2 uses the blended
-  green/grey production cost plus compression/storage.
+  electricity subsidy (until `electricity_subsidy_end_year`, default 2055); H2 uses the
+  blended green/grey production cost plus compression/storage. The electricity subsidy is a
+  **dashboard-only** lever — the workbook has no subsidy term (`Changing with year` r18 is
+  DISCOM + fixed/demand charges + charging infra, nothing subtracted) — so unlike the demand
+  incentives it carries no fidelity constraint on its end year.
 - **Maintenance/km** — Diesel/BET/FCET are user-editable per bucket via
   `fixed.bucket_maintenance` (defaults from `maintenance.ts` reproduce the Excel baseline);
   CNG/LNG/H2-ICE grow at a flat 4 %/yr. BET/FCET additionally carry a **Key Aggregate Life
@@ -192,9 +204,40 @@ Diesel, CNG, LNG and H2-ICE all use the diesel payload — only BET and FCET car
 **Supply timing** — a powertrain scores 0 for a bucket before its
 `START_OF_SUPPLY[size][pt]` year.
 
-**Estimation-sheet adjustments** — after normalising, shares are multiplied by
-`CHOICE_SHARE_ADJUSTMENT[targetYear][bucketId][pt]` (supply-delay / maturity / potential-TIV
-factors from the Excel Estimation sheets), then renormalised.
+**Estimation-sheet adjustments** — after normalising, shares are multiplied by a per-bucket
+factor and renormalised. The workbook does **not** store these as constants; it computes them
+from year inputs, and so does `src/lib/sim/adjustments.ts`. Every layer has the same shape:
+
+```
+delay(pt) = 1 − (year[pt] − year[baseline]) / (steadyState − year[baseline])
+```
+
+| Anchor | Layers | Baseline | Steady state |
+|---|---|---|---|
+| 2045 | supply × potentialTIV | Diesel | 2045 |
+| 2050 | supply × maturity × potentialTIV | Diesel | 2050 |
+| 2055 | maturity only | **BET** | 2055 |
+
+Year inputs: `START_OF_SUPPLY` (`No change with year` J63:O79, per size class) and
+`PT_MATURITY_YEARS` (P65:U65 — the workbook fills only the 15T row and applies it to every
+bucket, which is why the matching policy levers are scalars). Steady-state years are
+`Input Sheet` BO1/CB1/CK1.
+
+Worked check for B1 at 2050: CNG = supply `1−(2027−2025)/25` × maturity `1−(2030−2025)/25`
+= 0.92 × 0.80 = **0.736**; BET 0.92 × 0.60 = **0.552**; H2-ICE 0.64 × 0.32 = **0.2048**.
+
+`policy.bet_maturity_year` / `h2ice_maturity_year` / `fcet_maturity_year` feed the maturity
+layer, so they move the 2050 and 2055 anchors. The **"Potential TIV"** layer (which zeroes
+CNG or LNG in buckets where they are not offered) is derived at module load by dividing the
+extracted `CHOICE_SHARE_ADJUSTMENT_BASELINE` snapshot by the default-input delay factors —
+that guarantees the computed path reproduces the workbook exactly at defaults, which
+`src/test/choiceAdjustment.test.ts` asserts to 1e-9.
+
+**TCO parity** — `sim/parity.ts` sweeps 2026→2055 and reports the first year each ZET's
+TCO/km reaches diesel, per bucket, reproducing the `Buckets` AE3:AG16 array formula. It is
+computed on every run and surfaced as `SimulationResult.parityYears`. At BAU it matches the
+workbook exactly for 36 of 42 cells (all H2-ICE and H2-FCET); the six BET cells that differ
+are each exactly one year late, an artefact of the 2026 rebase.
 
 **2055 is ZET-only.** `computeShares(..., zetOnly = true)` zeroes Diesel/CNG/LNG and
 renormalises among BET / H2-ICE / H2-FCET, reproducing the `Estimation 100% ZET 2055` sheet.

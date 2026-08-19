@@ -209,8 +209,14 @@ export const BUCKET_PAYLOADS: Record<string, { diesel: number; bet: number; fcet
 //   2050: Start-of-Supply × "Adjustment for delay in PT Maturity" × Potential TIV
 //   2055: "Adjustment for delay in Powertrain Maturity Year" (ZET-only sheet)
 // Extracted as ratio (final-adjusted row ÷ raw PT-share row) per bucket.
+//
+// NOTE — this table is the *product* of those layers at the default year inputs.
+// The engine no longer reads it: `sim/adjustments.ts` rebuilds the layers from
+// START_OF_SUPPLY / PT_MATURITY_YEARS so the maturity years are live levers, and
+// this snapshot is kept purely as the regression target proving the computed
+// path reproduces the workbook at defaults (src/test/choiceAdjustment.test.ts).
 // ===========================================================================
-export const CHOICE_SHARE_ADJUSTMENT: Record<number, Record<string, Partial<Record<Powertrain, number>>>> = {
+export const CHOICE_SHARE_ADJUSTMENT_BASELINE: Record<number, Record<string, Partial<Record<Powertrain, number>>>> = {
   2045: {
     B1:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.9,  'H2-ICE': 0.55, 'H2-FCET': 0.35 },
     B2:  { Diesel: 1, CNG: 0.9,      LNG: 0,        BET: 0.85, 'H2-ICE': 0.55, 'H2-FCET': 0.35 },
@@ -328,6 +334,14 @@ export const ZET_GVW_CURRENT_KG: Record<string, number> = {
   '48T Rigid': 47500, '40T Tractor': 39500, '55T Tractor': 55000,
 };
 
+// Bands offered for the ZET toll waiver. The choice model prices TCO only at
+// its three decision years — 2045, 2050 and 2055, the Excel 'Estimation SS2045'
+// / 'Estimation2050' / 'Estimation 100% ZET 2055' anchors that feed PTTM — so a
+// waiver can only be expressed per decision point. Earlier bands (2026-2040)
+// are deliberately not offered: nothing downstream would ever read them.
+export const TOLL_WAIVER_KEYS = ['d4145', 'd4650', 'd5155'] as const;
+export const TOLL_WAIVER_LABELS = ['2041-45', '2046-50', '2051-55'] as const;
+
 // CNG/LNG/H2 tank physical sizes (used to compute tank cost contribution)
 export const TANK_SIZES = {
   cng_small_ltrs: 480,  cng_large_ltrs: 960,  cng_density_kg_per_l: 0.20,
@@ -444,15 +458,30 @@ export const PRE_2001_SCRAPPAGE_END_YEAR = 2040; // approximate — backlog clea
 // Source: 'No change with year' rows 65-73, cols J-O
 // ===========================================================================
 export const START_OF_SUPPLY: Record<VehicleSize, Record<Powertrain, number>> = {
-  '15T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2027, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '19T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2027, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '28T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '35T Rigid':   { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '48T Rigid':   { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '28T Tipper':  { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '35T Tipper':  { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '40T Tractor': { Diesel: 2025, CNG: 2028, LNG: 2028, BET: 2028, 'H2-ICE': 2036, 'H2-FCET': 2040 },
-  '55T Tractor': { Diesel: 2025, CNG: 2028, LNG: 2028, BET: 2027, 'H2-ICE': 2036, 'H2-FCET': 2040 },
+  '15T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2027, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '19T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2027, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '28T Rigid':   { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '35T Rigid':   { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '48T Rigid':   { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '28T Tipper':  { Diesel: 2025, CNG: 2027, LNG: 2030, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '35T Tipper':  { Diesel: 2025, CNG: 2028, LNG: 2030, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '40T Tractor': { Diesel: 2025, CNG: 2028, LNG: 2028, BET: 2028, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+  '55T Tractor': { Diesel: 2025, CNG: 2028, LNG: 2028, BET: 2027, 'H2-ICE': 2034, 'H2-FCET': 2038 },
+};
+
+// Powertrain maturity year — "Maturity (Technology, Products & Eco-system)",
+// Excel 'No change with year' P65:U65. Unlike start of supply the workbook fills
+// only one row (15T Rigid) and applies it to every bucket, which is why the
+// matching policy levers (policy.bet_/h2ice_/fcet_maturity_year) are scalars.
+// Feeds the 2050 and 2055 Estimation-sheet adjustments — see sim/adjustments.ts.
+export const PT_MATURITY_YEARS: Record<Powertrain, number> = {
+  Diesel: 2025, CNG: 2030, LNG: 2033, BET: 2035, 'H2-ICE': 2042, 'H2-FCET': 2045,
+};
+
+// "All PTs Steady State Year" per Estimation sheet — Excel 'Input Sheet' BO1
+// (2045), CB1 (2050) and CK1 (2055). The denominator of every delay factor.
+export const PT_STEADY_STATE_YEAR: Record<number, number> = {
+  2045: 2045, 2050: 2050, 2055: 2055,
 };
 
 // Gompertz initial pilot share W (very small — represents base-year sales as fraction of total)
@@ -570,9 +599,10 @@ export const BAU_POLICY = {
   interest_rate_zet: 0.12,
   loan_tenure_years: 7,
   electricity_subsidy_per_kwh: 0,
-  // Fraction of ZET toll waived per 5-year band. 0 = Excel $AL$276 = 1 (no waiver).
+  // Fraction of ZET toll waived, per model decision point (TOLL_WAIVER_KEYS).
+  // 0 = Excel $AL$276/$AL$277 = 1 (no waiver).
   toll_waiver_bands: {
-    d2530: 0, d3135: 0, d3640: 0, d4145: 0, d4650: 0, d5155: 0,
+    d4145: 0, d4650: 0, d5155: 0,
   } as Record<string, number>,
   bet_inflection_year: 2031,
   h2ice_inflection_year: 2051,
@@ -600,7 +630,12 @@ export const BAU_POLICY = {
   fcet_incentive_phase1_end_year: 2030,
   fcet_demand_incentive_phase2_per_kwh: 0,
   fcet_incentive_phase2_end_year: 2035,
-  electricity_subsidy_end_year: 2035,
+  // Electricity subsidy is a dashboard-only lever — the workbook has no subsidy
+  // term at all ('Changing with year' row 18 = DISCOM + fixed/demand charges +
+  // charging infra, nothing subtracted), so there is no fidelity constraint on
+  // the end year. It used to default to 2035, which put it entirely before the
+  // model's first decision point (2045) and made it impossible to observe.
+  electricity_subsidy_end_year: 2055,
   bet_maturity_year: 2035,
   h2ice_maturity_year: 2042,
   fcet_maturity_year: 2045,
@@ -626,7 +661,7 @@ export const BEST_OVERRIDES = {
     fcet_demand_incentive_per_kwh: 30000,
     interest_rate_zet: 0.10,
     electricity_subsidy_per_kwh: 2,
-    toll_waiver_bands: { d2530: 1, d3135: 1, d3640: 1, d4145: 1, d4650: 1, d5155: 1 },
+    toll_waiver_bands: { d4145: 1, d4650: 1, d5155: 1 },
     bet_inflection_year: 2032,
     bet_resale_2046_plus: 0.45,
   },
@@ -663,45 +698,6 @@ export function betGridFactor(year: number): number {
     * Math.pow(1 - EMISSION_FACTORS.grid_decarb_rate_per_year, dy);
 }
 
-// ===========================================================================
-// TCO PARITY YEARS (precomputed in Excel 'Buckets' sheet cols O-T)
-// Used directly for Chart F — the year when each powertrain reaches TCO
-// parity with diesel for a given bucket and scenario.
-// ===========================================================================
-export const TCO_PARITY_YEARS = {
-  scenario4_BEST: { // 'Buckets' cols R-T (Scenario 4)
-    'B1':  { BET: 2039, 'H2-ICE': 2045, 'H2-FCET': 2047 },
-    'B2':  { BET: 2040, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B3':  { BET: 2034, 'H2-ICE': 2044, 'H2-FCET': 2045 },
-    'B4':  { BET: 2036, 'H2-ICE': 2045, 'H2-FCET': 2046 },
-    'B5':  { BET: 2039, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B6':  { BET: 2039, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B7':  { BET: 2039, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B8':  { BET: 2035, 'H2-ICE': 2045, 'H2-FCET': 2044 },
-    'B9':  { BET: 2035, 'H2-ICE': 2045, 'H2-FCET': 2044 },
-    'B10': { BET: 2032, 'H2-ICE': 2045, 'H2-FCET': 2044 },
-    'B11': { BET: 2032, 'H2-ICE': 2045, 'H2-FCET': 2044 },
-    'B12': { BET: 2043, 'H2-ICE': 2045, 'H2-FCET': 2048 },
-    'B13': { BET: 2040, 'H2-ICE': 2045, 'H2-FCET': 2046 },
-    'B14': { BET: 2042, 'H2-ICE': 2045, 'H2-FCET': 2047 },
-  },
-  scenario1_BAU: { // 'Buckets' cols O-Q (Scenario 1)
-    'B1':  { BET: 2027, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B2':  { BET: 2028, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B3':  { BET: 2026, 'H2-ICE': 2045, 'H2-FCET': 2043 },
-    'B4':  { BET: 2026, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B5':  { BET: 2027, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B6':  { BET: 2027, 'H2-ICE': 2046, 'H2-FCET': 2045 },
-    'B7':  { BET: 2027, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B8':  { BET: 2026, 'H2-ICE': 2046, 'H2-FCET': 2043 },
-    'B9':  { BET: 2027, 'H2-ICE': 2045, 'H2-FCET': 2042 },
-    'B10': { BET: 2026, 'H2-ICE': 2043, 'H2-FCET': 2043 },
-    'B11': { BET: 2026, 'H2-ICE': 2045, 'H2-FCET': 2043 },
-    'B12': { BET: 2029, 'H2-ICE': 2047, 'H2-FCET': 2046 },
-    'B13': { BET: 2027, 'H2-ICE': 2045, 'H2-FCET': 2045 },
-    'B14': { BET: 2028, 'H2-ICE': 2040, 'H2-FCET': 2042 },
-  },
-};
 
 // ===========================================================================
 // BASELINE SANITY-CHECK ASSERTIONS (for Phase 4.5)

@@ -85,6 +85,8 @@ export function computeStockEmissions(
   // Per-year (2026…2055) grey-hydrogen supply fraction. Omitted/undefined →
   // green-only (0), reproducing the Excel baseline.
   greyH2FractionByYear?: number[],
+  // TCO parity is priced separately (sim/parity.ts) and folded in by the caller;
+  // omitted here it defaults to empty so this stays usable standalone in tests.
 ): SimulationResult {
   const dieselCounterfactualRate = computeWeightedDieselEmissionRate();
 
@@ -322,5 +324,6 @@ export function computeStockEmissions(
     cumulativeCO2Avoided,
     dieselStockPeakYear,
     dieselStockPeakValue: Math.round(dieselStockPeakValue),
+    parityYears: {},
   };
 }

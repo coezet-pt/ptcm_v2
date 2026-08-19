@@ -1,53 +1,63 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TCO_PARITY_YEARS, BUCKETS } from '@/lib/constants/extracted';
+import { BUCKETS } from '@/lib/constants/extracted';
 import { POWERTRAIN_LABELS } from '@/lib/constants/displayLabels';
 import { PT_COLORS } from '@/lib/constants/colors';
+import type { ParityYears } from '@/lib/types';
+import { PARITY_POWERTRAINS } from '@/lib/sim/parity';
 import ChartCard from '@/components/ChartCard';
 
+/**
+ * First year each ZET's TCO/km reaches diesel, per bucket — Excel 'Buckets'
+ * AE3:AG16 ("TCO Parity with Diesel"). Computed live from the engine
+ * (see sim/parity.ts), so it responds to every cost and policy lever.
+ *
+ * NOTE: this component is not currently mounted anywhere. Wire it into
+ * ChartSections/ReportDocument if the parity view should be shown.
+ */
 interface Props {
   scenarioName: string;
+  parityYears: ParityYears;
 }
 
-const ZET_PTS = ['BET', 'H2-ICE', 'H2-FCET'] as const;
+const NO_PARITY = 'No parity by 2055';
 
-export default function TCOParityChart({ scenarioName }: Props) {
-  const isBAU = scenarioName === 'BAU' || scenarioName === 'BWS-1' || scenarioName === 'BWS-2';
-  const isBEST = scenarioName === 'BEST';
-  const isCustom = !isBAU && !isBEST;
-  const sourceKey = isBEST ? 'scenario4_BEST' : 'scenario1_BAU';
-  const source = TCO_PARITY_YEARS[sourceKey as keyof typeof TCO_PARITY_YEARS];
-
+export default function TCOParityChart({ scenarioName, parityYears }: Props) {
   const data = useMemo(() =>
     BUCKETS.map(b => {
-      const entry = source[b.id as keyof typeof source];
+      const entry = parityYears[b.id];
       if (!entry) return null;
-      return {
-        bucket: b.id,
-        BET: (entry as any).BET ?? 2055,
-        'H2-ICE': (entry as any)['H2-ICE'] ?? 2055,
-        'H2-FCET': (entry as any)['H2-FCET'] ?? 2055,
-      };
-    }).filter(Boolean),
-    [source],
+      const row: Record<string, string | number | null> = { bucket: b.id };
+      for (const pt of PARITY_POWERTRAINS) row[pt] = entry[pt];
+      return row;
+    }).filter(Boolean) as Record<string, string | number | null>[],
+    [parityYears],
   );
 
-  const csvData = useMemo(() => data.map(d => ({ ...d! })), [data]);
+  // Buckets with no parity export as the label rather than a silent 2055.
+  const csvData = useMemo(() => data.map(d => {
+    const row: Record<string, string | number> = { bucket: String(d.bucket) };
+    for (const pt of PARITY_POWERTRAINS) row[pt] = d[pt] === null ? NO_PARITY : (d[pt] as number);
+    return row;
+  }), [data]);
 
   return (
     <ChartCard
       title="TCO Parity Year by Bucket"
-      description={isCustom ? '(Showing BAU baseline — custom parity not computed)' : `${isBEST ? 'BEST' : 'BAU'} scenario`}
+      description={`${scenarioName} · first year ZET cost per km reaches diesel`}
       csvData={csvData}
       csvFilename="tco_parity"
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout="vertical" margin={{ top: 5, right: 10, left: 30, bottom: 0 }}>
-          <XAxis type="number" domain={[2026, 2055]} tick={{ fontSize: 10 }} />
+          <XAxis type="number" domain={[2026, 2055]} allowDataOverflow tick={{ fontSize: 10 }} />
           <YAxis dataKey="bucket" type="category" tick={{ fontSize: 10 }} width={30} />
-          <Tooltip labelFormatter={l => `Bucket ${l}`} />
+          <Tooltip
+            labelFormatter={l => `Bucket ${l}`}
+            formatter={(v: number | null) => (v === null ? NO_PARITY : String(v))}
+          />
           <Legend wrapperStyle={{ fontSize: 10 }} />
-          {ZET_PTS.map(pt => (
+          {PARITY_POWERTRAINS.map(pt => (
             <Bar key={pt} dataKey={pt} name={POWERTRAIN_LABELS[pt]} fill={PT_COLORS[pt]} barSize={6} />
           ))}
         </BarChart>

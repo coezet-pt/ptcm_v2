@@ -12,10 +12,10 @@ import {
   POWERTRAINS,
   POWERTRAIN_RATINGS,
   START_OF_SUPPLY,
-  CHOICE_SHARE_ADJUSTMENT,
   BUCKET_CHOICE_ELASTICITIES,
 } from '@/lib/constants/extracted';
 import type { BucketTCOMap } from './tco';
+import { computeChoiceShareAdjustment } from './adjustments';
 
 // Excel 'No change with year' payload model (cols AX/AY/AZ): diesel payload is
 // GVW − ULW; BET/FCET subtract battery (density × kWh) and fuel-cell
@@ -154,8 +154,10 @@ export function computeShares(
     }
 
     // Excel Estimation-sheet adjustments: multiply shares by the per-bucket
-    // supply-delay / maturity / potential-TIV factors, then renormalize.
-    const adj = CHOICE_SHARE_ADJUSTMENT[targetYear]?.[bucket.id];
+    // supply-delay / maturity / potential-TIV factors, then renormalize. The
+    // factors are rebuilt from the year inputs (see adjustments.ts) so the
+    // maturity-year levers actually move the result.
+    const adj = computeChoiceShareAdjustment(targetYear, bucket, policy);
     if (adj) {
       let adjTotal = 0;
       for (const pt of POWERTRAINS) {

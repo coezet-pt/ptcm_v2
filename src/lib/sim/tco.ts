@@ -87,15 +87,17 @@ const clampFrac = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v
  *  ('bands' mode). Grey hydrogen is discontinued from 2046 onward, so the blend
  *  applies to 2026–2045 only; later years are green-only. */
 /**
- * ZET toll-waiver fraction (0–1) for the given purchase year, selected from the
- * per-5-year band table (keys d2530…d5155). 0 = no waiver.
+ * ZET toll-waiver fraction (0–1) for the given purchase year. 0 = no waiver.
+ *
+ * The choice model only ever prices TCO at its three decision years (2045,
+ * 2050, 2055 — the Excel 'Estimation SS2045' / 'Estimation2050' /
+ * 'Estimation 100% ZET 2055' anchors that feed PTTM), so the waiver is stored
+ * as one value per decision point: d4145 / d4650 / d5155. Bands covering
+ * 2026–2040 would never be read, so they are not offered — see TOLL_WAIVER_KEYS.
  */
 function tollWaiverForYear(policy: PolicyConfig, year: number): number {
   const bands = policy.toll_waiver_bands ?? {};
   const key =
-    year <= 2030 ? 'd2530' :
-    year <= 2035 ? 'd3135' :
-    year <= 2040 ? 'd3640' :
     year <= 2045 ? 'd4145' :
     year <= 2050 ? 'd4650' : 'd5155';
   return clampFrac(bands[key]);
@@ -209,6 +211,15 @@ function computeVehiclePrice(
       const price = dieselBase - dieselPowertrain + ePowertrain + batteryCost
         + oem * (ePowertrain + batteryCost)
         - zetBsviiRelief(year);
+      // Demand incentive — Excel 'Changing with year' rows 129-137 subtract
+      // $AH$128 × battery kWh in 2025-30 and $AI$128 × kWh in 2031-35, and
+      // nothing from 2036 on (the 2036+ columns carry only the BS-VII relief).
+      // The two phases below are those two cells.
+      //
+      // DELIBERATE: because the choice model only prices TCO at 2045/2050/2055,
+      // an incentive that ends in 2035 cannot move any output. That is the
+      // workbook's own behaviour, not a wiring bug — do NOT "fix" it by pushing
+      // the end years past 2045. src/test/demandIncentive.test.ts guards this.
       const betIncentivePerKwh = year <= policy.bet_incentive_phase1_end_year
         ? policy.bet_demand_incentive_per_kwh
         : year <= policy.bet_incentive_phase2_end_year
@@ -235,6 +246,8 @@ function computeVehiclePrice(
       const price = dieselBase - dieselPowertrain + ePowertrain + fcCost + batteryCost + h2TankCost
         + oem * (ePowertrain + batteryCost + fcCost)
         - zetBsviiRelief(year);
+      // Same two-phase structure as BET, from rows 142-149 ($AH143 / $AI143).
+      // See the note on the BET block: inert at the decision anchors by design.
       const fcetIncentivePerKwh = year <= policy.fcet_incentive_phase1_end_year
         ? policy.fcet_demand_incentive_per_kwh
         : year <= policy.fcet_incentive_phase2_end_year
@@ -367,6 +380,20 @@ function isZET(pt: Powertrain): boolean {
   return pt === 'BET' || pt === 'H2-FCET';
 }
 
+/**
+ * Powertrains that pay the ZET toll rather than the diesel toll. All 14 bucket
+ * sheets route H2-ICE through the ZET row: B1–B14 label it "Toll Charges
+ * (H2 ICE, BET & FCET)" and the H2-ICE block's toll line points at it (B1 row
+ * 122 = C60 → 'Changing with year' row 277, the ZET toll table at rows 276-284).
+ *
+ * Deliberately separate from isZET(), which drives the finance terms — there
+ * the workbook is inconsistent about H2-ICE (8 of the 14 sheets discount it at
+ * the ICE rate C26/C25, 6 at the ZET rate C28/C27), so that path is left alone.
+ */
+function usesZetToll(pt: Powertrain): boolean {
+  return pt === 'BET' || pt === 'H2-ICE' || pt === 'H2-FCET';
+}
+
 export function computeTCO(
   ts: Record<ParameterKey, number[]>,
   policy: PolicyConfig,
@@ -424,9 +451,10 @@ export function computeTCO(
       const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear, fp);
 
       // ZET toll waiver — Excel 'Changing with year' ZET toll = diesel toll ×
-      // (1 − waiver); waiver is set per 5-year band (by purchase year) for ZETs.
+      // (1 − waiver); waiver is set per 5-year band (by purchase year) and
+      // applies to every powertrain on the ZET toll row (BET, H2-ICE, FCET).
       let effectiveToll = tollPerKm;
-      if (isZET(pt)) {
+      if (usesZetToll(pt)) {
         effectiveToll = tollPerKm * (1 - tollWaiverForYear(policy, targetYear));
       }
 

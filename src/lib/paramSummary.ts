@@ -4,7 +4,7 @@ import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
 import {
   DEFAULT_BATTERY_LIFE_CYCLES, DEFAULT_FUEL_CELL_LIFE_HOURS, ZET_GVW_CLASSES,
-  ZET_GVW_CURRENT_KG,
+  ZET_GVW_CURRENT_KG, TOLL_WAIVER_KEYS, TOLL_WAIVER_LABELS,
 } from '@/lib/constants/extracted';
 import { DELTA_KEYS, DELTA_LABELS } from '@/components/ParameterRow';
 
@@ -137,14 +137,35 @@ export function buildOtherInputs(config: ScenarioConfig): OtherInputSection[] {
     }),
   });
 
-  // Policy support — Toll waiver for ZETs, per 5-year band (Excel $AL$276)
+  // Policy support — Toll waiver for ZETs, per model decision point
+  // (Excel $AL$276/$AL$277; see TOLL_WAIVER_KEYS)
   const tollBands = policy.toll_waiver_bands ?? {};
   sections.push({
     title: 'Policy support — Toll waiver for ZETs (% of toll waived)',
-    rows: DELTA_KEYS.map((key, i) => ({
-      label: DELTA_LABELS[i],
+    rows: TOLL_WAIVER_KEYS.map((key, i) => ({
+      label: TOLL_WAIVER_LABELS[i],
       value: `${((tollBands[key] ?? 0) * 100).toFixed(0)}%`,
     })),
+  });
+
+  // Policy support — electricity subsidy for BET charging (dashboard-only lever)
+  sections.push({
+    title: 'Policy support — Electricity subsidy',
+    rows: [
+      { label: 'Subsidy', value: `₹${fmtNum(policy.electricity_subsidy_per_kwh)}/kWh` },
+      { label: 'Applies until', value: String(policy.electricity_subsidy_end_year) },
+    ],
+  });
+
+  // Powertrain maturity years — Excel 'No change with year' P65:U65; drive the
+  // 2050/2055 Estimation share adjustments (sim/adjustments.ts).
+  sections.push({
+    title: 'Powertrain maturity year',
+    rows: [
+      { label: 'BET', value: String(policy.bet_maturity_year) },
+      { label: 'H₂ ICE', value: String(policy.h2ice_maturity_year) },
+      { label: 'H₂ FCET', value: String(policy.fcet_maturity_year) },
+    ],
   });
 
   return sections;

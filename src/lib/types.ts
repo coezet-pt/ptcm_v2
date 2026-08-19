@@ -1,5 +1,11 @@
 import type { Powertrain, ScenarioName, VehicleSize } from './constants/extracted';
 
+// ── TCO parity ──
+/** The powertrains the parity calculation compares against diesel. */
+export type ParityPowertrain = 'BET' | 'H2-ICE' | 'H2-FCET';
+/** Parity year per bucket per ZET; null = never reaches diesel by 2055. */
+export type ParityYears = Record<string, Record<ParityPowertrain, number | null>>;
+
 // ── Parameter config (cost trajectories) ──
 // 6 CAGR ranges (v4 Dashboard spec): 2026-30, 2031-35, 2036-40, 2041-45, 2046-50, 2051-55
 export interface ParameterConfig {
@@ -84,9 +90,10 @@ export interface PolicyConfig {
   interest_rate_zet: number;
   loan_tenure_years: number;
   electricity_subsidy_per_kwh: number;
-  // Fraction (0–1) of ZET toll waived, per 5-year band (keys d2530…d5155, by
-  // purchase year). Excel 'Changing with year' ZET toll = diesel toll × (1 − band).
-  // 0 = no waiver ($AL$276 = 1).
+  // Fraction (0–1) of ZET toll waived, keyed by TOLL_WAIVER_KEYS (d4145 / d4650
+  // / d5155 — one per model decision point, since TCO is only priced at 2045,
+  // 2050 and 2055). Excel 'Changing with year' ZET toll = diesel toll ×
+  // (1 − band); applies to BET, H2-ICE and FCET. 0 = no waiver ($AL$276 = 1).
   toll_waiver_bands: Record<string, number>;
   bet_inflection_year: number;
   h2ice_inflection_year: number;
@@ -168,6 +175,9 @@ export interface SimulationResult {
   cumulativeCO2Avoided: number;
   dieselStockPeakYear: number;
   dieselStockPeakValue: number;
+  /** First year each ZET's TCO/km reaches diesel, per bucket; null = no parity
+   *  by 2055. Excel 'Buckets' AE3:AG16 — see sim/parity.ts. */
+  parityYears: ParityYears;
 }
 
 // ── Sanity check ──

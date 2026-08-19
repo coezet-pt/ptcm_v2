@@ -27,13 +27,18 @@ sheet. The model does not *converge* to 100 % ZET — it is *told* to. Anyone re
 
 - `stockEmissions.ts`: ZET = **BET + H2-ICE + H2-FCET** (Excel `PTTM` cols C+E+G). This
   drives `zetShare`, `totalZetSales`, the 50 %-ZET KPI and the ZET penetration chart.
-- `tco.ts` `isZET()`: **BET + H2-FCET only**. This drives the ZET interest rate, the ZET loan
-  tenure and the toll waiver — H2-ICE is financed and tolled as an ICE.
+- `tco.ts` `usesZetToll()`: **BET + H2-ICE + H2-FCET** — who pays the waived ZET toll.
+- `tco.ts` `isZET()`: **BET + H2-FCET only** — who gets the ZET interest rate and loan tenure.
 
-Both are intentional as written, but the second one deserves a check against the workbook:
-the `Changing with year` ZET toll rows (275–284) appear to cover H2-ICE as well. If it turns
-out H2-ICE should get the waiver, that is a one-line change with real effects on the H2-ICE
-share. **Verify with CoEZET before changing it.**
+The toll question is now settled against the workbook: all 14 bucket sheets label the row
+`Toll Charges (H2 ICE, BET & FCET)` and route the H2-ICE block to it, so H2-ICE **does** get
+the waiver. That is why toll uses its own predicate rather than `isZET()`.
+
+The **financing** split is still worth raising with CoEZET, because the workbook contradicts
+itself: B1/B3/B4/B5/B13/B14 discount H2-ICE at the ZET rate (`C28`/`C27`), while
+B2/B6/B7/B8/B9/B10/B11/B12 use the ICE rate (`C26`/`C25`). The code follows the 8-sheet
+majority. Both rates are 12 %/7 yr at BAU, so this only bites once someone changes the
+Funding inputs — at which point the dashboard and the workbook will disagree for H2-ICE.
 
 ### 5. Deliberately reproduced Excel bugs
 
@@ -57,6 +62,28 @@ Which is why the PDF report renders its own detached copy of everything
 
 shadcn/ui output. Do not hand-edit — wrap or regenerate.
 
+### 9. TCO is only ever priced at 2045, 2050 and 2055
+
+`runSimulation` calls `computeTCO` for exactly three years — the workbook's
+`Estimation SS2045` / `Estimation2050` / `Estimation 100% ZET 2055` anchors, the only ones
+`PTTM` reads. (`Estimation2035` and `Estimation2040` exist in the workbook but nothing
+references them.) Everything before 2045 is the Gompertz/Weibull curve fitted *back* from
+those anchors.
+
+The consequence is the second big "my change did nothing" report after trap #1: **a lever
+that only applies in earlier years cannot move any output.** It is not a wiring bug — the
+model has no channel for near-term policy other than `*_inflection_year`. This is why the
+toll waiver is entered per decision point (`TOLL_WAIVER_KEYS` = `d4145`/`d4650`/`d5155`)
+rather than per 5-year block; earlier bands were silently inert and were removed.
+
+The **demand incentives** are the one lever still inert at its defaults, and that is
+Excel-faithful — the workbook's own incentive cells stop at 2035 (see
+[03](03-model-reference.md)). Do not "fix" it by extending the end years;
+`src/test/demandIncentive.test.ts` will fail if you do.
+
+`src/test/tollWaiver.test.ts` and `src/test/choiceAdjustment.test.ts` show how to assert a
+control is live. Copy that pattern for any new lever.
+
 ## Known model discrepancies vs the workbook
 
 | Area | Status |
@@ -66,6 +93,8 @@ shadcn/ui output. Do not hand-edit — wrap or regenerate.
 | PTTM curves | Verified against the `PTTM` sheet piecewise structure. |
 | Emissions | ~**1.3 % gap** remains vs Excel. Cause is known: the code weights bucket emission rates by `tivShare2045`, while Excel uses application-wise stock × application km/kmpl. Not yet addressed. |
 | 2025/2026 stock seed | `DIESEL_STOCK_END_2025 = 5,315,061` is seeded **all diesel**, but that figure includes Excel's 11,875 CNG, 368 LNG and 149 BET. Early-year CNG/LNG/BET *stock* therefore runs low by exactly that seed. It washes out by ~2045. Sales are unaffected. |
+| Estimation share adjustments | **Verified.** Rebuilt from the year inputs (`sim/adjustments.ts`) rather than hardcoded; reproduces the extracted workbook snapshot to 1e-9 across all 14 buckets × 3 anchors. |
+| TCO parity years | **Close.** Computed live (`sim/parity.ts`); 36 of 42 cells match `Buckets` AH3:AJ16 exactly, including all 28 hydrogen cells. The six BET cells that differ are each exactly one year late — an artefact of the 2026 rebase vs the workbook's 2025 start. |
 | Sanity suite | 12/12 passing for BAU as of the last run. |
 
 ## Stale artefacts in the repo
@@ -79,7 +108,7 @@ shadcn/ui output. Do not hand-edit — wrap or regenerate.
 | `BUCKET_PAYLOADS` in `extracted.ts` | Superseded by live derivation in `choiceModel.computeBucketPayload`. Kept as a reference constant only. |
 | `SEGMENT_OF_BUCKET` / `APPLICATION_OF_BUCKET` in `segments.ts` | Unused since segment/application splits moved to the Excel share tables in `segmentAppShares.ts`. |
 | `grey_h2_blend_fraction` (`ParameterKey`) | Dead. The blend is driven by `policy.grey_h2_blend_mode` / `_uniform` / `_bands`. |
-| Orphaned components | `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx` are not mounted anywhere. Useful as starting points if a lever needs to come back — verify they still typecheck against the current `PolicyConfig` first. |
+| Orphaned components | `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx`, `TCOParityChart.tsx` are not mounted anywhere. Useful as starting points if a lever or chart needs to come back — verify they still typecheck against the current `PolicyConfig` first. `TCOParityChart` is current and correct (it takes `SimulationResult.parityYears`); it just needs adding to `ChartSections.tsx` (and `ReportDocument.tsx` for the PDF) to appear. |
 
 ## Backlog / cleanup, roughly in priority order
 
@@ -95,8 +124,12 @@ shadcn/ui output. Do not hand-edit — wrap or regenerate.
 
 **Model correctness**
 
-6. Resolve the H2-ICE toll-waiver / ZET-financing question (trap #4 above) with CoEZET.
+6. Resolve the H2-ICE **financing** question (trap #4) with CoEZET — the workbook is
+   self-contradictory across bucket sheets. (The toll half of this is now settled: H2-ICE
+   gets the waiver.)
 7. Close the ~1.3 % emissions gap by switching to application-wise stock × km/kmpl.
+7b. Chase the one-year BET TCO-parity offset (6 of 42 cells) — almost certainly the 2026
+    rebase vs the workbook's 2025 start column. Low stakes; the hydrogen cells all match.
 8. Split the 2026 stock seed so CNG/LNG/BET early-year stock is right.
 9. Extend `sanityCheck.ts` to cover emissions and energy, not just shares and sales — those
    are currently the least-guarded outputs.

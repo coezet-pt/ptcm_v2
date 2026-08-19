@@ -10,6 +10,7 @@ import { computeTCO, greyH2FractionForYear } from '@/lib/sim/tco';
 import { computeShares } from '@/lib/sim/choiceModel';
 import { computePTTM } from '@/lib/sim/pttm';
 import { computeStockEmissions } from '@/lib/sim/stockEmissions';
+import { computeParityYears } from '@/lib/sim/parity';
 
 /** Stable JSON stringify — sorts keys recursively [fix #6] */
 function stableStringify(obj: unknown): string {
@@ -37,6 +38,10 @@ function runSimulation(config: ScenarioConfig): SimulationResult {
   const greyH2ByYear = Array.from({ length: 30 }, (_, i) =>
     greyH2FractionForYear(ts, config.policy, START_YEAR + i));
   const result = computeStockEmissions(annualSales, greyH2ByYear);
+  // TCO parity year per bucket — needs the full 2026-2055 sweep rather than the
+  // three decision anchors, so it is priced separately (~20 ms).
+  result.parityYears = computeParityYears(
+    ts, config.policy, BUCKETS, config.fixed, config.segmentBasePrices);
 
   // 🔬 Diagnostic dump
   if (typeof window !== 'undefined') {

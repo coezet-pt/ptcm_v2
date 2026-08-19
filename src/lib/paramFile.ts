@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import type { ScenarioConfig, ParameterKey, H2SourceMix, H2BlendMode } from '@/lib/types';
 import { PARAMETER_META } from '@/lib/constants/parameterMeta';
 import { CONFIGURABLE_PARAM_GROUPS } from '@/lib/constants/configurableParams';
-import { ZET_GVW_CLASSES } from '@/lib/constants/extracted';
+import { ZET_GVW_CLASSES, TOLL_WAIVER_KEYS, TOLL_WAIVER_LABELS } from '@/lib/constants/extracted';
 import { buildSeriesFromConfig } from '@/lib/sim/timeSeries';
 
 /**
@@ -134,6 +134,8 @@ const LIFE = 'Key Aggregate Life';
 const H2 = 'Hydrogen Source Mix';
 const GVW = 'Policy support — GVW for ZET';
 const TOLL = 'Policy support — Toll waiver';
+const MATURITY = 'Powertrain maturity';
+const SUBSIDY = 'Policy support — Electricity subsidy';
 
 const scalarSpecs: FieldSpec[] = [
   numberSpec(LIFE, 'Battery Life', 'fixed.battery_life_cycles', 'cycles',
@@ -174,9 +176,28 @@ const scalarSpecs: FieldSpec[] = [
         c.policy.zet_additional_gvw_kg = { ...(c.policy.zet_additional_gvw_kg ?? {}), [cls]: v };
       })),
 
-  // Toll waiver for ZETs — share of ZET toll waived per 5-year band (Excel $AL$276)
-  ...PERIOD_KEYS.map((pk, i): FieldSpec =>
-    numberSpec(TOLL, `Toll waiver for ZETs — ${PERIOD_LABELS[i]}`, `policy.toll_waiver_bands.${pk}`, '%',
+  // Powertrain maturity year — Excel 'No change with year' P65:U65. Drives the
+  // 2050 and 2055 Estimation-sheet share adjustments (see sim/adjustments.ts).
+  numberSpec(MATURITY, 'BET maturity year', 'policy.bet_maturity_year', 'year',
+    c => c.policy.bet_maturity_year, (c, v) => { c.policy.bet_maturity_year = Math.round(v); }),
+  numberSpec(MATURITY, 'H2-ICE maturity year', 'policy.h2ice_maturity_year', 'year',
+    c => c.policy.h2ice_maturity_year, (c, v) => { c.policy.h2ice_maturity_year = Math.round(v); }),
+  numberSpec(MATURITY, 'H2-FCET maturity year', 'policy.fcet_maturity_year', 'year',
+    c => c.policy.fcet_maturity_year, (c, v) => { c.policy.fcet_maturity_year = Math.round(v); }),
+
+  // Electricity subsidy for BET charging — dashboard-only lever (the workbook
+  // has no subsidy term); applies up to and including the end year.
+  numberSpec(SUBSIDY, 'Electricity subsidy', 'policy.electricity_subsidy_per_kwh', 'INR/kWh',
+    c => c.policy.electricity_subsidy_per_kwh,
+    (c, v) => { c.policy.electricity_subsidy_per_kwh = Math.max(0, v); }),
+  numberSpec(SUBSIDY, 'Electricity subsidy — applies until', 'policy.electricity_subsidy_end_year', 'year',
+    c => c.policy.electricity_subsidy_end_year,
+    (c, v) => { c.policy.electricity_subsidy_end_year = Math.round(v); }),
+
+  // Toll waiver for ZETs — share of ZET toll waived (Excel $AL$276/$AL$277),
+  // one value per model decision point (2045 / 2050 / 2055).
+  ...TOLL_WAIVER_KEYS.map((pk, i): FieldSpec =>
+    numberSpec(TOLL, `Toll waiver for ZETs — ${TOLL_WAIVER_LABELS[i]}`, `policy.toll_waiver_bands.${pk}`, '%',
       c => c.policy.toll_waiver_bands?.[pk] ?? 0,
       (c, v) => {
         c.policy.toll_waiver_bands = { ...(c.policy.toll_waiver_bands ?? {}), [pk]: clamp01(v) };
