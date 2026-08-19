@@ -1,0 +1,25 @@
+# Normalise line endings so the repo always stores LF, whatever the contributor's
+# OS or core.autocrlf setting. Without this a Windows checkout can commit CRLF and
+# produce whole-file diffs that hide the real change.
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.xlsx  binary
+*.xlsb  binary
+*.xls   binary
+*.lockb binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+
+# Generated / vendored — collapse in diffs and exclude from language stats.
+package-lock.json  linguist-generated=true -diff
+bun.lock           linguist-generated=true -diff
+src/components/ui/** linguist-vendored=true
