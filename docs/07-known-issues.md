@@ -102,9 +102,7 @@ These were removed on 2026-08-21 because nothing referenced them. Everything is 
 
 | Removed | Why |
 |---|---|
-| `.lovable/plan.md` | Described a `gompertzShare` version with `literalA/literalB/literalC` and a quadratic correction term. That code no longer existed — `pttm.ts` had been rewritten twice since. |
-| `bun.lock`, `bun.lockb` | Two extra lockfiles next to `package-lock.json`. Vercel picks its package manager from whichever lockfile it finds, so these could make it build with Bun instead of npm. **The next deploy will use npm.** |
-| `lovable-tagger` (dependency + `vite.config.ts` import) | A dev-only plugin left over from the project starting on Lovable.dev. It never affected the production bundle. |
+| `.lovable/plan.md` | Described a `gompertzShare` version with `literalA/literalB/literalC` and a quadratic correction term. That code no longer existed — `pttm.ts` had been rewritten twice since. (The `lovable-tagger` dev plugin itself was left in place — see below.) |
 | `public/placeholder.svg` | Scaffold image, referenced nowhere. |
 | `scripts/validate_against_xlsx.ts` | Pointed at `CoEZET_PTCM_v3.xlsx`, which is not the workbook in this repo, and used `import.meta.dir`, which only exists in Bun. It had not run in a long time. |
 | `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx` | Half-built input widgets, not mounted anywhere and not kept up to date with `PolicyConfig`. |
@@ -112,17 +110,22 @@ These were removed on 2026-08-21 because nothing referenced them. Everything is 
 | `SEGMENT_OF_BUCKET` / `APPLICATION_OF_BUCKET` (`segments.ts`) | Unused since the segment and application splits moved to the Excel share tables in `segmentAppShares.ts`. |
 | `grey_h2_blend_fraction` (`ParameterKey` + its default and label) | Dead input. The blend comes from `policy.grey_h2_blend_mode` / `_uniform` / `_bands`. `ParameterKey` now has 16 entries, not 17. |
 
-Tests (37), typecheck and build all still pass after these removals.
+Tests (37), typecheck and build all still pass after these removals. None of them touch
+`package.json`, the lockfiles or `vite.config.ts`, so the build and the deployment are
+unchanged.
 
-## Kept on purpose
+## Left alone on purpose
 
-| File | Why |
+| Thing | Why |
 |---|---|
+| `bun.lock`, `bun.lockb` | Redundant next to `package-lock.json`, and they can make Vercel build with Bun instead of npm. Deliberately **not** removed: the deployment works today and switching package manager is not worth the risk. See [05](05-deployment.md). |
+| `lovable-tagger` | A dev-only Vite plugin with no effect on the production bundle. Removing it means editing `package.json`, which desyncs the lockfiles — same reasoning as above. |
 | `src/components/charts/TCOParityChart.tsx` | Not mounted, but current and correct — it takes `SimulationResult.parityYears`. It only needs adding to `ChartSections.tsx`, and to `ReportDocument.tsx` for the PDF. Worth doing rather than deleting. |
 | `scripts/extract_constants.py` | The tool that pulls constants out of the workbook into `extracted.ts`. Needed if the workbook is ever updated. |
 | `scripts/gen_2026_base.py` | Generated the 2026 base values. Historical, but it documents how the rebase was done. |
 | `scripts/extracted_audit.json` | The structured dump `extract_constants.py` produces. Useful for tracing where a number came from. |
 | `CoEZET PTCM v2.xlsx` | The source of truth. Committed deliberately. |
+
 
 ## To-do list, roughly in order
 
@@ -134,7 +137,7 @@ Tests (37), typecheck and build all still pass after these removals.
 2. Fix `index.html`: real title, remove the TODOs, add a favicon and `og:image`.
 3. Settle the licence. `README.md` says MIT; the model and workbook belong to CoEZET.
 4. Add an "About / assumptions / version" panel so users know what they are looking at.
-5. Pin the Node version ([05](05-deployment.md)). The lockfile cleanup is done.
+5. Pin the Node version ([05](05-deployment.md)).
 
 **Model accuracy**
 

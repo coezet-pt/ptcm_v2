@@ -69,6 +69,24 @@ To roll back: Vercel dashboard → Deployments → pick an older production depl
 
 ## Things to know before touching the deployment
 
+### Three lockfiles are committed
+
+`package-lock.json`, `bun.lock` and `bun.lockb` are all in the repo. Vercel picks its package
+manager based on which lockfile it finds, so it may build with Bun rather than npm, which
+resolves packages differently from `npm install` locally.
+
+**This has been left alone on purpose.** The current setup builds and deploys correctly, and
+changing which package manager Vercel uses is not worth the risk on a working deployment.
+If you ever do want to consolidate to `package-lock.json` alone, do it on a branch first and
+confirm the preview deployment builds before merging.
+
+### `lovable-tagger` is dev-only
+
+`vite.config.ts` loads it, but only when `mode === "development"`, so it has no effect on the
+production bundle. It is left over from the project starting on Lovable.dev. Removing it also
+means editing `package.json`, which puts the lockfiles out of sync with each other — so it has
+been left in place for the same reason as above.
+
 ### The Node version is not pinned
 
 There is no `.nvmrc` and no `engines` field in `package.json`, so Vercel uses whatever Node
