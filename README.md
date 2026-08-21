@@ -5,8 +5,8 @@ heavy-duty truck fleet moving from diesel to zero-emission powertrains (BET, H�
 H₂-FCET) from **2026 to 2055**. It reproduces the CoEZET IIT Madras Excel model.
 
 🔗 **Live:** [ptcm-rho.vercel.app](https://ptcm-rho.vercel.app)
-📚 **Docs:** [`docs/`](docs/README.md) — start with
-[docs/01-getting-started.md](docs/01-getting-started.md)
+📚 **Docs:** [`docs/`](docs/README.md) — new here? Read
+[docs/00-start-here.md](docs/00-start-here.md) first; it is the whole project on one page.
 
 ---
 
@@ -62,6 +62,7 @@ jsPDF / SheetJS / PapaParse for exports · deployed on Vercel from `main`.
 
 | Doc | Contents |
 |---|---|
+| [00-start-here](docs/00-start-here.md) | **The one-page version.** Read this if you read nothing else. |
 | [01-getting-started](docs/01-getting-started.md) | Setup, commands, repo tour, debugging |
 | [02-architecture](docs/02-architecture.md) | State, the 5 stages, rendering, conventions |
 | [03-model-reference](docs/03-model-reference.md) | Formulas, Excel sources, checks, quirks |

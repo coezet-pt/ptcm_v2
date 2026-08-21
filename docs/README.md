@@ -11,6 +11,7 @@ These docs are written for someone who has never seen this repo.
 
 | # | Doc | Read it when |
 |---|---|---|
+| 0 | [00-start-here.md](00-start-here.md) | **First.** The whole project on one page. If you only ever read one file, read this one. |
 | 1 | [01-getting-started.md](01-getting-started.md) | Day 1. Install, run, test, find your way around. |
 | 2 | [02-architecture.md](02-architecture.md) | Before your first code change. How the app is put together. |
 | 3 | [03-model-reference.md](03-model-reference.md) | When you change the model — formulas and where they come from in Excel. |
@@ -19,7 +20,8 @@ These docs are written for someone who has never seen this repo.
 | 6 | [06-iitm-integration.md](06-iitm-integration.md) | To move this onto an IIT Madras website. |
 | 7 | [07-known-issues.md](07-known-issues.md) | Before you trust a number. Known gaps and the to-do list. |
 
-Short on time? Read **01**, the pipeline diagram in **02**, then **07**.
+Short on time? Read **00**. That is what it is for. After that, **01** to get running and
+**07** before you trust a number.
 
 ## The short version
 
