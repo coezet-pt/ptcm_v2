@@ -6,12 +6,21 @@
 |---|---|
 | Repository | `github.com/coezet-pt/ptcm_v2`, branch **`main`** |
 | Host | **Vercel** |
-| Live URL | <https://ptcm-rho.vercel.app> |
+| Live URL | <https://ptcm-v2.vercel.app> |
 | Trigger | Push to `main` → Vercel builds and publishes automatically |
 | Build command | `npm run build` (Vercel detects this from the Vite setup) |
 | Output folder | `dist/` |
 | Environment variables | **none** |
 | Server code | **none** — this is a plain static build |
+
+### An old URL is still live and serving a stale build
+
+`ptcm-rho.vercel.app` was an earlier deployment of this app. It still resolves, still returns
+200, and still serves a build from before August 2026 — it does **not** update when you push.
+Anyone given that link sees old numbers with no warning that they are old.
+
+Before handover, either delete that deployment/alias in Vercel or point it at the current
+project. Until then, only share **ptcm-v2.vercel.app**.
 
 There is **no `vercel.json`**. Everything comes from Vercel's automatic detection. The Vite
 preset also sets up the rule that sends unknown paths to `/index.html`, which react-router
@@ -56,6 +65,15 @@ live site.
 
 To roll back: Vercel dashboard → Deployments → pick an older production deployment →
 "Promote to Production". No rebuild needed.
+
+**To check a deploy actually went live**, do not rely on the page looking right — the CDN
+serves cached HTML and a stale copy looks identical. Request a file you know changed, or use
+this trick: pick something the new build removed and confirm it 404s.
+
+```bash
+curl -s https://ptcm-v2.vercel.app/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
+# compare that hash against your local dist/assets/ after npm run build
+```
 
 ## Access to hand over
 

@@ -1,7 +1,7 @@
 # 6. Putting This on an IIT Madras Website
 
 The plan is to publish this dashboard as a tool on a CoEZET / IITM website instead of
-`ptcm-rho.vercel.app`. This is what that takes.
+`ptcm-v2.vercel.app`. This is what that takes.
 
 ## Why this is easy
 

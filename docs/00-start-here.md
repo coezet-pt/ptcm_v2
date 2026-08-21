@@ -75,7 +75,7 @@ your settings → timeSeries.ts    cost of fuel, batteries etc. for each year
 ## Deploying
 
 Push to `main` on GitHub → Vercel builds and publishes automatically to
-<https://ptcm-rho.vercel.app>. There is nothing to configure. To roll back, use the Vercel
+<https://ptcm-v2.vercel.app>. There is nothing to configure. To roll back, use the Vercel
 dashboard.
 
 **Do not change `package.json`, the lockfiles or `vite.config.ts` casually.** The build works;

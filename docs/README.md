@@ -34,7 +34,7 @@ Short on time? Read **00**. That is what it is for. After that, **01** to get ru
   6 powertrains × 14 truck types × 30 years. Users change costs and policy settings and
   watch the result change.
 - **Where it runs** — GitHub `coezet-pt/ptcm_v2` (branch `main`) deploys automatically to
-  Vercel at <https://ptcm-rho.vercel.app>.
+  Vercel at <https://ptcm-v2.vercel.app>.
 - **Tests** — `npm test` runs 37 tests. Twelve of them check the model against known
   Excel values.
 

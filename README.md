@@ -4,7 +4,7 @@
 heavy-duty truck fleet moving from diesel to zero-emission powertrains (BET, H₂-ICE,
 H₂-FCET) from **2026 to 2055**. It reproduces the CoEZET IIT Madras Excel model.
 
-🔗 **Live:** [ptcm-rho.vercel.app](https://ptcm-rho.vercel.app)
+🔗 **Live:** [ptcm-v2.vercel.app](https://ptcm-v2.vercel.app)
 📚 **Docs:** [`docs/`](docs/README.md) — new here? Read
 [docs/00-start-here.md](docs/00-start-here.md) first; it is the whole project on one page.
 
