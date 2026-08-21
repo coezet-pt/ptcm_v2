@@ -29,7 +29,7 @@ dist/
     ├── html2canvas.esm-<hash>.js  201 kB     (48 kB gzip)    ├ only downloaded for the PDF
     ├── index.es-<hash>.js         151 kB     (52 kB gzip)    │
     └── purify.es-<hash>.js         28 kB     (11 kB gzip)    ┘
-plus everything in public/ copied as-is (robots.txt, placeholder.svg)
+plus everything in public/ copied as-is (robots.txt)
 ```
 
 About 2.2 MB raw, 680 kB gzipped. The PDF files only download when the user clicks
@@ -69,26 +69,11 @@ To roll back: Vercel dashboard → Deployments → pick an older production depl
 
 ## Things to know before touching the deployment
 
-### Three lockfiles are committed
-
-`package-lock.json`, `bun.lock` and `bun.lockb` are all in the repo. Vercel picks its package
-manager based on which lockfile it finds, and `bun.lockb` can make it use Bun instead of npm.
-That resolves packages differently from what you get locally with `npm install`. It has not
-caused a problem yet, but it is an easy source of "works locally, breaks on Vercel".
-**Suggested fix:** keep `package-lock.json`, delete the other two, and check one deployment
-before assuming it is fine.
-
 ### The Node version is not pinned
 
 There is no `.nvmrc` and no `engines` field in `package.json`, so Vercel uses whatever Node
 version it defaults to. Builds here were done on **Node 22.14.0**. Adding
 `"engines": { "node": "22.x" }` to `package.json` would make this predictable.
-
-### `lovable-tagger` is dev-only
-
-`vite.config.ts` loads it, but only when `mode === "development"`. It has no effect on the
-production bundle. It is left over from the project starting on Lovable.dev and can be
-removed along with the `.lovable/` folder whenever you like.
 
 ### Debug output goes to production
 
@@ -112,17 +97,12 @@ There is no favicon and no `og:image`. Worth fixing before a public launch.
 `public/robots.txt` allows Googlebot, Bingbot, Twitterbot, facebookexternalhit and `*`. If a
 deployment should not be indexed (a staging copy, for example), change it there.
 
-## Other places this could run
+## Moving off Vercel
 
-The build is static with no environment variables, so it runs anywhere that serves files.
+The only planned move is onto an IIT Madras site. [06](06-iitm-integration.md) covers that in
+full: the four options, the nginx and Apache configs, the CSP, and the pre-launch checklist.
 
-| Host | Effort | Notes |
-|---|---|---|
-| Vercel (current) | none | Push to deploy, preview URLs, instant rollback |
-| Netlify / Cloudflare Pages | ~15 min | Same idea. Needs a fallback rule to `index.html`. |
-| GitHub Pages | ~30 min | Needs `base: '/ptcm_v2/'` and a `404.html` shim |
-| IITM's own web server (nginx/Apache) | ~1 hour | See [06](06-iitm-integration.md) — the likely destination |
-| S3 + CDN | ~1 hour | Set the fallback rule at the CDN |
-
-The only real requirement: **serve `dist/` over HTTPS, and send unknown paths to
-`index.html`.**
+The short version is that the build is static with no environment variables, so the only real
+requirement anywhere is: **serve `dist/` over HTTPS, and send unknown paths to `index.html`.**
+The recommended route is to keep Vercel and point a custom IITM domain at it, which needs no
+code change at all.

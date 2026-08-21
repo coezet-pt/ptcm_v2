@@ -95,18 +95,34 @@ control is live. Copy that pattern for any new one.
 | TCO parity years | **Close.** Calculated live (`sim/parity.ts`); 36 of 42 cells match `Buckets` AH3:AJ16 exactly, including all 28 hydrogen cells. The six BET cells that differ are each exactly one year late — a side effect of starting at 2026 instead of the workbook's 2025. |
 | Health checks | 12 of 12 passing for BAU as of the last run. |
 
-## Old files still in the repo
+## Cleanup already done
 
-| File | Problem |
+These were removed on 2026-08-21 because nothing referenced them. Everything is still in
+`git log` if it is ever needed again.
+
+| Removed | Why |
 |---|---|
-| `.lovable/plan.md` | Describes a `gompertzShare` version with `literalA/literalB/literalC` and a quadratic correction term. **That code no longer exists** — `pttm.ts` was rewritten. It is a record of an old fix, not a description of how things work. Safe to delete. |
-| `verify_pttm.mjs` (was at the repo root) | A standalone script copying that same old `pttm.ts`. Moved to `dump/verify_pttm.mjs.obsolete` (gitignored) rather than committed, because committing it would document a version of the model two rewrites out of date. |
-| `scripts/validate_against_xlsx.ts` | Refers to `CoEZET_PTCM_v3.xlsx`; the repo has `CoEZET PTCM v2.xlsx`. Also uses `import.meta.dir`, which only exists in Bun — it will not run on plain Node. |
-| `scripts/*.py` | One-off extraction scripts. Not part of any build. |
-| `BUCKET_PAYLOADS` in `extracted.ts` | Replaced by live calculation in `choiceModel.computeBucketPayload`. Kept as a reference only. |
-| `SEGMENT_OF_BUCKET` / `APPLICATION_OF_BUCKET` in `segments.ts` | Unused since the segment and application splits moved to the Excel share tables in `segmentAppShares.ts`. |
-| `grey_h2_blend_fraction` (`ParameterKey`) | Unused. The blend comes from `policy.grey_h2_blend_mode` / `_uniform` / `_bands`. |
-| Unused components | `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx`, `TCOParityChart.tsx` are not used anywhere. They are useful starting points if a setting or chart needs to come back — check they still compile against the current `PolicyConfig` first. `TCOParityChart` is up to date and correct (it takes `SimulationResult.parityYears`); it just needs adding to `ChartSections.tsx`, and to `ReportDocument.tsx` for the PDF. |
+| `.lovable/plan.md` | Described a `gompertzShare` version with `literalA/literalB/literalC` and a quadratic correction term. That code no longer existed — `pttm.ts` had been rewritten twice since. |
+| `bun.lock`, `bun.lockb` | Two extra lockfiles next to `package-lock.json`. Vercel picks its package manager from whichever lockfile it finds, so these could make it build with Bun instead of npm. **The next deploy will use npm.** |
+| `lovable-tagger` (dependency + `vite.config.ts` import) | A dev-only plugin left over from the project starting on Lovable.dev. It never affected the production bundle. |
+| `public/placeholder.svg` | Scaffold image, referenced nowhere. |
+| `scripts/validate_against_xlsx.ts` | Pointed at `CoEZET_PTCM_v3.xlsx`, which is not the workbook in this repo, and used `import.meta.dir`, which only exists in Bun. It had not run in a long time. |
+| `PolicyLevers.tsx`, `RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx` | Half-built input widgets, not mounted anywhere and not kept up to date with `PolicyConfig`. |
+| `BUCKET_PAYLOADS` (`extracted.ts`) | Replaced by live calculation in `choiceModel.computeBucketPayload`. |
+| `SEGMENT_OF_BUCKET` / `APPLICATION_OF_BUCKET` (`segments.ts`) | Unused since the segment and application splits moved to the Excel share tables in `segmentAppShares.ts`. |
+| `grey_h2_blend_fraction` (`ParameterKey` + its default and label) | Dead input. The blend comes from `policy.grey_h2_blend_mode` / `_uniform` / `_bands`. `ParameterKey` now has 16 entries, not 17. |
+
+Tests (37), typecheck and build all still pass after these removals.
+
+## Kept on purpose
+
+| File | Why |
+|---|---|
+| `src/components/charts/TCOParityChart.tsx` | Not mounted, but current and correct — it takes `SimulationResult.parityYears`. It only needs adding to `ChartSections.tsx`, and to `ReportDocument.tsx` for the PDF. Worth doing rather than deleting. |
+| `scripts/extract_constants.py` | The tool that pulls constants out of the workbook into `extracted.ts`. Needed if the workbook is ever updated. |
+| `scripts/gen_2026_base.py` | Generated the 2026 base values. Historical, but it documents how the rebase was done. |
+| `scripts/extracted_audit.json` | The structured dump `extract_constants.py` produces. Useful for tracing where a number came from. |
+| `CoEZET PTCM v2.xlsx` | The source of truth. Committed deliberately. |
 
 ## To-do list, roughly in order
 
@@ -118,7 +134,7 @@ control is live. Copy that pattern for any new one.
 2. Fix `index.html`: real title, remove the TODOs, add a favicon and `og:image`.
 3. Settle the licence. `README.md` says MIT; the model and workbook belong to CoEZET.
 4. Add an "About / assumptions / version" panel so users know what they are looking at.
-5. Keep one lockfile and pin the Node version ([05](05-deployment.md)).
+5. Pin the Node version ([05](05-deployment.md)). The lockfile cleanup is done.
 
 **Model accuracy**
 
@@ -135,17 +151,16 @@ control is live. Copy that pattern for any new one.
 
 11. Add tests for `tco.ts` and `choiceModel.ts` against known B-sheet values. The only model
     test today is end-to-end, which catches "the answer moved" but not "which stage moved it".
-12. Fix or delete `scripts/validate_against_xlsx.ts` (Bun-only, wrong workbook name).
-13. Delete `.lovable/`, `lovable-tagger`, and the unused components.
-14. Split up the 1.37 MB main bundle. SheetJS (`xlsx`) and Recharts are the big parts; `xlsx`
+12. Mount `TCOParityChart` — it works and is not shown anywhere.
+13. Split up the 1.37 MB main bundle. SheetJS (`xlsx`) and Recharts are the big parts; `xlsx`
     is only needed for exports and could be imported on demand the way `jspdf` already is.
 
 **Product**
 
-15. Decide whether BWS-1 / BWS-2 / BEST go back into the scenario picker.
-16. Decide whether the settings with no on-screen control ([04](04-parameters-and-ui.md))
+14. Decide whether BWS-1 / BWS-2 / BEST go back into the scenario picker.
+15. Decide whether the settings with no on-screen control ([04](04-parameters-and-ui.md))
     should get one, given they are already reachable through the parameter file.
-17. Mobile layout: it stacks, but the dashboard is desktop-first by design.
+16. Mobile layout: it stacks, but the dashboard is desktop-first by design.
 
 ## How to change the model safely
 

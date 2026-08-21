@@ -49,10 +49,6 @@ function classifySegment(gvwKg: number, size: string): Segment {
   return 'Rigid >40T';
 }
 
-export const SEGMENT_OF_BUCKET: Record<string, Segment> = Object.fromEntries(
-  BUCKETS.map(b => [b.id, classifySegment(b.gvw, b.size)]),
-);
-
 export const SEGMENT_COLORS: Record<Segment, string> = {
   'Rigid 12-19T':   '#93c5fd',
   'Rigid 19-28.5T': '#3b82f6',
@@ -68,10 +64,6 @@ export type Application = string;
 
 export const APPLICATIONS: Application[] = Array.from(
   new Set(BUCKETS.map(b => b.useCase)),
-);
-
-export const APPLICATION_OF_BUCKET: Record<string, Application> = Object.fromEntries(
-  BUCKETS.map(b => [b.id, b.useCase]),
 );
 
 export const APPLICATION_COLORS: Record<Application, string> = {

@@ -40,7 +40,6 @@ export type ParameterKey =
   | 'diesel_vehicle_growth'
   | 'engine_trans_growth'
   | 'e_powertrain_growth'
-  | 'grey_h2_blend_fraction'
   | 'lng_valves_piping_per_vehicle';
 
 // ── Fixed (non-year-varying) parameters ──

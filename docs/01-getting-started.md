@@ -132,8 +132,7 @@ src/
 |---|---|
 | `extract_constants.py` | Pulled constants out of the workbook into `extracted.ts`. Needs Python + openpyxl. Run it if the workbook is updated. |
 | `gen_2026_base.py` | Made the 2026 base values (commit `c406730`). |
-| `validate_against_xlsx.ts` | Compares a full BAU run against the workbook's `Output Summary` sheet. Written for Bun, **will not run on plain Node** without edits. |
-| `extracted_audit.json` | Cached workbook extract used by the validator. |
+| `extracted_audit.json` | Structured dump of everything `extract_constants.py` read out of the workbook. Useful for checking where a number came from. |
 
 None of these run in CI or in the build. Treat them as reference, not as tools you maintain.
 

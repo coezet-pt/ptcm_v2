@@ -19,7 +19,6 @@ re-implementation of that workbook, not a model of its own.
 | `PTTM` | curve shapes, `GOMPERTZ_PARAMS_BY_PT`, pilot shares |
 | `Emissions` | `EMISSION_FACTORS`, `betGridFactor` |
 | `Segmentwise Sales/Stock`, `Applicationwise Sales/Stock` | `segmentAppShares.ts` |
-| `Output Summary` | targets for `scripts/validate_against_xlsx.ts` |
 | `Energy Requirementsfinal` | the diesel-saved KPI and the energy charts |
 
 **Rule:** when you add or change a constant, write the sheet name and cell in a comment next
@@ -325,9 +324,8 @@ down proportionally, then `Diesel = max(0, 1 − everything else)`. Sales are
   workbook's own share tables by year, copied into `segmentAppShares.ts`: yearly total per
   powertrain × share table. Diesel, BET and hydrogen use the general 7-band shares; CNG uses
   normalised shares (only Rigid 12–19T and 19–28.5T); LNG normalised (only the 3 tractor
-  bands); applications use one table for all powertrains. `SEGMENT_OF_BUCKET` and
-  `APPLICATION_OF_BUCKET` in `segments.ts` are leftovers and unused. The per-bucket
-  roll-forward still exists, but only for energy figures.
+  bands); applications use one table for all powertrains. The per-bucket roll-forward still
+  exists, but only for energy figures.
 
 ## Health checks (`sanityCheck.ts`)
 

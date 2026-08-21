@@ -45,11 +45,10 @@ individual years. Which inputs appear and in which group is set in
 | | Hydrogen Tank | `h2_tank_cost_per_kg` | ₹/kg |
 | | LNG Tank | `lng_tank_cost_per_kg` | ₹/kg |
 
-`ParameterKey` in `types.ts` has **17** entries. The six not in the sidebar
+`ParameterKey` in `types.ts` has **16** entries. The five not in the sidebar
 (`adblue_per_l`, `diesel_vehicle_growth`, `engine_trans_growth`, `e_powertrain_growth`,
-`grey_h2_blend_fraction`, `lng_valves_piping_per_vehicle`) still drive the model from their
-BAU defaults — they were taken out of the UI, not out of the model.
-`grey_h2_blend_fraction` is completely unused; the blend comes from `policy.grey_h2_blend_*`.
+`lng_valves_piping_per_vehicle`) still drive the model from their BAU defaults — they were
+taken out of the UI, not out of the model.
 
 **Growth rate cap:** `ParameterEditor.tsx` sets `DEFAULT_CAGR_MAX = 0.20`. Going above it
 shows a red "max ±20% allowed" note, but the value is still accepted. It is a warning, not a
@@ -78,10 +77,10 @@ limit.
   `fcet_inflection_year`, `bet_resale_2046_plus`, `diesel_price_5pct_yoy_after_2045`,
   `range_filling_concern_after_2035`, `gvw_payload_compensation_t`.
 
-Some components for these exist but are **not used anywhere**: `PolicyLevers.tsx`,
-`RatingMatrix.tsx`, `SegmentBasePricesTable.tsx`, `BucketMaintenanceInput.tsx`. If you need
-one of these settings back, start there — but check they still compile against the current
-`PolicyConfig` first.
+Half-built components for some of these used to sit in `src/components/` unused. They were
+deleted in the cleanup — see [07](07-known-issues.md). If you need one of these settings
+back, `git log` has them, but writing a fresh widget against the current `PolicyConfig` is
+probably faster than reviving one.
 
 > **Before adding a control, check the setting actually does something.** Costs are only
 > calculated at 2045, 2050 and 2055, so anything that stops before 2045 can never change a

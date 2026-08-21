@@ -67,8 +67,7 @@ ptcm_v2/
 ├── public/                  # Static files copied into the build
 ├── dist/                    # Build output (gitignored)
 ├── dump/                    # Local scratch files (gitignored)
-├── .claude/skills/verify/   # How to drive the app headlessly for testing
-└── .lovable/plan.md         # Old file, out of date — see 07
+└── .claude/skills/verify/   # How to drive the app headlessly for testing
 ```
 
 ## Who owns what

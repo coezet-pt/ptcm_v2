@@ -182,25 +182,6 @@ export const BUCKET_CHOICE_ELASTICITIES: Record<string, ChoiceElasticities> = {
   B12: CE_TANKER, B13: CE_TANKER, B14: CE_TANKER,
 };
 
-// Rated payloads per bucket (Excel B-sheet rows 17-19). Diesel/CNG/LNG/H2-ICE
-// share the diesel payload; only BET and FCET carry a payload penalty.
-export const BUCKET_PAYLOADS: Record<string, { diesel: number; bet: number; fcet: number }> = {
-  B1:  { diesel: 10500, bet: 8900,  fcet: 9600 },
-  B2:  { diesel: 19000, bet: 17000, fcet: 18100 },
-  B3:  { diesel: 35000, bet: 32200, fcet: 33900 },
-  B4:  { diesel: 10500, bet: 8900,  fcet: 9600 },
-  B5:  { diesel: 18500, bet: 16500, fcet: 17600 },
-  B6:  { diesel: 9500,  bet: 7900,  fcet: 8600 },
-  B7:  { diesel: 14500, bet: 12500, fcet: 13600 },
-  B8:  { diesel: 20000, bet: 17600, fcet: 19100 },
-  B9:  { diesel: 35000, bet: 32200, fcet: 33900 },
-  B10: { diesel: 39500, bet: 37100, fcet: 38400 },
-  B11: { diesel: 40000, bet: 37600, fcet: 38900 },
-  B12: { diesel: 18500, bet: 16500, fcet: 17600 },
-  B13: { diesel: 18500, bet: 16500, fcet: 17600 },
-  B14: { diesel: 20500, bet: 18100, fcet: 19600 },
-};
-
 // ===========================================================================
 // CHOICE MODEL SHARE ADJUSTMENTS (Excel Estimation sheets, per bucket)
 // Combined multiplier applied to the raw normalized PT shares, then the
@@ -562,7 +543,6 @@ export const BAU_PARAMETERS = {
   fuel_cell_cost_per_kw:         { baseValue: 34920,   d2530: -0.0300, d3135: -0.0300, d3640: -0.0300, d4145: -0.0200, d4650: -0.0200, d5155:  0.0100 },
   adblue_per_l:                  { baseValue: 56.375,  d2530:  0.0250, d3135:  0.0250, d3640:  0.0250, d4145:  0.0250, d4650:  0.0250, d5155:  0.0250 },
   grey_h2_production_per_kg:     { baseValue: 255,     d2530:  0.0200, d3135:  0.0200, d3640:  0.0200, d4145:  0.0200, d4650:  0.0200, d5155:  0.0200 },
-  grey_h2_blend_fraction:        { baseValue: 0,       d2530:  0,      d3135:  0,      d3640:  0,      d4145:  0,      d4650:  0,      d5155:  0      },
   lng_tank_cost_per_kg:          { baseValue: 3080.5,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
   lng_valves_piping_per_vehicle: { baseValue: 101000,  d2530:  0.0100, d3135:  0.0100, d3640:  0.0100, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },
   h2_tank_cost_per_kg:           { baseValue: 53200,   d2530: -0.0500, d3135: -0.0400, d3640: -0.0400, d4145:  0.0100, d4650:  0.0100, d5155:  0.0100 },

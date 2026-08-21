@@ -274,9 +274,6 @@ Code cleanup:
 
 - [ ] Put the console output behind `import.meta.env.DEV` (see `useSimulation.ts` and the
       `console.log('SimulationResult:', …)` in `Index.tsx`)
-- [ ] Remove `lovable-tagger` from `vite.config.ts` and `package.json`, and delete
-      `.lovable/`, if the Lovable origin should not be visible
-- [ ] Keep only one lockfile ([05](05-deployment.md))
 
 Content and ownership:
 

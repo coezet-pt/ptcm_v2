@@ -25,6 +25,5 @@ export const PARAMETER_META: Record<ParameterKey, ParameterMeta> = {
   e_powertrain_growth:            { label: 'E-powertrain growth',    unit: '%/yr',  tooltip: 'Annual YoY cost change for electric motor + electronics' },
   // v9 additions
   electricity_incl_caas_per_kwh:  { label: 'Electricity incl CAAS',  unit: '₹/kWh', tooltip: 'All-in electricity cost for BET charging incl. DISCOM + demand charges + charging infra (Excel R18)', maxValue: 100 },
-  grey_h2_blend_fraction:         { label: 'Grey Hydrogen blend fraction', unit: '0-1',   tooltip: 'Fraction of grey hydrogen in the hydrogen supply blend (0 = 100% green)' },
   lng_valves_piping_per_vehicle:  { label: 'LNG valves & piping',    unit: '₹/veh', tooltip: 'Per-vehicle cost of LNG valves and piping system' },
 };
