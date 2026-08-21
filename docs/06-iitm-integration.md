@@ -1,91 +1,84 @@
-# 6. Integrating into an IIT Madras Website
+# 6. Putting This on an IIT Madras Website
 
-The plan is to publish this dashboard as a tool on an IITM (CoEZET) website rather than on
-`ptcm-rho.vercel.app`. This document covers what that actually requires.
+The plan is to publish this dashboard as a tool on a CoEZET / IITM website instead of
+`ptcm-rho.vercel.app`. This is what that takes.
 
-## The good news first
+## Why this is easy
 
-This app is about as easy to host as a web application gets:
+- **It is fully static.** `npm run build` gives you a folder of HTML, CSS and JS. No Node
+  server, no Python, no database.
+- **No environment variables and no secrets.** Nothing to set up per environment.
+- **No outbound network calls.** No API, no CDN font, no analytics, no tracking. Once the
+  page loads it talks to nobody. This makes a security review very short.
+- **All the maths runs in the browser.** No server load, whatever the traffic. Hosting cost
+  is just serving ~680 kB gzipped per visitor.
+- **No user data is collected or stored.** Nothing is saved; refreshing resets to defaults.
 
-- **It is 100 % static.** `npm run build` produces a folder of HTML/CSS/JS. There is no
-  Node server, no Python, no database, no Redis, no cron job.
-- **There are no environment variables and no secrets.** Nothing to configure per
-  environment, nothing to leak.
-- **There are no outbound network calls.** No API, no CDN font, no analytics beacon, no
-  telemetry. Once loaded, the page talks to nobody. This matters for institutional
-  security review — it is a very short conversation.
-- **All computation is client-side.** No server load regardless of traffic. Hosting cost is
-  the cost of serving ~680 kB gzipped per visitor.
-- **No user data is collected or stored.** Nothing is persisted anywhere; a page refresh
-  resets to defaults.
+So the question is only **where do these files go and at what URL**, not "how do we run this
+service".
 
-The whole integration question is therefore **"where do these static files go, and at what
-URL"**, not "how do we run this service".
+## Four options
 
-## Four integration options
+### Option A — Its own subdomain (recommended)
 
-### Option A — Subdomain (recommended)
-
-Serve the app at its own hostname, e.g. `ptcm.coezet.iitm.ac.in` or
-`tools.coezet.iitm.ac.in/`, and link to it from the main site's navigation.
+Serve the app at its own address, e.g. `ptcm.coezet.iitm.ac.in`, and link to it from the main
+site's menu.
 
 | | |
 |---|---|
 | Effort | Low |
 | Code changes | None |
-| Needs from IITM IT | A DNS record + a vhost, or a DNS record pointing at Vercel |
-| Trade-off | The tool feels adjacent to the site rather than part of it |
+| Needed from IITM IT | A DNS record plus either a vhost or a pointer to Vercel |
+| Downside | The tool sits next to the site rather than inside it |
 
-Two sub-variants:
+Two ways to do it:
 
-- **A1 — Keep Vercel, point a custom domain at it.** Add
-  `ptcm.coezet.iitm.ac.in` as a custom domain in the Vercel project; IITM IT adds a CNAME.
-  You keep git-push deploys, preview URLs and one-click rollback, and IITM keeps the
-  branding. This is the least work by a wide margin.
-- **A2 — Host on IITM infrastructure.** Build locally or in CI, copy `dist/` to the
-  server. See "Serving from nginx/Apache" below.
+- **A1 — Keep Vercel, point a custom domain at it.** Add `ptcm.coezet.iitm.ac.in` as a custom
+  domain in the Vercel project; IITM IT adds a CNAME record. You keep push-to-deploy, preview
+  URLs and one-click rollback, and IITM keeps the branding. Much less work than anything else.
+- **A2 — Host on IITM servers.** Build locally or in CI and copy `dist/` to the server. See
+  "Serving from IITM servers" below.
 
-Choose A1 unless there is an institutional policy against third-party hosting. If there is,
-go to A2 — the app does not care.
+Pick A1 unless there is a policy against third-party hosting. If there is, A2 works fine.
 
-### Option B — Subpath on the existing site
+### Option B — A folder on the existing site
 
 Serve at `https://coezet.iitm.ac.in/ptcm/`.
 
 | | |
 |---|---|
-| Effort | Low–medium |
-| Code changes | **Yes — one config line, and it is mandatory** |
-| Needs from IITM IT | A location block / alias + an SPA fallback |
+| Effort | Low to medium |
+| Code changes | **Yes — one config line, and it is required** |
+| Needed from IITM IT | A location block plus a fallback rule |
 
-**Required change** — `vite.config.ts`:
+**Required change** in `vite.config.ts`:
 
 ```ts
 export default defineConfig(({ mode }) => ({
-  base: "/ptcm/",          // ← add this; must match the subpath exactly, trailing slash included
+  base: "/ptcm/",          // ← add this; must match the folder exactly, trailing slash included
   server: { host: "::", port: 8080, hmr: { overlay: false } },
   // …
 }));
 ```
 
-Without it, the built `index.html` requests `/assets/index-<hash>.js` from the domain root
-and the page loads blank with 404s in the console.
+Without it, the built `index.html` asks for `/assets/index-<hash>.js` at the domain root and
+the page loads blank with 404s in the console.
 
-The router also needs to know its base — in `src/App.tsx`:
+The router also needs to know the folder — in `src/App.tsx`:
 
 ```tsx
 <BrowserRouter basename={import.meta.env.BASE_URL}>
 ```
 
-`import.meta.env.BASE_URL` is populated by Vite from `base`, so this works in dev (`/`) and
-in production (`/ptcm/`) without a second constant to keep in sync.
+Vite fills `import.meta.env.BASE_URL` from `base`, so this works both in development (`/`)
+and in production (`/ptcm/`) without a second setting to keep in sync.
 
-Verify with `npm run build && npx vite preview` before shipping.
+Check it with `npm run build && npx vite preview` before shipping.
 
-### Option C — iframe embed in a CMS page
+### Option C — An iframe inside a CMS page
 
-If the IITM site runs WordPress/Drupal/Joomla and the tool should live *inside* a normal
-content page (with the site header, breadcrumbs and footer around it):
+If the IITM site runs WordPress, Drupal or Joomla and the tool should sit inside a normal
+page, with the site header and footer around it:
 
 ```html
 <iframe
@@ -101,43 +94,43 @@ content page (with the site header, breadcrumbs and footer around it):
 |---|---|
 | Effort | Very low — a content editor can do it |
 | Code changes | None |
-| Trade-off | Two scrollbars, awkward on mobile, and a **fixed iframe height** |
+| Downside | Two scrollbars, awkward on mobile, and a **fixed height** |
 
-This is still the most common way institutional sites embed tools, and it composes with
-Option A: host the app on a subdomain, embed that subdomain in a CMS page.
+This is still the most common way institutional sites embed tools, and it works together with
+Option A: host on a subdomain, embed that subdomain in a CMS page.
 
 Two things to get right:
 
-1. **Height.** The dashboard is a full-height app with a sticky header, a sticky sidebar
-   action bar and its own internal scroll regions. It does not shrink gracefully into a
-   600 px iframe. Give it at least 1200–1400 px, or make the iframe `height:100vh` on a
-   dedicated near-full-bleed page. Auto-resizing (postMessage → parent) would require adding
-   a small script on both sides; only do that if the fixed height is genuinely unacceptable.
-2. **Framing headers.** If the app is served with `X-Frame-Options: DENY` or a
-   `Content-Security-Policy: frame-ancestors 'none'`, the iframe renders blank. Whoever
+1. **Height.** The dashboard is a full-height app with a sticky header, a sticky action bar
+   and its own scrolling areas. It does not fit into a 600 px iframe. Give it at least
+   1200–1400 px, or use `height:100vh` on a page with little else on it. Auto-resizing
+   (postMessage to the parent) needs a small script on both sides — only do that if a fixed
+   height is really not acceptable.
+2. **Framing headers.** If the app is served with `X-Frame-Options: DENY` or
+   `Content-Security-Policy: frame-ancestors 'none'`, the iframe shows up blank. Whoever
    configures the host must allow the IITM origin:
    `Content-Security-Policy: frame-ancestors https://*.iitm.ac.in;`
 
-### Option D — Mount into an existing app / micro-frontend
+### Option D — Mount it inside an existing app
 
-Export the dashboard as a component or a custom element and mount it into an existing React
-or non-React page.
+Turn the dashboard into a component or custom element and mount it into an existing React or
+non-React page.
 
 | | |
 |---|---|
 | Effort | High |
-| Code changes | Significant — extract a mount function, scope Tailwind's preflight, handle style collisions |
-| Trade-off | Genuine single-page integration; also the only option that can break in subtle ways |
+| Code changes | A lot — extract a mount function, scope Tailwind's base styles, fix style clashes |
+| Downside | The only option that can break in ways that are hard to spot |
 
-Only worth it if the IITM site is itself a modern SPA and the tool must share its shell.
-`main.tsx` is a three-line mount, so the mechanics are easy; the hard part is CSS isolation —
-Tailwind's preflight will restyle the host page unless it is scoped or the app is put in a
-shadow root.
+Only worth it if the IITM site is itself a modern single-page app and the tool has to share
+its shell. `main.tsx` is a three-line mount so the mechanics are simple; the hard part is CSS
+isolation — Tailwind's base styles will restyle the host page unless they are scoped or the
+app runs in a shadow root.
 
-**Recommendation: A1 now, and C on top of it if the tool needs to appear inside a CMS page.**
-Reach for B if institutional URL policy requires a subpath. Avoid D.
+**Recommendation: A1 now, plus C on top if the tool needs to appear inside a CMS page.** Use
+B if URL policy requires a subfolder. Avoid D.
 
-## Serving from IITM infrastructure (A2 / B)
+## Serving from IITM servers (A2 / B)
 
 ### Build
 
@@ -146,7 +139,7 @@ npm ci
 npm run build      # → dist/
 ```
 
-Ship the contents of `dist/`. Nothing else from the repo is needed at runtime.
+Ship the contents of `dist/`. Nothing else from the repo is needed to run it.
 
 ### nginx
 
@@ -158,28 +151,28 @@ server {
     root /var/www/ptcm;
     index index.html;
 
-    # SPA fallback — REQUIRED. react-router uses history mode.
+    # Fallback for unknown paths — REQUIRED. react-router needs it.
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # Hashed assets are immutable; cache them hard.
+    # Asset filenames include a hash, so they never change. Cache them hard.
     location /assets/ {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 
-    # index.html must never be cached, or users get stale asset references.
+    # index.html must never be cached, or users get stale asset links.
     location = /index.html {
         add_header Cache-Control "no-cache, must-revalidate";
     }
 
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
-    # brotli is better if the build has it
+    # brotli is better if available
 }
 ```
 
-For a **subpath** deployment (Option B), with `base: "/ptcm/"` set:
+For a **subfolder** deployment (Option B), with `base: "/ptcm/"` set:
 
 ```nginx
 location /ptcm/ {
@@ -208,18 +201,18 @@ location /ptcm/ {
 </FilesMatch>
 ```
 
-### The three ways this goes wrong
+### Three things that commonly go wrong
 
-1. **No SPA fallback** → the root loads, any other path 404s. Fix: `try_files`.
+1. **No fallback rule** → the home page loads, every other path 404s. Fix: `try_files`.
 2. **Wrong `base`** → blank page, 404s for `/assets/*.js` in the console. Fix: set `base` and
    rebuild.
-3. **`index.html` cached** → users keep loading an old `index.html` that points at asset
-   hashes you have already deleted. Fix: `no-cache` on `index.html`, long cache on `/assets/`.
+3. **`index.html` gets cached** → users keep loading an old `index.html` that points at asset
+   files you have already replaced. Fix: `no-cache` on `index.html`, long cache on `/assets/`.
 
 ### Content-Security-Policy
 
-If IITM IT requires a CSP, this is a workable starting point. The app inlines no external
-resources but Vite/React do use inline styles:
+If IITM IT wants a CSP, this is a good starting point. The app loads nothing from outside,
+but Vite and React do use inline styles:
 
 ```
 default-src 'self';
@@ -231,13 +224,14 @@ connect-src 'self';
 frame-ancestors https://*.iitm.ac.in;
 ```
 
-`data:` and `blob:` in `img-src` are needed by the PNG/PDF export path (`html-to-image`
-renders to a data URL; CSV/XLSX downloads use blob URLs). If exports break under CSP, that is
-the directive to look at first.
+`data:` and `blob:` in `img-src` are needed by the PNG and PDF exports (`html-to-image`
+renders to a data URL; CSV and XLSX downloads use blob URLs). If exports stop working under a
+CSP, check that line first.
 
-### Automating the deploy to an IITM server
+### Automating the deploy
 
-If IITM IT gives you a deploy target, a GitHub Actions workflow keeps the git-push habit:
+If IITM IT gives you a server to deploy to, this GitHub Actions workflow keeps the
+push-to-deploy habit:
 
 ```yaml
 name: Deploy
@@ -256,50 +250,50 @@ jobs:
       - run: npm run build
       - name: Rsync to server
         run: rsync -az --delete dist/ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/var/www/ptcm/
-        # requires an SSH key in secrets and the runner's IP allowed through
+        # needs an SSH key in secrets and the runner's IP allowed through
 ```
 
-Note `npm test` before `npm run build` — that is the 12-check model health suite, and it is
-the thing standing between a bad merge and a published dashboard with wrong numbers.
+Note `npm test` runs before `npm run build`. That is the model health suite, and it is the
+only thing standing between a bad merge and a live dashboard showing wrong numbers.
 
-## Pre-launch checklist for an institutional site
+## Before launching on an institutional site
 
 Branding and metadata (all in `index.html` unless noted):
 
-- [ ] Replace `<title>PTCM</title>` with something a search result can use, e.g.
+- [ ] Replace `<title>PTCM</title>` with something useful in a search result, e.g.
       "Powertrain Choice Model — CoEZET, IIT Madras"
-- [ ] Remove the two scaffold `<!-- TODO: … -->` comments
-- [ ] Add a favicon (there is none) — IITM or CoEZET mark, `public/favicon.ico` + a `<link>`
-- [ ] Add `og:image` and `twitter:card` so shared links render a preview
+- [ ] Remove the two `<!-- TODO: … -->` comments
+- [ ] Add a favicon (there is none) — an IITM or CoEZET mark, `public/favicon.ico` + a `<link>`
+- [ ] Add `og:image` and `twitter:card` so shared links show a preview
 - [ ] Add `<link rel="canonical">` pointing at the final URL
-- [ ] Consider adding the CoEZET / IITM logo to the app header in `pages/Index.tsx`
-      (currently a generic truck icon)
+- [ ] Consider putting the CoEZET / IITM logo in the app header in `pages/Index.tsx`
+      (it is a generic truck icon right now)
 - [ ] Decide on `public/robots.txt` — it currently allows all crawlers
 
-Code hygiene:
+Code cleanup:
 
-- [ ] Gate the diagnostic console output behind `import.meta.env.DEV` (see
-      `useSimulation.ts` and the `console.log('SimulationResult:', …)` in `Index.tsx`)
-- [ ] Delete `lovable-tagger` from `vite.config.ts` and `package.json`, and the `.lovable/`
-      folder, if the Lovable lineage should not be visible
-- [ ] Consolidate to one lockfile ([05](05-deployment.md))
+- [ ] Put the console output behind `import.meta.env.DEV` (see `useSimulation.ts` and the
+      `console.log('SimulationResult:', …)` in `Index.tsx`)
+- [ ] Remove `lovable-tagger` from `vite.config.ts` and `package.json`, and delete
+      `.lovable/`, if the Lovable origin should not be visible
+- [ ] Keep only one lockfile ([05](05-deployment.md))
 
-Content and governance:
+Content and ownership:
 
-- [ ] Add an "About this model" panel or page: what the model is, that it comes from the
-      CoEZET workbook, the base year (2026), the scenario shown (BAU), and a version/date
-- [ ] Add a disclaimer — these are projections under stated assumptions, not forecasts
-- [ ] Decide whether the BWS-1 / BWS-2 / BEST scenarios should be re-exposed in the picker
-      (they are implemented; see [02](02-architecture.md))
-- [ ] Add a contact / feedback route
-- [ ] Confirm the licence. `README.md` says MIT, but the model and the workbook are CoEZET
-      IITM's — the code licence and the data licence are not necessarily the same, and this
-      should be settled explicitly before an institutional publication.
+- [ ] Add an "About this model" panel: what it is, that it comes from the CoEZET workbook,
+      the base year (2026), the scenario shown (BAU), and a version or date
+- [ ] Add a note that these are projections under stated assumptions, not forecasts
+- [ ] Decide whether BWS-1 / BWS-2 / BEST should be shown in the scenario picker (they are
+      built, see [02](02-architecture.md))
+- [ ] Add a contact or feedback link
+- [ ] Settle the licence. `README.md` says MIT, but the model and workbook belong to CoEZET
+      IITM. The code licence and the data licence are not necessarily the same, and this
+      should be agreed before publishing.
 
 Accessibility and compatibility (likely required for a `.ac.in` site):
 
 - [ ] Keyboard navigation through the sidebar inputs and chart tabs
-- [ ] Colour contrast on the chart palettes
-- [ ] Behaviour at 1366×768, the most common Indian institutional desktop resolution
-- [ ] Mobile: the layout stacks below `lg`, but the dashboard is genuinely desktop-first —
-      decide whether that is acceptable or worth investment
+- [ ] Colour contrast in the charts
+- [ ] Behaviour at 1366×768, the most common Indian institutional screen size
+- [ ] Mobile: the layout does stack below `lg`, but this is a desktop-first dashboard —
+      decide whether that is acceptable

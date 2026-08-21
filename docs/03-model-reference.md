@@ -1,40 +1,37 @@
 # 3. Model Reference
 
-This is the document to read before changing anything in `src/lib/sim/` or
-`src/lib/constants/`.
+Read this before changing anything in `src/lib/sim/` or `src/lib/constants/`.
 
-## Source of truth
+## Where the numbers come from
 
-`CoEZET PTCM v2.xlsx` sits at the repo root and is **deliberately committed** (`.gitignore`
-ignores `*.xlsx` but explicitly un-ignores this one). It has ~50 sheets. The dashboard is a
-re-implementation of it, not an independent model.
+`CoEZET PTCM v2.xlsx` sits at the repo root and is **committed on purpose** (`.gitignore`
+skips `*.xlsx` but makes an exception for this one). It has about 50 sheets. This app is a
+re-implementation of that workbook, not a model of its own.
 
-Sheets that matter, and where they land in code:
-
-| Excel sheet | Consumed by |
+| Excel sheet | Used by |
 |---|---|
-| `Parameters Fixed` / `No change with year` | `BAU_FIXED`, `FINANCE`, `TECH_SPECS`, battery/FC life constants |
-| `Parameters Varying` / `Changing with year` | `BAU_PARAMETERS` base values + CAGRs, vehicle price build-up, toll rows |
-| `Input Sheet` | choice-model elasticity ratings (`BUCKET_CHOICE_ELASTICITIES`) |
-| `B1`–`B14 - TCO ML` | per-bucket TCO build-up; `BUCKET_OPEX_CALIBRATION`, maintenance defaults |
-| `Estimation SS-2045` / `Estimation SS-2050` | share adjustments, rebuilt from year inputs in `sim/adjustments.ts` (snapshot: `CHOICE_SHARE_ADJUSTMENT_BASELINE`) |
+| `Parameters Fixed` / `No change with year` | `BAU_FIXED`, `FINANCE`, `TECH_SPECS`, battery and fuel-cell life |
+| `Parameters Varying` / `Changing with year` | `BAU_PARAMETERS` base values and growth rates, vehicle price build-up, toll rows |
+| `Input Sheet` | choice-model ratings (`BUCKET_CHOICE_ELASTICITIES`) |
+| `B1`–`B14 - TCO ML` | per-bucket cost build-up; `BUCKET_OPEX_CALIBRATION`, maintenance defaults |
+| `Estimation SS-2045` / `Estimation SS-2050` | share adjustments, rebuilt in `sim/adjustments.ts` (snapshot: `CHOICE_SHARE_ADJUSTMENT_BASELINE`) |
 | `Estimation 100% ZET 2055` | the `zetOnly` branch of `computeShares` |
-| `PTTM` | Gompertz/Weibull curve shapes, `GOMPERTZ_PARAMS_BY_PT`, pilot shares |
+| `PTTM` | curve shapes, `GOMPERTZ_PARAMS_BY_PT`, pilot shares |
 | `Emissions` | `EMISSION_FACTORS`, `betGridFactor` |
 | `Segmentwise Sales/Stock`, `Applicationwise Sales/Stock` | `segmentAppShares.ts` |
-| `Output Summary` | validation targets for `scripts/validate_against_xlsx.ts` |
-| `Energy Requirementsfinal` | the diesel-displaced KPI and energy charts |
+| `Output Summary` | targets for `scripts/validate_against_xlsx.ts` |
+| `Energy Requirementsfinal` | the diesel-saved KPI and the energy charts |
 
-**Convention:** when you add or change a constant, put the sheet name and cell reference in
-a comment next to it. Nearly every existing constant has one. This is what makes the model
-auditable a year from now.
+**Rule:** when you add or change a constant, write the sheet name and cell in a comment next
+to it. Almost every existing constant has one. This is what lets someone check the model a
+year from now.
 
 ## The 14 buckets
 
-A "bucket" is a use-case × vehicle-size combination. All model maths runs per bucket, then
-aggregates with `tivShare2045` weights.
+A bucket is one use case combined with one truck size. All maths runs per bucket, then gets
+combined using the 2045 share weights below.
 
-| ID | Use case | Size | TIV share 2045 |
+| ID | Use case | Size | Share of 2045 sales |
 |---|---|---|---|
 | B1 | Market Load | 19T Rigid | 6.57% |
 | B2 | Market Load | 28T Rigid | 6.21% |
@@ -51,38 +48,38 @@ aggregates with `tivShare2045` weights.
 | B13 | Tankers - Non POL | 28T Rigid | 3.64% |
 | B14 | LPG bullet tankers | 40T Tractor | 1.29% |
 
-Shares sum to **~91%**. The residual ~9% (`OTHER_DIESEL_TIV_SHARE`) is modelled as
-diesel-only "Other" and never transitions. Each bucket carries its annual km, working days,
-ULW/GVW, per-powertrain efficiency, battery/fuel-cell/tank sizing, tyre counts and
+These add up to about **91%**. The other 9% (`OTHER_DIESEL_TIV_SHARE`) is treated as
+diesel-only "Other" that never switches. Each bucket also carries its annual km, working
+days, weights, fuel efficiency per powertrain, battery/fuel-cell/tank sizes, tyre counts and
 maintenance baselines — all in the `BUCKETS` array in `extracted.ts`.
 
 ## Stage 1 — `timeSeries.ts`
 
-Turns each `ParameterConfig` into a 30-element array for 2026…2055.
+Turns each input into a 30-value array covering 2026 to 2055.
 
 ```
 arr[0]  = baseValue                       // 2026
-arr[i]  = arr[i-1] × (1 + CAGR_for_year)  // compounding
-arr[i]  = overrides[year]                 // if a per-year pin exists
+arr[i]  = arr[i-1] × (1 + growth rate)    // compounds year on year
+arr[i]  = overrides[year]                 // unless that year is pinned
 ```
 
-The CAGR band is picked by year: `≤2030 → d2530`, `≤2035 → d3135`, `≤2040 → d3640`,
+The growth band is chosen by year: `≤2030 → d2530`, `≤2035 → d3135`, `≤2040 → d3640`,
 `≤2045 → d4145`, `≤2050 → d4650`, else `d5155`.
 
-Three keys (`diesel_vehicle_growth`, `engine_trans_growth`, `e_powertrain_growth`) are
-**growth-rate** series: they start at `1.0` and hold a cumulative multiplier rather than an
-absolute value. Pins are ignored for these.
+Three inputs (`diesel_vehicle_growth`, `engine_trans_growth`, `e_powertrain_growth`) are
+multipliers rather than prices: they start at `1.0` and build up. Pins are ignored for these.
 
-One policy override lives here: `diesel_price_5pct_yoy_after_2045` forces
-`diesel_price_per_l`'s `d4650` and `d5155` to 0.05.
+One policy setting acts here: `diesel_price_5pct_yoy_after_2045` forces diesel's `d4650` and
+`d5155` to 0.05.
 
 ## Stage 2 — `tco.ts`
 
 ### Vehicle price (per bucket × powertrain × year)
 
-All prices build off a per-size diesel base (`VEHICLE_BASE_PRICES_2026`, overridable through
-`segmentBasePrices`), grown by the cumulative `diesel_vehicle_growth` multiplier. The BS-VII
-emission-norm bump of **₹400,000** lands in 2030 and compounds thereafter.
+Every price starts from a diesel price for that truck size
+(`VEHICLE_BASE_PRICES_2026`, editable via `segmentBasePrices`), grown by the
+`diesel_vehicle_growth` multiplier. The BS-VII emission-norm cost of **₹400,000** is added in
+2030 and grows after that.
 
 ```
 Diesel   = base.diesel_total × g(y)  + BSVII(y)
@@ -100,19 +97,18 @@ FCET     = Diesel(y) − engineTrans(y) + ePowertrain(y) + fuelCell(y)
            − ZET_BSVII_relief(y) − incentive
 ```
 
-- **ZET BS-VII relief** — BET/FCET bear only half the bump: ₹200,000 in 2030, ₹206,000
-  (= 200,000 × 1.03) from 2031 on.
-- **OEM margins** decline over time; see `BET_OEM_MARGIN_BY_YEAR` / `FCET_OEM_MARGIN_BY_YEAR`.
-- **Demand incentives** are two-phase: full rate through
-  `*_incentive_phase1_end_year`, a reduced phase-2 rate through
-  `*_incentive_phase2_end_year`, then zero. Incentive is per kWh × battery size (BET uses
-  `betBatteryKWh`, FCET uses `fcetBatteryKWh`). The two phases are the workbook's `$AH$128`
-  (2026-30) and `$AI$128` (2031-35) cells; rows 129-137 / 142-149 subtract nothing from 2036
-  on. **Because the choice model only prices 2045/2050/2055, this lever is inert by
-  construction** — that is the workbook's behaviour, not a defect. Do not "fix" it by pushing
-  the end years past 2045; `src/test/demandIncentive.test.ts` guards it.
+- **ZET BS-VII relief** — BET and FCET only pay half the norm cost: ₹200,000 in 2030,
+  ₹206,000 (= 200,000 × 1.03) from 2031 on.
+- **OEM margins** fall over time; see `BET_OEM_MARGIN_BY_YEAR` / `FCET_OEM_MARGIN_BY_YEAR`.
+- **Demand incentives** have two phases: the full rate until
+  `*_incentive_phase1_end_year`, a lower rate until `*_incentive_phase2_end_year`, then zero.
+  The incentive is per kWh × battery size. These are the workbook's `$AH$128` (2026-30) and
+  `$AI$128` (2031-35) cells; rows 129-137 and 142-149 subtract nothing from 2036 on.
+  **Because the model only prices 2045, 2050 and 2055, this setting has no effect** — that
+  matches the workbook, it is not a bug. Do not "fix" it by pushing the end years past 2045;
+  `src/test/demandIncentive.test.ts` will fail.
 
-### TCO per km (7-year ownership)
+### Cost per km (7 years of ownership)
 
 ```
 resale     = price × resalePct(profile, powertrain, tier)
@@ -120,76 +116,75 @@ resale     = price × resalePct(profile, powertrain, tier)
               profile: general | high_duty | tipper
               BET after 2046 can be overridden by policy.bet_resale_2046_plus
 
-financed   = price × r × n / (1 − (1+r)^−n)          // full-price annuity
+financed   = price × r × n / (1 − (1+r)^−n)          // loan on the full price
 insurance  = price × insurance_rate × 7
 capex      = financed − resale + insurance
 
-opex/km    = fuel/km + maintenance/km + toll/km + manpower/km
-TCO/km     = (capex + opex/km × annualKm × 7) / (annualKm × 7)
+running/km = fuel/km + maintenance/km + toll/km + manpower/km
+TCO/km     = (capex + running/km × annualKm × 7) / (annualKm × 7)
 ```
 
-- **Interest rate and tenure** split on `isZET(pt)`, which in code is
-  **`BET || H2-FCET` only** — H2-ICE is financed as an ICE. The workbook itself is
-  inconsistent here (8 of the 14 bucket sheets discount H2-ICE at the ICE rate `C26`/`C25`,
-  6 at the ZET rate `C28`/`C27`); both rates are 12 %/7 yr at BAU so it is invisible until
-  someone moves the Funding inputs. See [07](07-gotchas-and-backlog.md).
-- **Toll** splits on a *separate* predicate, `usesZetToll(pt)` = **BET + H2-ICE + H2-FCET**.
-  All 14 bucket sheets agree on this one: the row is labelled
-  `Toll Charges (H2 ICE, BET & FCET)` and the H2-ICE block points at it (B1 row 122 → row
-  60 → `Changing with year` row 277, the ZET toll table at rows 276–284).
-- **Fuel/km** — diesel adds AdBlue; BET uses `electricity_incl_caas_per_kwh` minus the
-  electricity subsidy (until `electricity_subsidy_end_year`, default 2055); H2 uses the
-  blended green/grey production cost plus compression/storage. The electricity subsidy is a
-  **dashboard-only** lever — the workbook has no subsidy term (`Changing with year` r18 is
-  DISCOM + fixed/demand charges + charging infra, nothing subtracted) — so unlike the demand
-  incentives it carries no fidelity constraint on its end year.
-- **Maintenance/km** — Diesel/BET/FCET are user-editable per bucket via
-  `fixed.bucket_maintenance` (defaults from `maintenance.ts` reproduce the Excel baseline);
-  CNG/LNG/H2-ICE grow at a flat 4 %/yr. BET/FCET additionally carry a **Key Aggregate Life
-  delta**: changing battery cycles or fuel-cell hours away from the defaults (3,000 cycles /
-  25,000 hrs) shifts maintenance by the change in replacement cost per km. The delta is
-  exactly zero at default life, so it cannot silently perturb the baseline.
-- **Toll and manpower** interpolate a per-bucket `[2026, 2045]` pair with the implied CAGR
+- **Interest rate and loan length** depend on `isZET(pt)`, which in the code means
+  **`BET` or `H2-FCET` only** — H2-ICE is financed like a diesel truck. The workbook itself
+  disagrees with itself here (8 of the 14 bucket sheets use the ICE rate `C26`/`C25` for
+  H2-ICE, 6 use the ZET rate `C28`/`C27`). Both rates are 12% over 7 years at BAU, so it
+  makes no difference until someone changes the Funding inputs. See [07](07-known-issues.md).
+- **Toll** uses a different rule, `usesZetToll(pt)` = **BET + H2-ICE + H2-FCET**. All 14
+  bucket sheets agree on this one: the row is called `Toll Charges (H2 ICE, BET & FCET)` and
+  the H2-ICE block points at it (B1 row 122 → row 60 → `Changing with year` row 277, the ZET
+  toll table at rows 276–284).
+- **Fuel per km** — diesel adds AdBlue; BET uses the electricity price minus any subsidy
+  (until `electricity_subsidy_end_year`, default 2055); hydrogen uses the blended green/grey
+  production cost plus compression and storage. The electricity subsidy is a
+  **dashboard-only** setting — the workbook has no subsidy at all — so unlike the demand
+  incentives, its end year is not tied to Excel.
+- **Maintenance per km** — Diesel, BET and FCET can be edited per bucket via
+  `fixed.bucket_maintenance` (defaults in `maintenance.ts` match Excel); CNG, LNG and H2-ICE
+  grow at a flat 4% a year. BET and FCET also carry a **battery/fuel-cell life adjustment**:
+  changing battery cycles or fuel-cell hours away from the defaults (3,000 cycles /
+  25,000 hours) shifts maintenance by the change in replacement cost per km. At the default
+  life this adjustment is exactly zero, so it cannot quietly move the baseline.
+- **Toll and manpower** are interpolated between a 2026 and a 2045 value per bucket
   (`BUCKET_OPEX_CALIBRATION`).
 
 ### Hydrogen source mix
 
-`greyH2FractionForYear()` is the single source of truth, shared by cost *and* emissions:
+`greyH2FractionForYear()` is the one place this is decided, and it feeds both cost and
+emissions:
 
 | `policy.h2_source_mix` | Grey fraction |
 |---|---|
 | `green_only` (default) | 0 |
-| `blend_2046_green` | uniform % or per-band %, **0 from 2046 on** |
-| `cheapest` | 1 when grey production cost < green, else 0 |
+| `blend_2046_green` | a flat % or a per-band %, **0 from 2046 on** |
+| `cheapest` | 1 when grey is cheaper than green, else 0 |
 
-> The Excel workbook uses **0 % grey in every year**. Grey appears there only as a cost
-> input. The blend and "cheapest" options are dashboard-only what-if levers beyond the
-> workbook, and the grey emission factor (10 kgCO₂e/kg, SMR) comes from literature, not
-> from the workbook.
+> The Excel workbook uses **0% grey in every year**. Grey only appears there as a cost input.
+> The blend and "cheapest" options are extra what-if settings this dashboard adds, and the
+> grey emission factor (10 kgCO₂e/kg, SMR) comes from published literature, not the workbook.
 
 ## Stage 3 — `choiceModel.ts`
 
-Five factors, each compared against diesel, exponentiated and summed:
+Five factors, each compared against diesel, then combined:
 
 ```
-arg[f]     = elasticity[f] × (ratio[f] − 1)
+arg[f]     = rating[f] × (ratio[f] − 1)
 factor[f]  = exp(clamp(arg[f], −50, +50))
-score[pt]  = Σ factor[f]  over  TCO, price, payload, TAT, range
-share[pt]  = score[pt] / Σ score[all pt]
+score[pt]  = sum of factor[f] over TCO, price, payload, TAT, range
+share[pt]  = score[pt] / sum of all scores
 ```
 
-| Factor | Ratio | Direction |
+| Factor | Ratio | Which way is better |
 |---|---|---|
-| TCO | `dieselTCO / ptTCO` | lower TCO is better |
-| Vehicle price | `dieselPrice / ptPrice` | lower price is better |
-| Rated payload | `ptPayload / dieselPayload` | higher payload is better |
-| TAT / gradeability | `ptRating / dieselRating` | higher rating is better |
-| Range / filling time | `dieselRating / ptRating` | lower penalty is better |
+| TCO | `dieselTCO / ptTCO` | lower cost |
+| Vehicle price | `dieselPrice / ptPrice` | lower price |
+| Rated payload | `ptPayload / dieselPayload` | higher payload |
+| TAT / gradeability | `ptRating / dieselRating` | higher rating |
+| Range / filling time | `dieselRating / ptRating` | lower penalty |
 
-Elasticities are per bucket (`BUCKET_CHOICE_ELASTICITIES`, averaged from `Input Sheet`
-rows 8–12) and already include the ×1.5 lambda from the workbook.
+Ratings are per bucket (`BUCKET_CHOICE_ELASTICITIES`, averaged from `Input Sheet` rows 8–12)
+and already include the ×1.5 factor from the workbook.
 
-**Payload** is derived live in `computeBucketPayload`:
+**Payload** is worked out live in `computeBucketPayload`:
 
 ```
 diesel = GVW − ULW
@@ -199,14 +194,16 @@ extraGVW = policy.gvw_payload_compensation_t × 1000
          + policy.zet_additional_gvw_kg[sizeClass]
 ```
 
-Diesel, CNG, LNG and H2-ICE all use the diesel payload — only BET and FCET carry a penalty.
+Diesel, CNG, LNG and H2-ICE all use the diesel payload. Only BET and FCET lose payload to
+their battery and fuel cell.
 
-**Supply timing** — a powertrain scores 0 for a bucket before its
-`START_OF_SUPPLY[size][pt]` year.
+**Availability** — a powertrain scores 0 in a bucket before its `START_OF_SUPPLY[size][pt]`
+year.
 
-**Estimation-sheet adjustments** — after normalising, shares are multiplied by a per-bucket
-factor and renormalised. The workbook does **not** store these as constants; it computes them
-from year inputs, and so does `src/lib/sim/adjustments.ts`. Every layer has the same shape:
+**Share adjustments** — after the shares are normalised, each is multiplied by a per-bucket
+factor and normalised again. The workbook does not store these as fixed numbers; it works
+them out from year inputs, and so does `src/lib/sim/adjustments.ts`. Every layer has the
+same form:
 
 ```
 delay(pt) = 1 − (year[pt] − year[baseline]) / (steadyState − year[baseline])
@@ -219,136 +216,137 @@ delay(pt) = 1 − (year[pt] − year[baseline]) / (steadyState − year[baseline
 | 2055 | maturity only | **BET** | 2055 |
 
 Year inputs: `START_OF_SUPPLY` (`No change with year` J63:O79, per size class) and
-`PT_MATURITY_YEARS` (P65:U65 — the workbook fills only the 15T row and applies it to every
-bucket, which is why the matching policy levers are scalars). Steady-state years are
+`PT_MATURITY_YEARS` (P65:U65 — the workbook only fills the 15T row and applies it to every
+bucket, which is why the matching policy settings are single values). Steady-state years are
 `Input Sheet` BO1/CB1/CK1.
 
-Worked check for B1 at 2050: CNG = supply `1−(2027−2025)/25` × maturity `1−(2030−2025)/25`
+Worked example, B1 at 2050: CNG = supply `1−(2027−2025)/25` × maturity `1−(2030−2025)/25`
 = 0.92 × 0.80 = **0.736**; BET 0.92 × 0.60 = **0.552**; H2-ICE 0.64 × 0.32 = **0.2048**.
 
 `policy.bet_maturity_year` / `h2ice_maturity_year` / `fcet_maturity_year` feed the maturity
 layer, so they move the 2050 and 2055 anchors. The **"Potential TIV"** layer (which zeroes
-CNG or LNG in buckets where they are not offered) is derived at module load by dividing the
-extracted `CHOICE_SHARE_ADJUSTMENT_BASELINE` snapshot by the default-input delay factors —
-that guarantees the computed path reproduces the workbook exactly at defaults, which
-`src/test/choiceAdjustment.test.ts` asserts to 1e-9.
+CNG or LNG in buckets where they are not sold) is derived when the module loads, by dividing
+the extracted `CHOICE_SHARE_ADJUSTMENT_BASELINE` snapshot by the default delay factors. That
+guarantees the calculated path matches the workbook exactly at defaults, which
+`src/test/choiceAdjustment.test.ts` checks to nine decimal places.
 
-**TCO parity** — `sim/parity.ts` sweeps 2026→2055 and reports the first year each ZET's
-TCO/km reaches diesel, per bucket, reproducing the `Buckets` AE3:AG16 array formula. It is
-computed on every run and surfaced as `SimulationResult.parityYears`. At BAU it matches the
-workbook exactly for 36 of 42 cells (all H2-ICE and H2-FCET); the six BET cells that differ
-are each exactly one year late, an artefact of the 2026 rebase.
+**TCO parity** — `sim/parity.ts` walks 2026 to 2055 and reports the first year each ZET's
+cost per km reaches diesel, per bucket, matching the `Buckets` AE3:AG16 / AH3:AJ16 array
+formula. It runs on every simulation and appears as `SimulationResult.parityYears`. At BAU it
+matches the workbook for 36 of 42 cells (all hydrogen ones). The six BET cells that differ are
+each exactly one year late, because the model starts at 2026 and the workbook starts at 2025.
 
-**2055 is ZET-only.** `computeShares(..., zetOnly = true)` zeroes Diesel/CNG/LNG and
-renormalises among BET / H2-ICE / H2-FCET, reproducing the `Estimation 100% ZET 2055` sheet.
-This is why the 2055 ZET share is 100 % by construction, not by convergence.
+**2055 is ZET-only.** `computeShares(..., zetOnly = true)` sets Diesel, CNG and LNG to zero
+and renormalises across BET, H2-ICE and H2-FCET, matching the `Estimation 100% ZET 2055`
+sheet. The 2055 ZET share is 100% because the model is told to make it so, not because it
+works out that way.
 
-### Deliberately reproduced Excel bugs
+### Excel mistakes copied on purpose
 
-These are labelled `Excel quirk:` in the source. **Do not remove them without checking with
+These are marked `Excel quirk:` in the source. **Do not remove them without checking with
 CoEZET** — they change published numbers.
 
 1. **B9 / B11 2055 diesel baseline.** The workbook's "2055 Diesel VE" cells for these two
-   buckets point at the LNG TCO row (`AG167`) instead of the diesel row (`AG165`). The code
-   replicates this: in the `zetOnly` pass, B9 and B11 score against LNG.
-2. **B12 BET ↔ H2-ICE cross-wiring.** In the 2045 and 2050 Estimation sheets, B12's BET and
-   H2-ICE TCO factor cells are swapped. The code swaps them back the same way.
+   buckets point at the LNG row (`AG167`) instead of the diesel row (`AG165`). The code does
+   the same: in the ZET-only pass, B9 and B11 are scored against LNG.
+2. **B12 BET and H2-ICE swapped.** In the 2045 and 2050 Estimation sheets, B12's BET and
+   H2-ICE cost cells are the wrong way round. The code swaps them the same way.
 
 ## Stage 4 — `pttm.ts`
 
-Takes the 2045 / 2050 / 2055 anchors from the choice model and draws a year-by-year
-trajectory. Curves run **per bucket**; because every post-inflection branch is linear in the
-bucket anchors, the TIV-weighted aggregate equals the workbook's global curve.
+Takes the 2045, 2050 and 2055 anchors and fills in every year between. Curves run **per
+bucket**. Because every branch after the inflection point is linear in the bucket anchors,
+the weighted total matches the workbook's single global curve.
 
-### Gompertz family (BET, H2-ICE, H2-FCET)
+### Gompertz curves (BET, H2-ICE, H2-FCET)
 
 ```
 year < pilotYear                → 0
 pilotYear ≤ y ≤ inflection      → a · exp(−b · exp(−c · (y − pilotYear)))
 inflection < y ≤ 2045           → cosine ramp   0.05 → Z2045
-2045 < y ≤ 2050                 → linear        Z2045 → Z2050
-2050 < y ≤ 2055                 → linear        Z2050 → Z2055
+2045 < y ≤ 2050                 → straight line Z2045 → Z2050
+2050 < y ≤ 2055                 → straight line Z2050 → Z2055
 ```
 
-with parameters derived the way the workbook does (`PTTM` cols T/W/X):
+Parameters are worked out the way the workbook does (`PTTM` columns T/W/X):
 
 ```
 b = ln( max(a, W × 1.01) / W )
 c = −(1 / (inflection − pilot)) × ln( ln( max(a, 0.0501) / 0.03 ) / b )
 ```
 
-`W` is the pilot share and `a` starts at the aggregate 2055 anchor. **For BET only**, `a` is
-additionally normalised so the raw Gompertz passes through Z2055 at 2055 — the workbook does
-this with a circular reference (col Z), and the code resolves it by fixed-point iteration
-(50 iterations, 1e-12 tolerance).
+`W` is the pilot share and `a` starts at the 2055 anchor. **For BET only**, `a` is adjusted
+so the raw curve passes exactly through the 2055 anchor. The workbook does this with a
+circular reference (column Z); the code solves it by repeating the calculation (up to 50
+times, stopping at 1e-12).
 
-Pilot years come from `GOMPERTZ_PARAMS_BY_PT`; inflection years are **policy levers**
+Pilot years come from `GOMPERTZ_PARAMS_BY_PT`. Inflection years are policy settings
 (`bet_inflection_year`, `h2ice_inflection_year`, `fcet_inflection_year`).
 
-### Weibull family (CNG, LNG)
+### Weibull curves (CNG, LNG)
 
 ```
 year < 2026        → 0
 2026 ≤ y ≤ 2045    → share2026 + (Z2045 − share2026) × wbl(y)/wbl(2045)
-2045 < y ≤ 2050    → linear  Z2045 → Z2050
-2050 < y ≤ 2055    → cosine decay  Z2050 → 0
+2045 < y ≤ 2050    → straight line Z2045 → Z2050
+2050 < y ≤ 2055    → cosine decay Z2050 → 0
 
 wbl(y) = t^(α−1) · exp( ((α−1)/α) · (1 − t^α) ),   t = (y − 2026)/(2045 − 2026)
 α = WEIBULL_SHAPE_ALPHA = 5
-share2026 = CNG_UNITS_2026 / TIV_2026   (13,374 / 301,120), LNG likewise (414)
+share2026 = CNG_UNITS_2026 / TIV_2026   (13,374 / 301,120), LNG the same way (414)
 ```
 
-CNG and LNG are forced to zero by 2055 by the cosine decay term.
+The cosine decay forces CNG and LNG to zero by 2055.
 
-### Diesel is the residual
+### Diesel is the remainder
 
-At both the per-bucket and aggregate level: if the non-diesel shares sum above 1.0 they are
-scaled down proportionally, then `Diesel = max(0, 1 − Σ others)`. Sales are
+Per bucket and in total: if the non-diesel shares add up to more than 1.0 they are scaled
+down proportionally, then `Diesel = max(0, 1 − everything else)`. Sales are
 `share × TIV_PROJECTION[year]`.
 
 ## Stage 5 — `stockEmissions.ts`
 
-- **Stock roll-forward.** Starts from `DIESEL_STOCK_END_2025 = 5,315,061`, adds each year's
-  sales, retires vehicles after `SCRAPPAGE_AGE_YEARS = 20`, and additionally scraps
-  `PRE_2001_DIESEL_SCRAPPAGE_PER_YEAR = 125,000` pre-2001 diesels per year until
+- **Fleet stock.** Starts from `DIESEL_STOCK_END_2025 = 5,315,061`, adds each year's sales,
+  retires trucks after `SCRAPPAGE_AGE_YEARS = 20`, and scraps an extra
+  `PRE_2001_DIESEL_SCRAPPAGE_PER_YEAR = 125,000` old diesels a year until
   `PRE_2001_SCRAPPAGE_END_YEAR = 2040`. Pre-2026 sales come from `HISTORICAL_SALES` and are
   all diesel.
-- **Emissions** use bucket-weighted per-vehicle rates. Combustion factors are **well-to-wheel**
-  (diesel 3.13, CNG 2.66, LNG 2.88 kgCO₂e per unit). BET uses a year-varying grid factor
-  `betGridFactor(y) = 0.7455 × 0.97^(y − 2025)` from `Emissions` R49 — not a constant.
-  H2 blends a green baseline with grey production intensity according to the grey fraction.
-- **Counterfactual** — `dieselCounterfactualEmissions = totalStock × dieselWeightedRate`,
-  i.e. the same fleet if every vehicle had stayed diesel.
-  `cumulativeCO2Avoided = Σ (counterfactual − actual)`.
-- **ZET definition** — `zetShare` and `totalZetSales` are **BET + H2-ICE + H2-FCET**
-  (Excel `PTTM` cols C+E+G). H2-ICE counts as a ZET here even though `isZET()` in `tco.ts`
-  excludes it for financing purposes. Two different meanings of "ZET", both intentional.
-- **Segment / application splits** do **not** derive from bucket GVW. They use the workbook's
-  own year-varying share tables, extracted verbatim into `segmentAppShares.ts`: per-powertrain
-  yearly totals × share table. Diesel/BET/H2 use the general 7-segment shares; CNG uses
+- **Emissions** use bucket-weighted rates per vehicle. Combustion factors are well-to-wheel
+  (diesel 3.13, CNG 2.66, LNG 2.88 kgCO₂e per unit). BET uses a grid factor that improves
+  each year, `betGridFactor(y) = 0.7455 × 0.97^(y − 2025)` from `Emissions` R49 — not a fixed
+  number. Hydrogen blends a green baseline with grey intensity using the grey fraction.
+- **Comparison case** — `dieselCounterfactualEmissions = totalStock × dieselWeightedRate`,
+  i.e. the same fleet if every truck had stayed diesel.
+  `cumulativeCO2Avoided` is the running total of the difference.
+- **Two meanings of ZET** — `zetShare` and `totalZetSales` are **BET + H2-ICE + H2-FCET**
+  (Excel `PTTM` columns C+E+G). H2-ICE counts as a ZET here even though `isZET()` in `tco.ts`
+  leaves it out for financing. Both are intentional. See [07](07-known-issues.md).
+- **Segment and application splits** do **not** come from bucket weights. They use the
+  workbook's own share tables by year, copied into `segmentAppShares.ts`: yearly total per
+  powertrain × share table. Diesel, BET and hydrogen use the general 7-band shares; CNG uses
   normalised shares (only Rigid 12–19T and 19–28.5T); LNG normalised (only the 3 tractor
   bands); applications use one table for all powertrains. `SEGMENT_OF_BUCKET` and
-  `APPLICATION_OF_BUCKET` in `segments.ts` are legacy and currently unused.
-  The per-bucket roll-forward remains, but only for energy accounting.
+  `APPLICATION_OF_BUCKET` in `segments.ts` are leftovers and unused. The per-bucket
+  roll-forward still exists, but only for energy figures.
 
-## Sanity checks (`sanityCheck.ts`)
+## Health checks (`sanityCheck.ts`)
 
-Twelve checks against `BAU_BASELINE_CHECKS`, surfaced in the header badge and asserted in
+Twelve checks against `BAU_BASELINE_CHECKS`, shown in the header badge and asserted in
 `src/test/rebase_check.test.ts`:
 
 | Check | Target |
 |---|---|
-| `total_sales_2026 / 2045 / 2055` | 301,120 / 707,250 / 1,029,830 (±2 %) |
-| `zet_share_2045` | 70 %–90 % |
-| `zet_share_2055` | 95 %–100 % |
+| `total_sales_2026 / 2045 / 2055` | 301,120 / 707,250 / 1,029,830 (±2%) |
+| `zet_share_2045` | 70%–90% |
+| `zet_share_2055` | 95%–100% |
 | `diesel_2026_units` | 270,000–300,000 |
-| `cng_share_2030 / 2045 / 2055` | 1–15 % / ≥2 % / ≤0.5 % |
-| `lng_share_2030 / 2045 / 2055` | 0.05–0.5 % / 0.1–1.5 % / ≤0.5 % |
+| `cng_share_2030 / 2045 / 2055` | 1–15% / ≥2% / ≤0.5% |
+| `lng_share_2030 / 2045 / 2055` | 0.05–0.5% / 0.1–1.5% / ≤0.5% |
 
-Current BAU output: ZET 2045 = 79.6 %, diesel 2026 = 286,925 units (Excel 286,923).
+Current BAU output: ZET 2045 = 79.6%, diesel 2026 = 286,925 units (Excel 286,923).
 
 ## Base year
 
-The model was rebased from 2025 to **2026** in commit `c406730`. `START_YEAR = 2026`,
-`END_YEAR = 2055`, `YEAR_COUNT = 30`. Any document or comment still saying "2025 base" is
-stale.
+The model was moved from a 2025 start to a **2026** start in commit `c406730`.
+`START_YEAR = 2026`, `END_YEAR = 2055`, `YEAR_COUNT = 30`. Any comment or document still
+saying "2025 base" is out of date.
