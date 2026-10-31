@@ -63,7 +63,7 @@ limit.
 | `FundingInput` (non-ZET) | `fixed.interest_rate_ice`, `fixed.loan_tenure_years_nonzet` | `tco.ts` loan calculation for Diesel/CNG/LNG/H2-ICE |
 | `FundingInput` (ZET) | `policy.interest_rate_zet`, `policy.loan_tenure_years` | `tco.ts` loan calculation for BET/FCET |
 | `GvwForZet` | `policy.zet_additional_gvw_kg` (7 size classes, default 0) | `choiceModel.ts computeBucketPayload` → payload factor |
-| `TollWaiver` | `policy.toll_waiver_bands` (3 bands, 0–1 — `TOLL_WAIVER_KEYS`) | `tco.ts tollWaiverForYear` → `toll × (1 − band)` for BET/H2-ICE/FCET |
+| `TollWaiver` | `policy.toll_waiver_bands` (2 bands, till 2033 / 2034-39, 0–1 — `TOLL_WAIVER_KEYS`; Excel `$AL$276`/`$AL$277`) | `tco.ts tollWaiverForYear` → `toll × (1 − band)` for BET/H2-ICE/FCET |
 
 ### Settings with no on-screen control
 
@@ -101,7 +101,7 @@ policy.
 |---|---|
 | GVW for ZET | Powertrain mix (BET vs FCET). Small, because ZET is already ~85% by 2045. |
 | H₂ source mix | Powertrain mix (H2-ICE/FCET via cost), TCO parity, and emissions. |
-| Toll waiver | ZET cost → powertrain mix. Strong: a full waiver lifts 2045 BET share from ~76% to ~93%. |
+| Toll waiver | ZET cost up to 2039 → TCO parity years only (computed, not currently charted). As in the Excel, ZETs pay full toll from 2040, so the 2045–55 sales mix does not move. |
 | Powertrain maturity year | Share adjustments at 2050 and 2055 → powertrain mix. Parameter file only. |
 | Electricity subsidy | BET fuel cost → powertrain mix. Parameter file only; applies until `electricity_subsidy_end_year` (default 2055). |
 | Battery / fuel-cell cost | ZET cost → mix, and TCO parity year. |

@@ -89,10 +89,10 @@ export interface PolicyConfig {
   interest_rate_zet: number;
   loan_tenure_years: number;
   electricity_subsidy_per_kwh: number;
-  // Fraction (0–1) of ZET toll waived, keyed by TOLL_WAIVER_KEYS (d4145 / d4650
-  // / d5155 — one per model decision point, since TCO is only priced at 2045,
-  // 2050 and 2055). Excel 'Changing with year' ZET toll = diesel toll ×
-  // (1 − band); applies to BET, H2-ICE and FCET. 0 = no waiver ($AL$276 = 1).
+  // Fraction (0–1) of ZET toll waived, keyed by TOLL_WAIVER_KEYS (till2033 =
+  // Excel $AL$276, d3439 = $AL$277). Excel 'Changing with year' ZET toll =
+  // diesel toll × (1 − band) up to 2039, full toll from 2040; applies to BET,
+  // H2-ICE and FCET. 0 = no waiver ($AL$276 = 1).
   toll_waiver_bands: Record<string, number>;
   bet_inflection_year: number;
   h2ice_inflection_year: number;

@@ -315,13 +315,14 @@ export const ZET_GVW_CURRENT_KG: Record<string, number> = {
   '48T Rigid': 47500, '40T Tractor': 39500, '55T Tractor': 55000,
 };
 
-// Bands offered for the ZET toll waiver. The choice model prices TCO only at
-// its three decision years — 2045, 2050 and 2055, the Excel 'Estimation SS2045'
-// / 'Estimation2050' / 'Estimation 100% ZET 2055' anchors that feed PTTM — so a
-// waiver can only be expressed per decision point. Earlier bands (2026-2040)
-// are deliberately not offered: nothing downstream would ever read them.
-export const TOLL_WAIVER_KEYS = ['d4145', 'd4650', 'd5155'] as const;
-export const TOLL_WAIVER_LABELS = ['2041-45', '2046-50', '2051-55'] as const;
+// Bands for the ZET toll waiver — exactly the Excel's two inputs on
+// 'Changing with year': $AL$276 ("Toll till 2033", years ≤ 2033) and $AL$277
+// ("2034-39"). From 2040 the Excel ZET toll is the full diesel toll (R276 =
+// R265), so there is no waiver input for 2040+. As in the Excel, the waiver
+// therefore never reaches the 2045/2050/2055 TCO that drives PTTM; it moves
+// the per-year TCO (and so the TCO parity years) only.
+export const TOLL_WAIVER_KEYS = ['till2033', 'd3439'] as const;
+export const TOLL_WAIVER_LABELS = ['Till 2033', '2034-39'] as const;
 
 // CNG/LNG/H2 tank physical sizes (used to compute tank cost contribution)
 export const TANK_SIZES = {
@@ -579,10 +580,10 @@ export const BAU_POLICY = {
   interest_rate_zet: 0.12,
   loan_tenure_years: 7,
   electricity_subsidy_per_kwh: 0,
-  // Fraction of ZET toll waived, per model decision point (TOLL_WAIVER_KEYS).
+  // Fraction of ZET toll waived per Excel band (TOLL_WAIVER_KEYS).
   // 0 = Excel $AL$276/$AL$277 = 1 (no waiver).
   toll_waiver_bands: {
-    d4145: 0, d4650: 0, d5155: 0,
+    till2033: 0, d3439: 0,
   } as Record<string, number>,
   bet_inflection_year: 2031,
   h2ice_inflection_year: 2051,
@@ -641,7 +642,7 @@ export const BEST_OVERRIDES = {
     fcet_demand_incentive_per_kwh: 30000,
     interest_rate_zet: 0.10,
     electricity_subsidy_per_kwh: 2,
-    toll_waiver_bands: { d4145: 1, d4650: 1, d5155: 1 },
+    toll_waiver_bands: { till2033: 1, d3439: 1 },
     bet_inflection_year: 2032,
     bet_resale_2046_plus: 0.45,
   },

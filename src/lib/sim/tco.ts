@@ -87,20 +87,16 @@ const clampFrac = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v
  *  ('bands' mode). Grey hydrogen is discontinued from 2046 onward, so the blend
  *  applies to 2026–2045 only; later years are green-only. */
 /**
- * ZET toll-waiver fraction (0–1) for the given purchase year. 0 = no waiver.
+ * ZET toll-waiver fraction (0–1) for the given year. 0 = no waiver.
  *
- * The choice model only ever prices TCO at its three decision years (2045,
- * 2050, 2055 — the Excel 'Estimation SS2045' / 'Estimation2050' /
- * 'Estimation 100% ZET 2055' anchors that feed PTTM), so the waiver is stored
- * as one value per decision point: d4145 / d4650 / d5155. Bands covering
- * 2026–2040 would never be read, so they are not offered — see TOLL_WAIVER_KEYS.
+ * Mirrors Excel 'Changing with year' rows 276-284: years ≤ 2033 use $AL$276,
+ * 2034-39 use $AL$277, and from 2040 the ZET toll is the full diesel toll
+ * (R276 = R265) — no waiver. See TOLL_WAIVER_KEYS.
  */
-function tollWaiverForYear(policy: PolicyConfig, year: number): number {
+export function tollWaiverForYear(policy: PolicyConfig, year: number): number {
+  if (year >= 2040) return 0;
   const bands = policy.toll_waiver_bands ?? {};
-  const key =
-    year <= 2045 ? 'd4145' :
-    year <= 2050 ? 'd4650' : 'd5155';
-  return clampFrac(bands[key]);
+  return clampFrac(bands[year <= 2033 ? 'till2033' : 'd3439']);
 }
 
 function greyBlendForYear(policy: PolicyConfig, year: number): number {
@@ -451,8 +447,8 @@ export function computeTCO(
       const maintPerKm = getMaintenancePerKm(pt, bucket, targetYear, fp);
 
       // ZET toll waiver — Excel 'Changing with year' ZET toll = diesel toll ×
-      // (1 − waiver); waiver is set per 5-year band (by purchase year) and
-      // applies to every powertrain on the ZET toll row (BET, H2-ICE, FCET).
+      // (1 − waiver) for years up to 2039 (full toll from 2040); applies to
+      // every powertrain on the ZET toll row (BET, H2-ICE, FCET).
       let effectiveToll = tollPerKm;
       if (usesZetToll(pt)) {
         effectiveToll = tollPerKm * (1 - tollWaiverForYear(policy, targetYear));

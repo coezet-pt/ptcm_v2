@@ -194,8 +194,8 @@ const scalarSpecs: FieldSpec[] = [
     c => c.policy.electricity_subsidy_end_year,
     (c, v) => { c.policy.electricity_subsidy_end_year = Math.round(v); }),
 
-  // Toll waiver for ZETs — share of ZET toll waived (Excel $AL$276/$AL$277),
-  // one value per model decision point (2045 / 2050 / 2055).
+  // Toll waiver for ZETs — share of ZET toll waived (Excel $AL$276 = till 2033,
+  // $AL$277 = 2034-39).
   ...TOLL_WAIVER_KEYS.map((pk, i): FieldSpec =>
     numberSpec(TOLL, `Toll waiver for ZETs — ${TOLL_WAIVER_LABELS[i]}`, `policy.toll_waiver_bands.${pk}`, '%',
       c => c.policy.toll_waiver_bands?.[pk] ?? 0,

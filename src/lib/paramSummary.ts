@@ -137,8 +137,8 @@ export function buildOtherInputs(config: ScenarioConfig): OtherInputSection[] {
     }),
   });
 
-  // Policy support — Toll waiver for ZETs, per model decision point
-  // (Excel $AL$276/$AL$277; see TOLL_WAIVER_KEYS)
+  // Policy support — Toll waiver for ZETs (Excel $AL$276 till 2033,
+  // $AL$277 2034-39; see TOLL_WAIVER_KEYS)
   const tollBands = policy.toll_waiver_bands ?? {};
   sections.push({
     title: 'Policy support — Toll waiver for ZETs (% of toll waived)',

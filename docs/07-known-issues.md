@@ -71,9 +71,10 @@ them.) Everything before 2045 is the curve fitted *backwards* from those anchors
 
 This causes the second most common "my change did nothing" report, after #1: **a setting that
 only applies in earlier years cannot change any output.** It is not a wiring bug — the model
-has no path for near-term policy other than `*_inflection_year`. This is why the toll waiver
-is entered per decision point (`TOLL_WAIVER_KEYS` = `d4145`/`d4650`/`d5155`) rather than per
-5-year block; the earlier bands did nothing and were removed.
+has no path for near-term policy other than `*_inflection_year`. The **toll waiver** is the
+clearest case: it follows the Excel exactly (`$AL$276` till 2033, `$AL$277` 2034-39, full toll
+from 2040), so it moves TCO parity years but not sales, stock or emissions — same as the
+workbook. `src/test/tollWaiver.test.ts` pins this.
 
 The **demand incentives** are the one setting still inert at its defaults, and that matches
 Excel — the workbook's own incentive cells stop at 2035 (see [03](03-model-reference.md)). Do
